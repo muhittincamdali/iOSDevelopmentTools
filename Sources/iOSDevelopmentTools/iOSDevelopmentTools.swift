@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - iOS Development Tools
 public struct iOSDevelopmentTools {
@@ -6,9 +7,9 @@ public struct iOSDevelopmentTools {
     // MARK: - Version
     public static let version = "1.0.0"
     
-    // MARK: - Initialize
+    // MARK: - Initialization
     public static func initialize() {
-        Logger.info("iOS Development Tools initialized - Version \(version)")
+        print("🚀 iOS Development Tools v\(version) initialized")
     }
     
     // MARK: - Configuration
@@ -17,207 +18,291 @@ public struct iOSDevelopmentTools {
         analyticsEnabled: Bool = true,
         loggingEnabled: Bool = true
     ) {
+        print("⚙️ iOS Development Tools configured")
+        print("   - Network Base URL: \(networkBaseURL)")
+        print("   - Analytics: \(analyticsEnabled ? "✅" : "❌")")
+        print("   - Logging: \(loggingEnabled ? "✅" : "❌")")
+        
         // Configure network client
-        let networkClient = NetworkClient(baseURL: networkBaseURL)
+        NetworkClient.shared.configure(baseURL: networkBaseURL)
         
         // Configure analytics
         if analyticsEnabled {
-            let analyticsManager = AnalyticsManager.shared
-            analyticsManager.addProvider(FirebaseAnalyticsProvider())
-            analyticsManager.addProvider(AmplitudeAnalyticsProvider())
-            analyticsManager.addProvider(MixpanelAnalyticsProvider())
+            AnalyticsManager.shared.initialize()
         }
         
         // Configure logging
         if loggingEnabled {
-            Logger.info("Logging enabled")
+            Logger.shared.initialize()
         }
-        
-        Logger.info("iOS Development Tools configured successfully")
     }
 }
 
 // MARK: - Development Tools Manager
-public class DevelopmentToolsManager {
+public class DevelopmentToolsManager: ObservableObject {
+    
+    // MARK: - Singleton
     public static let shared = DevelopmentToolsManager()
     
-    private let networkClient: NetworkClient?
-    private let storageManager = StorageManager()
-    private let analyticsManager = AnalyticsManager.shared
-    private let logger = Logger.shared
-    private let performanceLogger = PerformanceLogger()
-    private let networkLogger = NetworkLogger()
-    private let memoryLogger = MemoryLogger()
+    // MARK: - Published Properties
+    @Published public var isInitialized = false
+    @Published public var networkStatus: NetworkStatus = .unknown
+    @Published public var analyticsEnabled = false
+    @Published public var loggingEnabled = false
     
-    public init(networkBaseURL: String? = nil) {
-        if let baseURL = networkBaseURL {
-            self.networkClient = NetworkClient(baseURL: baseURL)
-        } else {
-            self.networkClient = nil
+    // MARK: - Private Properties
+    private var networkClient: NetworkClient!
+    private var storageManager: StorageManager!
+    private var analyticsManager: AnalyticsManager!
+    private var logger: Logger!
+    
+    // MARK: - Initialization
+    private init() {}
+    
+    // MARK: - Public Methods
+    
+    /// Initialize all development tools
+    public func initialize() {
+        networkClient = NetworkClient.shared
+        storageManager = StorageManager.shared
+        analyticsManager = AnalyticsManager.shared
+        logger = Logger.shared
+        
+        isInitialized = true
+        print("✅ Development Tools Manager initialized")
+    }
+    
+    /// Get network tools
+    public var networkTools: NetworkClient {
+        guard let networkClient = networkClient else {
+            fatalError("Development Tools Manager not initialized")
+        }
+        return networkClient
+    }
+    
+    /// Get storage tools
+    public var storageTools: StorageManager {
+        guard let storageManager = storageManager else {
+            fatalError("Development Tools Manager not initialized")
+        }
+        return storageManager
+    }
+    
+    /// Get analytics tools
+    public var analyticsTools: AnalyticsManager {
+        guard let analyticsManager = analyticsManager else {
+            fatalError("Development Tools Manager not initialized")
+        }
+        return analyticsManager
+    }
+    
+    /// Get debug tools
+    public var debugTools: Logger {
+        guard let logger = logger else {
+            fatalError("Development Tools Manager not initialized")
+        }
+        return logger
+    }
+    
+    /// Get performance tools
+    public var performanceTools: PerformanceLogger {
+        return PerformanceLogger.shared
+    }
+    
+    /// Get network logging tools
+    public var networkLoggingTools: NetworkLogger {
+        return NetworkLogger.shared
+    }
+    
+    /// Get memory logging tools
+    public var memoryLoggingTools: MemoryLogger {
+        return MemoryLogger.shared
+    }
+    
+    /// Get utility tools
+    public var utilityTools: UtilityExtensions {
+        return UtilityExtensions()
+    }
+    
+    /// Check network connectivity
+    public func checkNetworkConnectivity() async -> NetworkStatus {
+        do {
+            let isConnected = try await networkClient.checkConnectivity()
+            networkStatus = isConnected ? .connected : .disconnected
+            return networkStatus
+        } catch {
+            networkStatus = .error
+            return .error
         }
     }
     
-    // MARK: - Network Tools
-    public func makeRequest<T: Codable>(_ endpoint: APIEndpoint) async throws -> T {
-        guard let networkClient = networkClient else {
-            throw DevelopmentToolsError.networkNotConfigured
+    /// Get system information
+    public func getSystemInfo() -> SystemInfo {
+        return SystemInfo(
+            deviceName: UIDevice.current.name,
+            systemVersion: UIDevice.current.systemVersion,
+            modelName: UIDevice.current.model,
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown",
+            buildNumber: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
+        )
+    }
+    
+    /// Get memory usage
+    public func getMemoryUsage() -> MemoryUsage {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
+        
+        let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+                task_info(mach_task_self_,
+                         task_flavor_t(MACH_TASK_BASIC_INFO),
+                         $0,
+                         &count)
+            }
         }
         
-        return try await networkClient.request(endpoint)
+        if kerr == KERN_SUCCESS {
+            let usedMemory = Double(info.resident_size) / 1024.0 / 1024.0
+            return MemoryUsage(usedMemory: usedMemory, totalMemory: 0) // Total memory not easily available on iOS
+        } else {
+            return MemoryUsage(usedMemory: 0, totalMemory: 0)
+        }
     }
     
-    // MARK: - Storage Tools
-    public func saveData<T: Codable>(_ data: T, forKey key: String) throws {
-        try storageManager.save(data, forKey: key)
+    /// Get CPU usage
+    public func getCPUUsage() -> CPUUsage {
+        var info = processor_info_array_t.allocate(capacity: Int(HOST_CPU_LOAD_INFO_COUNT))
+        var numCpuInfo: mach_msg_type_number_t = 0
+        var numCpus: natural_t = 0
+        let result = host_processor_info(mach_host_self(),
+                                       PROCESSOR_CPU_LOAD_INFO,
+                                       &numCpus,
+                                       &info,
+                                       &numCpuInfo)
+        
+        if result == KERN_SUCCESS {
+            let cpuLoad = info.withMemoryRebound(to: processor_cpu_load_info.self, capacity: Int(numCpus)) { cpuLoadInfo in
+                let user = Double(cpuLoadInfo.pointee.cpu_ticks.0)
+                let system = Double(cpuLoadInfo.pointee.cpu_ticks.1)
+                let idle = Double(cpuLoadInfo.pointee.cpu_ticks.2)
+                let nice = Double(cpuLoadInfo.pointee.cpu_ticks.3)
+                let total = user + system + idle + nice
+                return ((user + system) / total) * 100.0
+            }
+            info.deallocate()
+            return CPUUsage(usage: cpuLoad)
+        } else {
+            info.deallocate()
+            return CPUUsage(usage: 0)
+        }
     }
     
-    public func loadData<T: Codable>(_ type: T.Type, forKey key: String) throws -> T {
-        return try storageManager.load(type, forKey: key)
+    /// Clear all cached data
+    public func clearCache() {
+        storageManager.clearCache()
+        URLCache.shared.removeAllCachedResponses()
+        print("🗑️ Cache cleared")
     }
     
-    public func saveDataSecurely<T: Codable>(_ data: T, forKey key: String) throws {
-        try storageManager.saveSecurely(data, forKey: key)
-    }
-    
-    public func loadDataSecurely<T: Codable>(_ type: T.Type, forKey key: String) throws -> T {
-        return try storageManager.loadSecurely(type, forKey: key)
-    }
-    
-    // MARK: - Analytics Tools
-    public func trackEvent(_ name: String, parameters: [String: Any]? = nil) {
-        analyticsManager.trackEvent(name, parameters: parameters)
-    }
-    
-    public func trackScreen(_ name: String, parameters: [String: Any]? = nil) {
-        analyticsManager.trackScreen(name, parameters: parameters)
-    }
-    
-    public func setUserProperty(_ value: String, forKey key: String) {
-        analyticsManager.setUserProperty(value, forKey: key)
-    }
-    
-    public func setUserId(_ userId: String) {
-        analyticsManager.setUserId(userId)
-    }
-    
-    // MARK: - Debug Tools
-    public func logDebug(_ message: String) {
-        logger.debug(message)
-    }
-    
-    public func logInfo(_ message: String) {
-        logger.info(message)
-    }
-    
-    public func logWarning(_ message: String) {
-        logger.warning(message)
-    }
-    
-    public func logError(_ message: String) {
-        logger.error(message)
-    }
-    
-    public func logCritical(_ message: String) {
-        logger.critical(message)
-    }
-    
-    // MARK: - Performance Tools
-    public func startPerformanceMeasurement(_ name: String) {
-        performanceLogger.startMeasurement(name)
-    }
-    
-    public func endPerformanceMeasurement(_ name: String) {
-        performanceLogger.endMeasurement(name)
-    }
-    
-    public func measure<T>(_ name: String, operation: () throws -> T) rethrows -> T {
-        return try performanceLogger.measure(name, operation: operation)
-    }
-    
-    public func measureAsync<T>(_ name: String, operation: () async throws -> T) async rethrows -> T {
-        return try await performanceLogger.measureAsync(name, operation: operation)
-    }
-    
-    // MARK: - Network Logging
-    public func logNetworkRequest(_ request: URLRequest) {
-        networkLogger.logRequest(request)
-    }
-    
-    public func logNetworkResponse(_ response: URLResponse, data: Data?, error: Error?) {
-        networkLogger.logResponse(response, data: data, error: error)
-    }
-    
-    // MARK: - Memory Logging
-    public func logMemoryUsage() {
-        memoryLogger.logMemoryUsage()
-    }
-    
-    // MARK: - Utility Tools
-    public func validateEmail(_ email: String) -> Bool {
-        return email.isValidEmail
-    }
-    
-    public func validatePhoneNumber(_ phoneNumber: String) -> Bool {
-        return phoneNumber.isValidPhoneNumber
-    }
-    
-    public func formatDate(_ date: Date, format: String) -> String {
-        return date.formattedString(format)
-    }
-    
-    public func timeAgo(_ date: Date) -> String {
-        return date.timeAgoDisplay()
-    }
-    
-    public func createColor(hex: String) -> UIColor {
-        return UIColor(hex: hex)
-    }
-    
-    public func resizeImage(_ image: UIImage, to size: CGSize) -> UIImage? {
-        return image.resized(to: size)
+    /// Reset all development tools
+    public func reset() {
+        networkClient = nil
+        storageManager = nil
+        analyticsManager = nil
+        logger = nil
+        isInitialized = false
+        print("🔄 Development Tools Manager reset")
     }
 }
 
-// MARK: - Development Tools Error
+// MARK: - Supporting Types
+
+/// Network Status
+public enum NetworkStatus {
+    case unknown
+    case connected
+    case disconnected
+    case error
+}
+
+/// System Information
+public struct SystemInfo {
+    public let deviceName: String
+    public let systemVersion: String
+    public let modelName: String
+    public let appVersion: String
+    public let buildNumber: String
+    
+    public init(
+        deviceName: String,
+        systemVersion: String,
+        modelName: String,
+        appVersion: String,
+        buildNumber: String
+    ) {
+        self.deviceName = deviceName
+        self.systemVersion = systemVersion
+        self.modelName = modelName
+        self.appVersion = appVersion
+        self.buildNumber = buildNumber
+    }
+}
+
+/// Memory Usage
+public struct MemoryUsage {
+    public let usedMemory: Double // MB
+    public let totalMemory: Double // MB
+    
+    public init(usedMemory: Double, totalMemory: Double) {
+        self.usedMemory = usedMemory
+        self.totalMemory = totalMemory
+    }
+    
+    public var usedMemoryFormatted: String {
+        return String(format: "%.1f MB", usedMemory)
+    }
+    
+    public var totalMemoryFormatted: String {
+        return String(format: "%.1f MB", totalMemory)
+    }
+}
+
+/// CPU Usage
+public struct CPUUsage {
+    public let usage: Double // Percentage
+    
+    public init(usage: Double) {
+        self.usage = usage
+    }
+    
+    public var usageFormatted: String {
+        return String(format: "%.1f%%", usage)
+    }
+}
+
+/// Development Tools Error
 public enum DevelopmentToolsError: LocalizedError {
-    case networkNotConfigured
-    case analyticsNotConfigured
-    case storageNotConfigured
-    case invalidConfiguration
+    case notInitialized
+    case networkError(Error)
+    case storageError(Error)
+    case analyticsError(Error)
+    case loggingError(Error)
+    case configurationError(String)
     
     public var errorDescription: String? {
         switch self {
-        case .networkNotConfigured:
-            return "Network client not configured"
-        case .analyticsNotConfigured:
-            return "Analytics not configured"
-        case .storageNotConfigured:
-            return "Storage not configured"
-        case .invalidConfiguration:
-            return "Invalid configuration"
+        case .notInitialized:
+            return "Development Tools Manager not initialized"
+        case .networkError(let error):
+            return "Network error: \(error.localizedDescription)"
+        case .storageError(let error):
+            return "Storage error: \(error.localizedDescription)"
+        case .analyticsError(let error):
+            return "Analytics error: \(error.localizedDescription)"
+        case .loggingError(let error):
+            return "Logging error: \(error.localizedDescription)"
+        case .configurationError(let reason):
+            return "Configuration error: \(reason)"
         }
-    }
-}
-
-// MARK: - Convenience Extensions
-public extension iOSDevelopmentTools {
-    static func debug(_ message: String) {
-        Logger.debug(message)
-    }
-    
-    static func info(_ message: String) {
-        Logger.info(message)
-    }
-    
-    static func warning(_ message: String) {
-        Logger.warning(message)
-    }
-    
-    static func error(_ message: String) {
-        Logger.error(message)
-    }
-    
-    static func critical(_ message: String) {
-        Logger.critical(message)
     }
 } 
