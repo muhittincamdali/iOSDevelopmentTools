@@ -8,7 +8,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Version](https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge)
 
-**Dünya'nın en gelişmiş iOS geliştirme araçları kütüphanesi**
+**World's most advanced iOS development tools library**
 
 [![GitHub stars](https://img.shields.io/github/stars/muhittincamdali/iOSDevelopmentTools?style=social)](https://github.com/muhittincamdali/iOSDevelopmentTools)
 [![GitHub forks](https://img.shields.io/github/forks/muhittincamdali/iOSDevelopmentTools?style=social)](https://github.com/muhittincamdali/iOSDevelopmentTools)
@@ -19,40 +19,40 @@
 
 ---
 
-## 🌟 Özellikler
+## 🌟 Features
 
-### 🎯 **Premium Kalite**
-- **1000+ satır gerçek Swift kodu**
-- **Clean Architecture** ile tasarlanmış
-- **SOLID principles** uygulanmış
-- **100% test coverage** sağlanmış
-- **Performance optimize** edilmiş
-- **Security best practices** uygulanmış
+### 🎯 **Premium Quality**
+- **1000+ lines of real Swift code**
+- **Clean Architecture** designed
+- **SOLID principles** implemented
+- **100% test coverage** achieved
+- **Performance optimized**
+- **Security best practices** implemented
 
-### 🛠️ **Gelişmiş Araçlar**
-- **Network Client** - Kusursuz HTTP istekleri
-- **Storage Manager** - Güvenli veri saklama
-- **Analytics Manager** - Detaylı analitik
-- **Logger** - Profesyonel loglama
-- **Performance Monitor** - Performans izleme
-- **Utility Extensions** - Yardımcı fonksiyonlar
+### 🛠️ **Advanced Tools**
+- **Network Client** - Perfect HTTP requests
+- **Storage Manager** - Secure data storage
+- **Analytics Manager** - Detailed analytics
+- **Logger** - Professional logging
+- **Performance Monitor** - Performance monitoring
+- **Utility Extensions** - Helper functions
 
-### 🎨 **Tasarım Mükemmelliği**
-- **Dünya'nın en canlı renkleri** kullanılmış
-- **Premium UI/UX** tasarımı
-- **Custom animasyonlar** her sayfa için
-- **Accessibility** uyumlu
-- **Dark/Light mode** mükemmellik
+### 🎨 **Design Excellence**
+- **World's most vibrant colors** used
+- **Premium UI/UX** design
+- **Custom animations** for every page
+- **Accessibility** compliant
+- **Dark/Light mode** perfection
 
-### ⚡ **Performans Standartları**
-- **App açılışı**: <1.3 saniye
-- **API yanıtı**: <200ms
-- **Animasyonlar**: >60fps
+### ⚡ **Performance Standards**
+- **App launch**: <1.3 seconds
+- **API response**: <200ms
+- **Animations**: >60fps
 - **Memory usage**: <200MB
 - **Battery optimization**
 
-### 🔒 **Güvenlik Standartları**
-- **Banka seviyesi güvenlik**
+### 🔒 **Security Standards**
+- **Bank-level security**
 - **SSL/TLS encryption**
 - **API authentication**
 - **Data encryption at rest**
@@ -60,7 +60,7 @@
 
 ---
 
-## 📦 Kurulum
+## 📦 Installation
 
 ### Swift Package Manager
 
@@ -84,7 +84,7 @@ github "muhittincamdali/iOSDevelopmentTools"
 
 ---
 
-## 🚀 Hızlı Başlangıç
+## 🚀 Quick Start
 
 ### Network Client
 
@@ -93,7 +93,7 @@ import iOSDevelopmentTools
 
 let networkClient = NetworkClient()
 
-// API isteği
+// API request
 let request = APIRequest(
     url: "https://api.example.com/users",
     method: .GET,
@@ -113,13 +113,13 @@ do {
 ```swift
 let storage = StorageManager()
 
-// Veri kaydetme
+// Save data
 try storage.save("value", forKey: "key")
 
-// Veri alma
+// Retrieve data
 let value = try storage.retrieve(String.self, forKey: "key")
 
-// Güvenli keychain saklama
+// Secure keychain storage
 let keychain = KeychainStorage()
 try keychain.save("secret", forKey: "password")
 ```
@@ -129,16 +129,16 @@ try keychain.save("secret", forKey: "password")
 ```swift
 let analytics = AnalyticsManager()
 
-// Event tracking
+// Track event
 analytics.trackEvent("user_login", properties: [
     "method": "email",
     "timestamp": Date()
 ])
 
-// Screen tracking
+// Track screen view
 analytics.trackScreen("ProfileViewController")
 
-// User properties
+// Track user property
 analytics.setUserProperty("premium", value: true)
 ```
 
@@ -160,7 +160,7 @@ logger.critical("Critical error")
 let performance = PerformanceMonitor()
 
 performance.startTimer("api_request")
-// ... API isteği
+// ... perform API request
 performance.endTimer("api_request")
 
 let duration = performance.getTimerDuration("api_request")
@@ -169,12 +169,12 @@ print("API request took: \(duration) seconds")
 
 ---
 
-## 🎨 Tasarım Sistemi
+## 🎨 Design System
 
-### Renk Paleti
+### Color Palette
 
 ```swift
-// Premium renk paleti
+// Premium color palette
 extension UIColor {
     static let primaryBlue = UIColor(red: 0.2, green: 0.6, blue: 1.0, alpha: 1.0)
     static let secondaryPurple = UIColor(red: 0.6, green: 0.2, blue: 1.0, alpha: 1.0)
@@ -184,10 +184,10 @@ extension UIColor {
 }
 ```
 
-### Animasyonlar
+### Animations
 
 ```swift
-// Custom animasyonlar
+// Custom animations
 extension UIView {
     func animateWithSpring() {
         UIView.animate(withSpring: 0.6, damping: 0.8, velocity: 0.5) {
@@ -203,31 +203,26 @@ extension UIView {
 
 ---
 
-## 📊 Performans Metrikleri
+## 📊 Performance Metrics
 
-| Metrik | Hedef | Gerçek |
-|--------|-------|--------|
-| App Açılışı | <1.3s | 1.1s |
-| API Yanıtı | <200ms | 150ms |
-| Animasyon FPS | >60fps | 120fps |
+| Metric | Target | Actual |
+|--------|--------|--------|
+| App Launch | <1.3s | 1.1s |
+| API Response | <200ms | 150ms |
+| Animation FPS | >60fps | 120fps |
 | Memory Usage | <200MB | 150MB |
-| Battery Impact | Minimal | %2 |
+| Battery Impact | Minimal | 2% |
 
 ---
 
-## 🔧 Konfigürasyon
+## 🔧 Configuration
 
 ### Network Configuration
 
 ```swift
 let networkConfig = NetworkConfiguration(
     baseURL: "https://api.example.com",
-    timeout: 30,
-    retryCount: 3,
-    headers: [
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    ]
+    timeout: 30
 )
 
 let networkClient = NetworkClient(configuration: networkConfig)
@@ -237,9 +232,7 @@ let networkClient = NetworkClient(configuration: networkConfig)
 
 ```swift
 let storageConfig = StorageConfiguration(
-    userDefaultsSuite: "com.yourapp.storage",
-    keychainService: "com.yourapp.keychain",
-    encryptionEnabled: true
+    userDefaultsSuite: "com.yourapp.storage"
 )
 
 let storage = StorageManager(configuration: storageConfig)
@@ -250,9 +243,7 @@ let storage = StorageManager(configuration: storageConfig)
 ```swift
 let analyticsConfig = AnalyticsConfiguration(
     enabled: true,
-    debugMode: false,
-    batchSize: 10,
-    flushInterval: 30
+    debugMode: false
 )
 
 let analytics = AnalyticsManager(configuration: analyticsConfig)
@@ -286,19 +277,19 @@ class StorageIntegrationTests: XCTestCase {
 
 ---
 
-## 📚 Dokümantasyon
+## 📚 Documentation
 
-- **[Getting Started](Documentation/GettingStarted.md)** - Hızlı başlangıç
-- **[Network Guide](Documentation/NetworkGuide.md)** - Network araçları
-- **[Storage Guide](Documentation/StorageGuide.md)** - Storage araçları
-- **[Analytics Guide](Documentation/AnalyticsGuide.md)** - Analytics araçları
-- **[Debugging Guide](Documentation/DebuggingGuide.md)** - Debugging araçları
-- **[Utility Guide](Documentation/UtilityGuide.md)** - Utility fonksiyonları
-- **[API Reference](Documentation/API.md)** - Tam API dokümantasyonu
+- **[Getting Started](Documentation/GettingStarted.md)** - Quick start guide
+- **[Network Guide](Documentation/NetworkGuide.md)** - Network utilities
+- **[Storage Guide](Documentation/StorageGuide.md)** - Storage utilities
+- **[Analytics Guide](Documentation/AnalyticsGuide.md)** - Analytics utilities
+- **[Debugging Guide](Documentation/DebuggingGuide.md)** - Debugging tools
+- **[Utility Guide](Documentation/UtilityGuide.md)** - Utility functions
+- **[API Reference](Documentation/API.md)** - Complete API documentation
 
 ---
 
-## 🎯 Kullanım Örnekleri
+## 🎯 Usage Examples
 
 ### Complete App Setup
 
@@ -388,29 +379,29 @@ class UserService {
 
 ---
 
-## 🤝 Katkıda Bulunma
+## 🤝 Contributing
 
-Bu projeye katkıda bulunmak istiyorsanız, lütfen [CONTRIBUTING.md](CONTRIBUTING.md) dosyasını okuyun.
+We welcome contributions to iOS Development Tools! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) file for details.
 
-### Katkı Süreci
+### Contribution Process
 
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Değişikliklerinizi commit edin (`git commit -m 'Add amazing feature'`)
-4. Branch'inizi push edin (`git push origin feature/amazing-feature`)
-5. Pull Request oluşturun
-
----
-
-## 📄 Lisans
-
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ---
 
-## 🙏 Teşekkürler
+## 📄 License
 
-Bu projeyi mümkün kılan tüm katkıda bulunanlara teşekkürler:
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+Thanks to all contributors who made this project possible:
 
 - [Swift Community](https://swift.org)
 - [Apple Developer](https://developer.apple.com)
@@ -418,7 +409,7 @@ Bu projeyi mümkün kılan tüm katkıda bulunanlara teşekkürler:
 
 ---
 
-## 📞 İletişim
+## 📞 Contact
 
 - **GitHub**: [@muhittincamdali](https://github.com/muhittincamdali)
 - **Email**: muhittin@example.com
@@ -429,10 +420,10 @@ Bu projeyi mümkün kılan tüm katkıda bulunanlara teşekkürler:
 
 <div align="center">
 
-**⭐ Bu projeyi beğendiyseniz yıldız vermeyi unutmayın! ⭐**
+**⭐ If you like this project, please give it a star! ⭐**
 
 [![GitHub stars](https://img.shields.io/github/stars/muhittincamdali/iOSDevelopmentTools?style=social)](https://github.com/muhittincamdali/iOSDevelopmentTools)
 
 **Made with ❤️ by [Muhittin Camdali](https://github.com/muhittincamdali)**
 
-</div> // Documentation updates
+</div>
