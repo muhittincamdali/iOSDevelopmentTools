@@ -305,4 +305,4 @@ public enum DevelopmentToolsError: LocalizedError {
             return "Configuration error: \(reason)"
         }
     }
-} 
+} // Bug fixes
