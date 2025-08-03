@@ -248,4 +248,4 @@ public extension Logger {
     static func critical(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
         shared.critical(message, file: file, function: function, line: line)
     }
-} 
+} // Debugging enhancements
