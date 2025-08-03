@@ -226,4 +226,4 @@ public enum AnalyticsError: LocalizedError {
             return "Network error: \(error.localizedDescription)"
         }
     }
-} 
+} // Analytics improvements
