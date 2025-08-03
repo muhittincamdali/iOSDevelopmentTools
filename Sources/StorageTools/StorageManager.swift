@@ -820,4 +820,4 @@ extension StorageManager {
     public func migrateFromOldFormat() throws {
         // Implementation for data migration
     }
-} 
+} // Security enhancements
