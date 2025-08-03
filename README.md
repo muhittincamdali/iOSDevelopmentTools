@@ -435,4 +435,4 @@ Bu projeyi mümkün kılan tüm katkıda bulunanlara teşekkürler:
 
 **Made with ❤️ by [Muhittin Camdali](https://github.com/muhittincamdali)**
 
-</div> 
+</div> // Documentation updates
