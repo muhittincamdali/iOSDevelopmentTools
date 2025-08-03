@@ -142,6 +142,119 @@ final class NetworkClientTests: XCTestCase {
         XCTAssertEqual(timeoutError.recoverySuggestion, "Please try again later or check your connection")
     }
     
+    // MARK: - URL Building Tests
+    func testURLBuildingWithBaseURL() {
+        let request = APIRequest(url: "/users")
+        let url = networkClient.buildURL(from: request)
+        
+        XCTAssertNotNil(url)
+        XCTAssertTrue(url?.absoluteString.contains("api.example.com") ?? false)
+        XCTAssertTrue(url?.absoluteString.contains("/users") ?? false)
+    }
+    
+    func testURLBuildingWithQueryParameters() {
+        let request = APIRequest(
+            url: "/users",
+            queryParameters: ["page": "1", "limit": "10"]
+        )
+        let url = networkClient.buildURL(from: request)
+        
+        XCTAssertNotNil(url)
+        XCTAssertTrue(url?.absoluteString.contains("page=1") ?? false)
+        XCTAssertTrue(url?.absoluteString.contains("limit=10") ?? false)
+    }
+    
+    // MARK: - Data Encoding Tests
+    func testDataEncodingWithString() {
+        let string = "test string"
+        let data = try? networkClient.encodeBody(string)
+        
+        XCTAssertNotNil(data)
+        XCTAssertEqual(String(data: data!, encoding: .utf8), string)
+    }
+    
+    func testDataEncodingWithDictionary() {
+        let dictionary = ["key": "value", "number": 123]
+        let data = try? networkClient.encodeBody(dictionary)
+        
+        XCTAssertNotNil(data)
+        let decoded = try? JSONSerialization.jsonObject(with: data!) as? [String: Any]
+        XCTAssertEqual(decoded?["key"] as? String, "value")
+        XCTAssertEqual(decoded?["number"] as? Int, 123)
+    }
+    
+    func testDataEncodingWithData() {
+        let originalData = "test data".data(using: .utf8)!
+        let encodedData = try? networkClient.encodeBody(originalData)
+        
+        XCTAssertNotNil(encodedData)
+        XCTAssertEqual(encodedData, originalData)
+    }
+    
+    // MARK: - Data Decoding Tests
+    func testDataDecoding() {
+        struct TestModel: Codable {
+            let name: String
+            let age: Int
+        }
+        
+        let testModel = TestModel(name: "John", age: 30)
+        let data = try! JSONEncoder().encode(testModel)
+        
+        let decodedModel = try? networkClient.decodeResponse(data, to: TestModel.self)
+        
+        XCTAssertNotNil(decodedModel)
+        XCTAssertEqual(decodedModel?.name, "John")
+        XCTAssertEqual(decodedModel?.age, 30)
+    }
+    
+    func testDataDecodingFailure() {
+        let invalidData = "invalid json".data(using: .utf8)!
+        
+        XCTAssertThrowsError(try networkClient.decodeResponse(invalidData, to: String.self)) { error in
+            XCTAssertTrue(error is NetworkError)
+        }
+    }
+    
+    // MARK: - Error Mapping Tests
+    func testURLErrorMapping() {
+        let notConnectedError = URLError(.notConnectedToInternet)
+        let mappedError = networkClient.mapError(notConnectedError)
+        
+        XCTAssertEqual(mappedError, NetworkError.noInternetConnection)
+    }
+    
+    func testURLErrorTimeoutMapping() {
+        let timeoutError = URLError(.timedOut)
+        let mappedError = networkClient.mapError(timeoutError)
+        
+        XCTAssertEqual(mappedError, NetworkError.timeout)
+    }
+    
+    func testURLErrorHostMapping() {
+        let hostError = URLError(.cannotFindHost)
+        let mappedError = networkClient.mapError(hostError)
+        
+        XCTAssertEqual(mappedError, NetworkError.notFound)
+    }
+    
+    // MARK: - Cache Tests
+    func testCacheOperations() {
+        networkClient.enableDebugMode()
+        
+        let stats = networkClient.getCacheStats()
+        XCTAssertNotNil(stats["totalCost"])
+        XCTAssertNotNil(stats["count"])
+        XCTAssertNotNil(stats["objectCount"])
+    }
+    
+    func testCacheClearing() {
+        networkClient.clearCache()
+        
+        let stats = networkClient.getCacheStats()
+        XCTAssertEqual(stats["totalCost"] as? Int, 0)
+    }
+    
     // MARK: - Performance Tests
     func testPerformanceForMultipleRequests() {
         measure {
