@@ -384,4 +384,4 @@ public extension UIDevice {
         }
         return identifier
     }
-} 
+} // Additional utility functions
