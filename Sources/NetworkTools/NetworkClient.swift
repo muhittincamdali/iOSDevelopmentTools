@@ -670,4 +670,4 @@ extension NetworkClient {
             "objectCount": cache.countLimit
         ]
     }
-} 
+} // Performance optimizations
