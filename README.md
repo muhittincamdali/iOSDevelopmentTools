@@ -418,12 +418,12 @@ Thanks to all contributors who made this project possible:
 
 ---
 
-## 📞 Contact
+## 📞 Support
 
-- **GitHub**: [@muhittincamdali](https://github.com/muhittincamdali)
-- **Email**: muhittin@example.com
-- **Twitter**: [@muhittincamdali](https://twitter.com/muhittincamdali)
-- **LinkedIn**: [Muhittin Camdali](https://linkedin.com/in/muhittincamdali)
+- **Issues**: [GitHub Issues](https://github.com/muhittincamdali/iOSDevelopmentTools/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/muhittincamdali/iOSDevelopmentTools/discussions)
+- **Documentation**: [Full Documentation](Documentation/)
+- **Examples**: [Examples](Examples/)
 
 ---
 
@@ -433,6 +433,6 @@ Thanks to all contributors who made this project possible:
 
 [![GitHub stars](https://img.shields.io/github/stars/muhittincamdali/iOSDevelopmentTools?style=social)](https://github.com/muhittincamdali/iOSDevelopmentTools)
 
-**Made with ❤️ by [Muhittin Camdali](https://github.com/muhittincamdali)**
+**Built with ❤️ for the iOS community**
 
 </div>
