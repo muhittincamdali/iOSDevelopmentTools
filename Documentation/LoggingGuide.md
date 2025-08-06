@@ -1,1 +1,1 @@
-# LoggingGuide
+# Logging Guide

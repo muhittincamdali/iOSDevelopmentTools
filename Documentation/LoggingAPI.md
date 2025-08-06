@@ -1,1 +1,1 @@
-# LoggingAPI
+# Logging API
