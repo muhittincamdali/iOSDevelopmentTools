@@ -279,7 +279,6 @@ memoryDebugger.startMemoryMonitoring { memoryInfo in
 }
 
 // Detect memory leaks
-memoryDebugger.startLeakDetection { leakInfo in
     print("🔍 Memory leak detected")
     print("Leaked object: \(leakInfo.objectType)")
     print("Leak size: \(leakInfo.leakSize) bytes")
@@ -447,7 +446,6 @@ performanceTester.runPerformanceTests { result in
 
 ```bash
 # Clone the repository
-git clone https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 # Navigate to project directory
 cd iOSDevelopmentTools
@@ -465,7 +463,6 @@ Add the framework to your project:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "1.0.0")
 ]
 ```
 
@@ -656,15 +653,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-[![GitHub stars](https://img.shields.io/github/stars/muhittincamdali/iOSDevelopmentTools?style=social)](https://github.com/muhittincamdali/iOSDevelopmentTools/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/muhittincamdali/iOSDevelopmentTools?style=social)](https://github.com/muhittincamdali/iOSDevelopmentTools/network)
-[![GitHub issues](https://img.shields.io/github/issues/muhittincamdali/iOSDevelopmentTools)](https://github.com/muhittincamdali/iOSDevelopmentTools/issues)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/muhittincamdali/iOSDevelopmentTools)](https://github.com/muhittincamdali/iOSDevelopmentTools/pulls)
-[![GitHub contributors](https://img.shields.io/github/contributors/muhittincamdali/iOSDevelopmentTools)](https://github.com/muhittincamdali/iOSDevelopmentTools/graphs/contributors)
-[![GitHub last commit](https://img.shields.io/github/last-commit/muhittincamdali/iOSDevelopmentTools)](https://github.com/muhittincamdali/iOSDevelopmentTools/commits/master)
 
 </div>
 
 ## 🌟 Stargazers
 
-[![Stargazers repo roster for @muhittincamdali/iOSDevelopmentTools](https://reporoster.com/stars/muhittincamdali/iOSDevelopmentTools)](https://github.com/muhittincamdali/iOSDevelopmentTools/stargazers)
