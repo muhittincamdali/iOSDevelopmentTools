@@ -1,5 +1,53 @@
 # Network Guide
 
+<!-- TOC START -->
+## Table of Contents
+- [Network Guide](#network-guide)
+- [Introduction](#introduction)
+- [Table of Contents](#table-of-contents)
+- [Getting Started with Networking](#getting-started-with-networking)
+  - [Prerequisites](#prerequisites)
+  - [Basic Setup](#basic-setup)
+  - [Network Types](#network-types)
+- [Basic Networking](#basic-networking)
+  - [HTTP Requests](#http-requests)
+  - [Request Configuration](#request-configuration)
+  - [Response Handling](#response-handling)
+- [Advanced Networking](#advanced-networking)
+  - [REST API Client](#rest-api-client)
+  - [WebSocket Communication](#websocket-communication)
+  - [File Upload/Download](#file-uploaddownload)
+- [Network Security](#network-security)
+  - [SSL/TLS Configuration](#ssltls-configuration)
+  - [Certificate Pinning](#certificate-pinning)
+  - [Authentication](#authentication)
+- [Network Monitoring](#network-monitoring)
+  - [Network Status Monitoring](#network-status-monitoring)
+  - [Network Performance Monitoring](#network-performance-monitoring)
+  - [Network Quality Assessment](#network-quality-assessment)
+- [Network Optimization](#network-optimization)
+  - [Request Caching](#request-caching)
+  - [Request Prioritization](#request-prioritization)
+  - [Bandwidth Optimization](#bandwidth-optimization)
+- [Network Testing](#network-testing)
+  - [Network Connectivity Testing](#network-connectivity-testing)
+  - [Network Simulation](#network-simulation)
+- [Network Management](#network-management)
+  - [Request Retry](#request-retry)
+  - [Request Timeout](#request-timeout)
+  - [Request Cancellation](#request-cancellation)
+- [Best Practices](#best-practices)
+  - [Error Handling](#error-handling)
+  - [Performance Optimization](#performance-optimization)
+  - [Security Best Practices](#security-best-practices)
+  - [Network Strategy](#network-strategy)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Debugging Network](#debugging-network)
+  - [Getting Help](#getting-help)
+<!-- TOC END -->
+
+
 ## Introduction
 
 This comprehensive network guide covers all aspects of networking in iOS applications using the iOS Development Tools framework. From basic HTTP requests to advanced network monitoring and optimization, this guide provides everything you need to implement effective networking strategies.

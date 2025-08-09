@@ -1,5 +1,53 @@
 # Profiling Guide
 
+<!-- TOC START -->
+## Table of Contents
+- [Profiling Guide](#profiling-guide)
+- [Introduction](#introduction)
+- [Table of Contents](#table-of-contents)
+- [Getting Started with Profiling](#getting-started-with-profiling)
+  - [Prerequisites](#prerequisites)
+  - [Basic Setup](#basic-setup)
+  - [Profiling Tools Overview](#profiling-tools-overview)
+- [Performance Profiling](#performance-profiling)
+  - [CPU Profiling](#cpu-profiling)
+  - [Memory Profiling](#memory-profiling)
+  - [Network Profiling](#network-profiling)
+- [Memory Profiling](#memory-profiling)
+  - [Memory Usage Analysis](#memory-usage-analysis)
+  - [Memory Leak Detection](#memory-leak-detection)
+- [CPU Profiling](#cpu-profiling)
+  - [CPU Usage Monitoring](#cpu-usage-monitoring)
+  - [CPU Performance Analysis](#cpu-performance-analysis)
+- [Network Profiling](#network-profiling)
+  - [Network Request Monitoring](#network-request-monitoring)
+  - [Network Performance Analysis](#network-performance-analysis)
+- [Battery Profiling](#battery-profiling)
+  - [Battery Usage Monitoring](#battery-usage-monitoring)
+  - [Battery Impact Analysis](#battery-impact-analysis)
+- [Storage Profiling](#storage-profiling)
+  - [Storage Usage Monitoring](#storage-usage-monitoring)
+  - [Storage Performance Analysis](#storage-performance-analysis)
+- [UI Profiling](#ui-profiling)
+  - [UI Performance Monitoring](#ui-performance-monitoring)
+  - [UI Performance Analysis](#ui-performance-analysis)
+- [Launch Time Profiling](#launch-time-profiling)
+  - [Launch Time Measurement](#launch-time-measurement)
+  - [Launch Time Optimization](#launch-time-optimization)
+- [Background Task Profiling](#background-task-profiling)
+  - [Background Task Monitoring](#background-task-monitoring)
+- [Best Practices](#best-practices)
+  - [Performance Optimization](#performance-optimization)
+  - [Memory Management](#memory-management)
+  - [Network Optimization](#network-optimization)
+  - [Battery Optimization](#battery-optimization)
+- [Troubleshooting](#troubleshooting)
+  - [Common Performance Issues](#common-performance-issues)
+  - [Debugging Performance Issues](#debugging-performance-issues)
+  - [Getting Help](#getting-help)
+<!-- TOC END -->
+
+
 ## Introduction
 
 The Profiling Guide provides comprehensive information about performance profiling tools and techniques for iOS applications. Learn how to identify and resolve performance bottlenecks, optimize memory usage, and improve overall app performance.

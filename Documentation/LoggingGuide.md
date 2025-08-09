@@ -1,5 +1,55 @@
 # Logging Guide
 
+<!-- TOC START -->
+## Table of Contents
+- [Logging Guide](#logging-guide)
+- [Introduction](#introduction)
+- [Table of Contents](#table-of-contents)
+- [Getting Started with Logging](#getting-started-with-logging)
+  - [Prerequisites](#prerequisites)
+  - [Basic Setup](#basic-setup)
+  - [Log Levels](#log-levels)
+- [Basic Logging](#basic-logging)
+  - [Console Logging](#console-logging)
+  - [Custom Loggers](#custom-loggers)
+  - [Contextual Logging](#contextual-logging)
+- [Advanced Logging](#advanced-logging)
+  - [File Logging](#file-logging)
+  - [Log Rotation](#log-rotation)
+  - [Log Export](#log-export)
+- [Structured Logging](#structured-logging)
+  - [Structured Log Entries](#structured-log-entries)
+  - [JSON Logging](#json-logging)
+- [Remote Logging](#remote-logging)
+  - [Remote Logging Setup](#remote-logging-setup)
+  - [Batch Logging](#batch-logging)
+  - [Authentication](#authentication)
+- [Crash Reporting](#crash-reporting)
+  - [Crash Reporting Setup](#crash-reporting-setup)
+  - [Crash Report Handling](#crash-report-handling)
+  - [Custom Crash Data](#custom-crash-data)
+- [Performance Logging](#performance-logging)
+  - [Operation Logging](#operation-logging)
+  - [System Metrics Logging](#system-metrics-logging)
+  - [Network Request Logging](#network-request-logging)
+  - [Database Operation Logging](#database-operation-logging)
+- [Log Management](#log-management)
+  - [Log Filtering](#log-filtering)
+  - [Log Compression](#log-compression)
+  - [Log Cleanup](#log-cleanup)
+- [Best Practices](#best-practices)
+  - [Log Level Usage](#log-level-usage)
+  - [Performance Considerations](#performance-considerations)
+  - [Security Considerations](#security-considerations)
+  - [Structured Logging Best Practices](#structured-logging-best-practices)
+  - [Remote Logging Best Practices](#remote-logging-best-practices)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Debugging Logging Issues](#debugging-logging-issues)
+  - [Getting Help](#getting-help)
+<!-- TOC END -->
+
+
 ## Introduction
 
 This comprehensive logging guide covers all aspects of logging in iOS applications using the iOS Development Tools framework. From basic console logging to advanced remote logging and crash reporting, this guide provides everything you need to implement effective logging strategies.

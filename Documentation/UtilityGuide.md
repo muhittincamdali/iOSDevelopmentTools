@@ -1,5 +1,54 @@
 # Utility Guide
 
+<!-- TOC START -->
+## Table of Contents
+- [Utility Guide](#utility-guide)
+- [Introduction](#introduction)
+- [Table of Contents](#table-of-contents)
+- [Getting Started with Utilities](#getting-started-with-utilities)
+  - [Prerequisites](#prerequisites)
+  - [Basic Setup](#basic-setup)
+  - [Utility Types](#utility-types)
+- [Basic Utilities](#basic-utilities)
+  - [Common Helper Functions](#common-helper-functions)
+  - [Array Utilities](#array-utilities)
+  - [Dictionary Utilities](#dictionary-utilities)
+- [Advanced Utilities](#advanced-utilities)
+  - [Data Transformation](#data-transformation)
+  - [Encoding Utilities](#encoding-utilities)
+  - [Compression Utilities](#compression-utilities)
+- [String Utilities](#string-utilities)
+  - [String Manipulation](#string-manipulation)
+  - [String Formatting](#string-formatting)
+  - [String Validation](#string-validation)
+- [Date Utilities](#date-utilities)
+  - [Date Creation and Manipulation](#date-creation-and-manipulation)
+  - [Date Formatting](#date-formatting)
+  - [Date Calculations](#date-calculations)
+- [File Utilities](#file-utilities)
+  - [File Operations](#file-operations)
+  - [Directory Operations](#directory-operations)
+  - [File Validation](#file-validation)
+- [Device Utilities](#device-utilities)
+  - [Device Information](#device-information)
+  - [Device Capabilities](#device-capabilities)
+  - [Network Information](#network-information)
+- [Validation Utilities](#validation-utilities)
+  - [Data Validation](#data-validation)
+  - [Input Sanitization](#input-sanitization)
+  - [Format Validation](#format-validation)
+- [Best Practices](#best-practices)
+  - [Performance Optimization](#performance-optimization)
+  - [Error Handling](#error-handling)
+  - [Security Best Practices](#security-best-practices)
+  - [Utility Strategy](#utility-strategy)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Debugging Utilities](#debugging-utilities)
+  - [Getting Help](#getting-help)
+<!-- TOC END -->
+
+
 ## Introduction
 
 This comprehensive utility guide covers all aspects of utility functions in iOS applications using the iOS Development Tools framework. From basic utility functions to advanced helper classes and common iOS development utilities, this guide provides everything you need to implement effective utility strategies.

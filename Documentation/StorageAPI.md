@@ -1,5 +1,51 @@
 # Storage API
 
+<!-- TOC START -->
+## Table of Contents
+- [Storage API](#storage-api)
+- [Overview](#overview)
+- [Core Components](#core-components)
+  - [StorageManager](#storagemanager)
+  - [StorageConfiguration](#storageconfiguration)
+  - [StorageError](#storageerror)
+- [File Storage](#file-storage)
+  - [Basic File Operations](#basic-file-operations)
+  - [File Types](#file-types)
+  - [File Management](#file-management)
+- [Database Storage](#database-storage)
+  - [SQLite Database](#sqlite-database)
+  - [Core Data Integration](#core-data-integration)
+  - [Database Migrations](#database-migrations)
+- [Cloud Storage](#cloud-storage)
+  - [iCloud Integration](#icloud-integration)
+  - [CloudKit Integration](#cloudkit-integration)
+  - [Third-Party Cloud Services](#third-party-cloud-services)
+- [Security Storage](#security-storage)
+  - [Keychain Storage](#keychain-storage)
+  - [Encrypted Storage](#encrypted-storage)
+  - [Secure File Storage](#secure-file-storage)
+- [Performance Storage](#performance-storage)
+  - [Caching](#caching)
+  - [Memory Storage](#memory-storage)
+  - [Optimized Storage](#optimized-storage)
+- [Storage Management](#storage-management)
+  - [Storage Monitoring](#storage-monitoring)
+  - [Storage Backup](#storage-backup)
+  - [Storage Cleanup](#storage-cleanup)
+- [Error Handling](#error-handling)
+  - [Storage Error Handling](#storage-error-handling)
+- [Usage Examples](#usage-examples)
+  - [Basic Storage Setup](#basic-storage-setup)
+  - [Secure Data Storage](#secure-data-storage)
+  - [Cloud Storage Integration](#cloud-storage-integration)
+- [Best Practices](#best-practices)
+  - [Data Organization](#data-organization)
+  - [Performance Optimization](#performance-optimization)
+  - [Security Best Practices](#security-best-practices)
+  - [Storage Strategy](#storage-strategy)
+<!-- TOC END -->
+
+
 ## Overview
 
 The Storage API provides comprehensive data storage capabilities for iOS applications, including file storage, database management, cloud storage integration, and secure data handling.

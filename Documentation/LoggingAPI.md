@@ -1,5 +1,52 @@
 # Logging API
 
+<!-- TOC START -->
+## Table of Contents
+- [Logging API](#logging-api)
+- [Overview](#overview)
+- [Core Components](#core-components)
+  - [AdvancedLoggingManager](#advancedloggingmanager)
+  - [LoggingConfiguration](#loggingconfiguration)
+  - [LogLevel](#loglevel)
+  - [Logger](#logger)
+- [Console Logging](#console-logging)
+  - [ConsoleLogger](#consolelogger)
+  - [Console Configuration](#console-configuration)
+- [File Logging](#file-logging)
+  - [FileLogger](#filelogger)
+  - [LogFile](#logfile)
+  - [File Configuration](#file-configuration)
+- [Remote Logging](#remote-logging)
+  - [RemoteLogger](#remotelogger)
+  - [Remote Configuration](#remote-configuration)
+  - [Authentication](#authentication)
+- [Crash Reporting](#crash-reporting)
+  - [CrashReporter](#crashreporter)
+  - [CrashReport](#crashreport)
+  - [DeviceInfo](#deviceinfo)
+- [Structured Logging](#structured-logging)
+  - [StructuredLogger](#structuredlogger)
+  - [LogEntry](#logentry)
+- [Performance Logging](#performance-logging)
+  - [PerformanceLogger](#performancelogger)
+  - [PerformanceMetrics](#performancemetrics)
+- [Error Handling](#error-handling)
+  - [LoggingError](#loggingerror)
+- [Usage Examples](#usage-examples)
+  - [Basic Logging Setup](#basic-logging-setup)
+  - [Custom Logger](#custom-logger)
+  - [Structured Logging](#structured-logging)
+  - [Performance Logging](#performance-logging)
+  - [Crash Reporting](#crash-reporting)
+  - [Remote Logging](#remote-logging)
+- [Best Practices](#best-practices)
+  - [Log Level Usage](#log-level-usage)
+  - [Performance Considerations](#performance-considerations)
+  - [Security Considerations](#security-considerations)
+  - [Integration](#integration)
+<!-- TOC END -->
+
+
 ## Overview
 
 The Logging API provides comprehensive logging capabilities for iOS applications, including console logging, file logging, remote logging, and crash reporting.
