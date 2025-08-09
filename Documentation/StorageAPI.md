@@ -1,218 +1,180 @@
-# Storage Guide
+# Storage API
 
-## Introduction
+## Overview
 
-This comprehensive storage guide covers all aspects of data storage in iOS applications using the iOS Development Tools framework. From basic file operations to advanced database management and cloud storage integration, this guide provides everything you need to implement effective storage strategies.
+The Storage API provides comprehensive data storage capabilities for iOS applications, including file storage, database management, cloud storage integration, and secure data handling.
 
-## Table of Contents
+## Core Components
 
-1. [Getting Started with Storage](#getting-started-with-storage)
-2. [Basic Storage](#basic-storage)
-3. [Advanced Storage](#advanced-storage)
-4. [Database Storage](#database-storage)
-5. [Cloud Storage](#cloud-storage)
-6. [Security Storage](#security-storage)
-7. [Performance Storage](#performance-storage)
-8. [Storage Management](#storage-management)
-9. [Best Practices](#best-practices)
-10. [Troubleshooting](#troubleshooting)
+### StorageManager
 
-## Getting Started with Storage
-
-### Prerequisites
-
-Before you begin implementing storage, ensure you have:
-
-- Xcode 15.0 or later
-- iOS 15.0+ SDK
-- Swift 5.9+
-- iOS Development Tools framework installed
-
-### Basic Setup
+Main storage manager class for handling all storage operations.
 
 ```swift
-import iOSDevelopmentTools
-
-// Initialize storage manager
-let storageManager = StorageManager()
-
-// Configure storage
-let config = StorageConfiguration()
-config.enableFileStorage = true
-config.enableDatabaseStorage = true
-config.enableCloudStorage = true
-
-// Start storage
-storageManager.configure(config)
+public class StorageManager {
+    // MARK: - Properties
+    private var configuration: StorageConfiguration
+    private var fileManager: FileManager
+    private var databaseManager: DatabaseManager?
+    private var cloudManager: CloudStorageManager?
+    
+    // MARK: - Initialization
+    public init(configuration: StorageConfiguration = StorageConfiguration())
+    
+    // MARK: - Configuration
+    public func configure(_ configuration: StorageConfiguration)
+    public func enableEncryption(_ enabled: Bool)
+    
+    // MARK: - File Operations
+    public func saveToFile(_ data: Any, filename: String) throws
+    public func loadFromFile(_ filename: String) -> Any?
+    public func deleteFile(_ filename: String) throws
+    public func fileExists(_ filename: String) -> Bool
+    
+    // MARK: - Database Operations
+    public func saveToDatabase(_ data: Any, key: String) throws
+    public func loadFromDatabase(_ key: String) -> Any?
+    public func deleteFromDatabase(_ key: String) throws
+    
+    // MARK: - Cloud Storage
+    public func saveToCloud(_ data: Any, filename: String, service: CloudService) throws
+    public func loadFromCloud(_ filename: String, service: CloudService) -> Any?
+    public func deleteFromCloud(_ filename: String, service: CloudService) throws
+    
+    // MARK: - Security
+    public func saveToKeychain(_ data: String, forKey: String) throws
+    public func loadFromKeychain(forKey: String) -> String?
+    public func deleteFromKeychain(forKey: String) throws
+}
 ```
 
-### Storage Types
+### StorageConfiguration
 
-Understanding different types of storage:
-
-- **File Storage**: Store data in files on device
-- **Database Storage**: Store structured data in databases
-- **Cloud Storage**: Store data in cloud services
-- **Keychain Storage**: Store sensitive data securely
-- **Cache Storage**: Store temporary data for performance
-
-## Basic Storage
-
-### File Storage
-
-Store data in files:
+Configuration class for storage settings.
 
 ```swift
-let storageManager = StorageManager()
+public struct StorageConfiguration {
+    // MARK: - Properties
+    public var enableFileStorage: Bool
+    public var enableDatabaseStorage: Bool
+    public var enableCloudStorage: Bool
+    public var enableEncryption: Bool
+    public var maxFileSize: Int64
+    public var compressionEnabled: Bool
+    public var backupEnabled: Bool
+    
+    // MARK: - Initialization
+    public init()
+    
+    // MARK: - Validation
+    public func validate() -> Bool
+}
+```
 
+### StorageError
+
+Error types for storage operations.
+
+```swift
+public enum StorageError: Error {
+    case fileNotFound
+    case fileExists
+    case invalidData
+    case encryptionFailed
+    case decryptionFailed
+    case networkError(Error)
+    case databaseError(Error)
+    case keychainError(Error)
+    case cloudServiceUnavailable
+    case quotaExceeded
+    case permissionDenied
+}
+```
+
+## File Storage
+
+### Basic File Operations
+
+Perform basic file operations.
+
+```swift
 // Save data to file
 let userData = ["name": "John Doe", "email": "john@example.com"]
-storageManager.saveToFile(userData, filename: "user_profile.json")
+try storageManager.saveToFile(userData, filename: "user_profile.json")
 
 // Load data from file
 if let loadedData = storageManager.loadFromFile("user_profile.json") {
-    print("Loaded user data: \(loadedData)")
+    print("Loaded data: \(loadedData)")
 }
 
 // Check if file exists
 let exists = storageManager.fileExists("user_profile.json")
 print("File exists: \(exists)")
+
+// Delete file
+try storageManager.deleteFile("old_file.txt")
 ```
 
-### Data Types
+### File Types
 
-Store different types of data:
+Handle different file types.
 
 ```swift
-let storageManager = StorageManager()
+// Save string
+try storageManager.saveToFile("Hello World", filename: "greeting.txt")
 
-// Store strings
-storageManager.saveString("Hello World", filename: "greeting.txt")
+// Save number
+try storageManager.saveToFile(42, filename: "score.dat")
 
-// Store numbers
-storageManager.saveNumber(42, filename: "score.dat")
-
-// Store arrays
+// Save array
 let numbers = [1, 2, 3, 4, 5]
-storageManager.saveArray(numbers, filename: "numbers.json")
+try storageManager.saveToFile(numbers, filename: "numbers.json")
 
-// Store dictionaries
+// Save dictionary
 let settings = ["theme": "dark", "notifications": true]
-storageManager.saveDictionary(settings, filename: "settings.json")
+try storageManager.saveToFile(settings, filename: "settings.json")
+
+// Save binary data
+let imageData = UIImage(named: "profile")?.jpegData(compressionQuality: 0.8)
+if let data = imageData {
+    try storageManager.saveToFile(data, filename: "profile.jpg")
+}
 ```
 
-### File Operations
+### File Management
 
-Perform file operations:
+Manage files and directories.
 
 ```swift
-let storageManager = StorageManager()
-
 // Create directory
-storageManager.createDirectory("documents")
+try storageManager.createDirectory("documents")
 
 // List files in directory
 let files = storageManager.listFiles(in: "documents")
 print("Files: \(files)")
 
-// Delete file
-storageManager.deleteFile("old_file.txt")
+// Get file size
+let fileSize = storageManager.getFileSize("document.pdf")
+print("File size: \(fileSize) bytes")
+
+// Get file modification date
+let modificationDate = storageManager.getFileModificationDate("document.pdf")
+print("Modified: \(modificationDate)")
 
 // Copy file
-storageManager.copyFile(from: "source.txt", to: "destination.txt")
+try storageManager.copyFile(from: "source.txt", to: "destination.txt")
 
 // Move file
-storageManager.moveFile(from: "old_location.txt", to: "new_location.txt")
-```
-
-## Advanced Storage
-
-### Structured Data Storage
-
-Store structured data with schemas:
-
-```swift
-let storageManager = StorageManager()
-
-// Define data schema
-let userSchema = DataSchema(
-    name: "User",
-    fields: [
-        "id": .string,
-        "name": .string,
-        "email": .string,
-        "age": .integer,
-        "created_at": .date
-    ]
-)
-
-// Save structured data
-let user = [
-    "id": "user123",
-    "name": "John Doe",
-    "email": "john@example.com",
-    "age": 30,
-    "created_at": Date()
-]
-
-storageManager.saveStructuredData(user, schema: userSchema, filename: "user.json")
-```
-
-### Binary Data Storage
-
-Store binary data:
-
-```swift
-let storageManager = StorageManager()
-
-// Save image data
-if let imageData = UIImage(named: "profile")?.jpegData(compressionQuality: 0.8) {
-    storageManager.saveBinaryData(imageData, filename: "profile.jpg")
-}
-
-// Load image data
-if let loadedImageData = storageManager.loadBinaryData("profile.jpg") {
-    let image = UIImage(data: loadedImageData)
-}
-
-// Save audio data
-if let audioData = loadAudioData() {
-    storageManager.saveBinaryData(audioData, filename: "recording.m4a")
-}
-```
-
-### Compressed Storage
-
-Store compressed data:
-
-```swift
-let storageManager = StorageManager()
-
-// Save compressed data
-let largeData = generateLargeData()
-storageManager.saveCompressedData(largeData, filename: "large_file.gz")
-
-// Load compressed data
-if let compressedData = storageManager.loadCompressedData("large_file.gz") {
-    let decompressedData = storageManager.decompressData(compressedData)
-}
-
-// Check compression ratio
-let originalSize = largeData.count
-let compressedSize = storageManager.getFileSize("large_file.gz")
-let compressionRatio = Double(compressedSize) / Double(originalSize)
-print("Compression ratio: \(compressionRatio)")
+try storageManager.moveFile(from: "old_location.txt", to: "new_location.txt")
 ```
 
 ## Database Storage
 
 ### SQLite Database
 
-Use SQLite for structured data:
+Use SQLite for structured data storage.
 
 ```swift
-let storageManager = StorageManager()
-
 // Initialize database
 let database = storageManager.createDatabase("app_data.db")
 
@@ -226,27 +188,33 @@ CREATE TABLE users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 """
-database.executeSQL(createTableSQL)
+try database.executeSQL(createTableSQL)
 
 // Insert data
 let insertSQL = "INSERT INTO users (id, name, email, age) VALUES (?, ?, ?, ?)"
-database.executeSQL(insertSQL, parameters: ["user123", "John Doe", "john@example.com", 30])
+try database.executeSQL(insertSQL, parameters: ["user123", "John Doe", "john@example.com", 30])
 
 // Query data
 let querySQL = "SELECT * FROM users WHERE age > ?"
-let results = database.querySQL(querySQL, parameters: [25])
+let results = try database.querySQL(querySQL, parameters: [25])
 for row in results {
     print("User: \(row["name"] ?? "")")
 }
+
+// Update data
+let updateSQL = "UPDATE users SET name = ? WHERE id = ?"
+try database.executeSQL(updateSQL, parameters: ["John Smith", "user123"])
+
+// Delete data
+let deleteSQL = "DELETE FROM users WHERE id = ?"
+try database.executeSQL(deleteSQL, parameters: ["user123"])
 ```
 
 ### Core Data Integration
 
-Use Core Data for complex data models:
+Use Core Data for complex data models.
 
 ```swift
-let storageManager = StorageManager()
-
 // Initialize Core Data stack
 let coreDataStack = storageManager.createCoreDataStack(modelName: "AppModel")
 
@@ -280,15 +248,17 @@ do {
 } catch {
     print("Error fetching users: \(error)")
 }
+
+// Delete entity
+context.delete(user)
+try context.save()
 ```
 
 ### Database Migrations
 
-Handle database schema changes:
+Handle database schema changes.
 
 ```swift
-let storageManager = StorageManager()
-
 // Define migration
 let migration = DatabaseMigration(
     fromVersion: 1,
@@ -300,22 +270,26 @@ let migration = DatabaseMigration(
 )
 
 // Apply migration
-storageManager.applyMigration(migration, to: "app_data.db")
+try storageManager.applyMigration(migration, to: "app_data.db")
 
 // Check database version
 let currentVersion = storageManager.getDatabaseVersion("app_data.db")
 print("Current database version: \(currentVersion)")
+
+// Backup database
+try storageManager.backupDatabase("app_data.db", to: "backup.db")
+
+// Restore database
+try storageManager.restoreDatabase(from: "backup.db", to: "app_data.db")
 ```
 
 ## Cloud Storage
 
 ### iCloud Integration
 
-Store data in iCloud:
+Store data in iCloud.
 
 ```swift
-let storageManager = StorageManager()
-
 // Configure iCloud
 let iCloudConfig = CloudStorageConfiguration()
 iCloudConfig.enableiCloud = true
@@ -325,12 +299,15 @@ storageManager.configureCloudStorage(iCloudConfig)
 
 // Save to iCloud
 let userData = ["name": "John Doe", "email": "john@example.com"]
-storageManager.saveToCloud(userData, filename: "user_profile.json", service: .iCloud)
+try storageManager.saveToCloud(userData, filename: "user_profile.json", service: .iCloud)
 
 // Load from iCloud
 if let cloudData = storageManager.loadFromCloud("user_profile.json", service: .iCloud) {
     print("Loaded from iCloud: \(cloudData)")
 }
+
+// Delete from iCloud
+try storageManager.deleteFromCloud("user_profile.json", service: .iCloud)
 
 // Sync with iCloud
 storageManager.syncWithCloud(service: .iCloud) { result in
@@ -345,11 +322,9 @@ storageManager.syncWithCloud(service: .iCloud) { result in
 
 ### CloudKit Integration
 
-Use CloudKit for advanced cloud storage:
+Use CloudKit for advanced cloud storage.
 
 ```swift
-let storageManager = StorageManager()
-
 // Configure CloudKit
 let cloudKitConfig = CloudKitConfiguration()
 cloudKitConfig.containerIdentifier = "iCloud.com.yourapp"
@@ -382,15 +357,23 @@ storageManager.queryCloudKit(query) { result in
         print("Query error: \(error)")
     }
 }
+
+// Delete record from CloudKit
+storageManager.deleteFromCloudKit(recordID) { result in
+    switch result {
+    case .success:
+        print("Record deleted successfully")
+    case .failure(let error):
+        print("Delete error: \(error)")
+    }
+}
 ```
 
 ### Third-Party Cloud Services
 
-Integrate with third-party cloud services:
+Integrate with third-party cloud services.
 
 ```swift
-let storageManager = StorageManager()
-
 // Configure AWS S3
 let s3Config = S3Configuration()
 s3Config.accessKey = "your-access-key"
@@ -421,20 +404,28 @@ storageManager.downloadFromS3(key: "test.txt") { result in
         print("Download error: \(error)")
     }
 }
+
+// Delete from S3
+storageManager.deleteFromS3(key: "test.txt") { result in
+    switch result {
+    case .success:
+        print("File deleted from S3")
+    case .failure(let error):
+        print("Delete error: \(error)")
+    }
+}
 ```
 
 ## Security Storage
 
 ### Keychain Storage
 
-Store sensitive data in Keychain:
+Store sensitive data in Keychain.
 
 ```swift
-let storageManager = StorageManager()
-
 // Save to Keychain
-storageManager.saveToKeychain("secret_token", forKey: "auth_token")
-storageManager.saveToKeychain("user_password", forKey: "user_password")
+try storageManager.saveToKeychain("secret_token", forKey: "auth_token")
+try storageManager.saveToKeychain("user_password", forKey: "user_password")
 
 // Load from Keychain
 if let token = storageManager.loadFromKeychain(forKey: "auth_token") {
@@ -442,20 +433,21 @@ if let token = storageManager.loadFromKeychain(forKey: "auth_token") {
 }
 
 // Delete from Keychain
-storageManager.deleteFromKeychain(forKey: "old_token")
+try storageManager.deleteFromKeychain(forKey: "old_token")
 
 // Check if key exists
 let exists = storageManager.keychainKeyExists("auth_token")
 print("Key exists: \(exists)")
+
+// Update keychain item
+try storageManager.updateKeychainItem("new_token", forKey: "auth_token")
 ```
 
 ### Encrypted Storage
 
-Store encrypted data:
+Store encrypted data.
 
 ```swift
-let storageManager = StorageManager()
-
 // Configure encryption
 let encryptionConfig = EncryptionConfiguration()
 encryptionConfig.algorithm = .aes256
@@ -466,7 +458,7 @@ storageManager.configureEncryption(encryptionConfig)
 
 // Save encrypted data
 let sensitiveData = "sensitive information"
-storageManager.saveEncryptedData(sensitiveData, filename: "secure_data.enc")
+try storageManager.saveEncryptedData(sensitiveData, filename: "secure_data.enc")
 
 // Load encrypted data
 if let decryptedData = storageManager.loadEncryptedData("secure_data.enc") {
@@ -482,15 +474,17 @@ storageManager.rotateEncryptionKey { result in
         print("Key rotation error: \(error)")
     }
 }
+
+// Check encryption status
+let isEncrypted = storageManager.isFileEncrypted("secure_data.enc")
+print("File is encrypted: \(isEncrypted)")
 ```
 
 ### Secure File Storage
 
-Store files securely:
+Store files securely.
 
 ```swift
-let storageManager = StorageManager()
-
 // Configure secure storage
 let secureConfig = SecureStorageConfiguration()
 secureConfig.enableFileEncryption = true
@@ -501,7 +495,7 @@ storageManager.configureSecureStorage(secureConfig)
 
 // Save secure file
 let secureData = "confidential information"
-storageManager.saveSecureFile(secureData, filename: "confidential.txt")
+try storageManager.saveSecureFile(secureData, filename: "confidential.txt")
 
 // Load secure file
 storageManager.loadSecureFile("confidential.txt") { result in
@@ -512,17 +506,19 @@ storageManager.loadSecureFile("confidential.txt") { result in
         print("Secure load error: \(error)")
     }
 }
+
+// Check secure storage status
+let isSecure = storageManager.isSecureStorageEnabled()
+print("Secure storage enabled: \(isSecure)")
 ```
 
 ## Performance Storage
 
 ### Caching
 
-Implement caching for performance:
+Implement caching for performance.
 
 ```swift
-let storageManager = StorageManager()
-
 // Configure cache
 let cacheConfig = CacheConfiguration()
 cacheConfig.maxMemorySize = 100 * 1024 * 1024 // 100MB
@@ -547,15 +543,16 @@ let stats = storageManager.getCacheStatistics()
 print("Cache hits: \(stats.hits)")
 print("Cache misses: \(stats.misses)")
 print("Cache size: \(stats.currentSize)")
+
+// Set cache expiration
+storageManager.setCacheExpiration(7200, forKey: "long_lived_cache")
 ```
 
 ### Memory Storage
 
-Use memory storage for fast access:
+Use memory storage for fast access.
 
 ```swift
-let storageManager = StorageManager()
-
 // Configure memory storage
 let memoryConfig = MemoryStorageConfiguration()
 memoryConfig.maxSize = 50 * 1024 * 1024 // 50MB
@@ -578,15 +575,17 @@ storageManager.clearMemory()
 let usage = storageManager.getMemoryUsage()
 print("Memory used: \(usage.used)")
 print("Memory available: \(usage.available)")
+
+// Check memory pressure
+let pressure = storageManager.getMemoryPressure()
+print("Memory pressure: \(pressure)")
 ```
 
 ### Optimized Storage
 
-Optimize storage performance:
+Optimize storage performance.
 
 ```swift
-let storageManager = StorageManager()
-
 // Configure optimization
 let optimizationConfig = StorageOptimizationConfiguration()
 optimizationConfig.enableCompression = true
@@ -611,17 +610,18 @@ let stats = storageManager.getStorageStatistics()
 print("Total space: \(stats.totalSpace)")
 print("Used space: \(stats.usedSpace)")
 print("Free space: \(stats.freeSpace)")
+
+// Clean up old files
+storageManager.cleanupOldFiles(olderThan: 30 * 24 * 60 * 60) // 30 days
 ```
 
 ## Storage Management
 
 ### Storage Monitoring
 
-Monitor storage usage:
+Monitor storage usage.
 
 ```swift
-let storageManager = StorageManager()
-
 // Start monitoring
 storageManager.startStorageMonitoring()
 
@@ -638,37 +638,19 @@ storageManager.onStorageSpaceLow = { availableSpace in
 let usage = storageManager.getCurrentStorageUsage()
 print("Usage: \(usage.percentage)%")
 print("Available: \(usage.availableSpace) bytes")
-```
 
-### Storage Cleanup
-
-Clean up storage:
-
-```swift
-let storageManager = StorageManager()
-
-// Clean up old files
-storageManager.cleanupOldFiles(olderThan: 30 * 24 * 60 * 60) // 30 days
-
-// Clean up temporary files
-storageManager.cleanupTemporaryFiles()
-
-// Clean up cache
-storageManager.cleanupCache()
-
-// Get cleanup statistics
-let cleanupStats = storageManager.getCleanupStatistics()
-print("Files removed: \(cleanupStats.filesRemoved)")
-print("Space freed: \(cleanupStats.spaceFreed)")
+// Get storage breakdown
+let breakdown = storageManager.getStorageBreakdown()
+print("Documents: \(breakdown.documents)")
+print("Cache: \(breakdown.cache)")
+print("Temporary: \(breakdown.temporary)")
 ```
 
 ### Storage Backup
 
-Backup storage data:
+Backup storage data.
 
 ```swift
-let storageManager = StorageManager()
-
 // Create backup
 storageManager.createBackup { result in
     switch result {
@@ -694,6 +676,147 @@ storageManager.restoreFromBackup("backup_2024_01_01.zip") { result in
 let backups = storageManager.listBackups()
 for backup in backups {
     print("Backup: \(backup.name) - \(backup.date)")
+}
+
+// Delete old backups
+storageManager.cleanupOldBackups(olderThan: 7 * 24 * 60 * 60) // 7 days
+```
+
+### Storage Cleanup
+
+Clean up storage.
+
+```swift
+// Clean up old files
+storageManager.cleanupOldFiles(olderThan: 30 * 24 * 60 * 60) // 30 days
+
+// Clean up temporary files
+storageManager.cleanupTemporaryFiles()
+
+// Clean up cache
+storageManager.cleanupCache()
+
+// Get cleanup statistics
+let cleanupStats = storageManager.getCleanupStatistics()
+print("Files removed: \(cleanupStats.filesRemoved)")
+print("Space freed: \(cleanupStats.spaceFreed)")
+
+// Validate storage integrity
+storageManager.validateStorageIntegrity { result in
+    switch result {
+    case .success(let integrity):
+        print("Storage integrity: \(integrity)")
+    case .failure(let error):
+        print("Integrity check error: \(error)")
+    }
+}
+```
+
+## Error Handling
+
+### Storage Error Handling
+
+Handle storage errors gracefully.
+
+```swift
+// Handle file operations
+do {
+    try storageManager.saveToFile(data, filename: "test.txt")
+} catch StorageError.fileExists {
+    print("File already exists")
+} catch StorageError.invalidData {
+    print("Invalid data format")
+} catch StorageError.encryptionFailed {
+    print("Encryption failed")
+} catch {
+    print("Unknown storage error: \(error)")
+}
+
+// Handle database operations
+do {
+    try storageManager.saveToDatabase(data, key: "user_data")
+} catch StorageError.databaseError(let error) {
+    print("Database error: \(error)")
+} catch {
+    print("Unknown database error: \(error)")
+}
+
+// Handle cloud operations
+do {
+    try storageManager.saveToCloud(data, filename: "cloud_file.txt", service: .iCloud)
+} catch StorageError.cloudServiceUnavailable {
+    print("Cloud service unavailable")
+} catch StorageError.networkError(let error) {
+    print("Network error: \(error)")
+} catch {
+    print("Unknown cloud error: \(error)")
+}
+```
+
+## Usage Examples
+
+### Basic Storage Setup
+
+Set up storage for your app.
+
+```swift
+import iOSDevelopmentTools
+
+// Initialize storage
+let storageManager = StorageManager()
+
+// Configure storage
+let config = StorageConfiguration()
+config.enableFileStorage = true
+config.enableDatabaseStorage = true
+config.enableCloudStorage = true
+config.enableEncryption = true
+config.maxFileSize = 100 * 1024 * 1024 // 100MB
+
+storageManager.configure(config)
+
+// Save user data
+let userData = ["name": "John Doe", "email": "john@example.com"]
+try storageManager.saveToFile(userData, filename: "user_profile.json")
+```
+
+### Secure Data Storage
+
+Store sensitive data securely.
+
+```swift
+// Store authentication token
+try storageManager.saveToKeychain("auth_token_123", forKey: "auth_token")
+
+// Store encrypted user data
+let sensitiveData = ["ssn": "123-45-6789", "credit_card": "4111-1111-1111-1111"]
+try storageManager.saveEncryptedData(sensitiveData, filename: "secure_user_data.enc")
+
+// Store in secure file
+try storageManager.saveSecureFile("confidential_document", filename: "document.txt")
+```
+
+### Cloud Storage Integration
+
+Integrate with cloud storage.
+
+```swift
+// Save to iCloud
+let userData = ["name": "John Doe", "email": "john@example.com"]
+try storageManager.saveToCloud(userData, filename: "user_profile.json", service: .iCloud)
+
+// Save to CloudKit
+let record = CKRecord(recordType: "User")
+record["name"] = "John Doe"
+record["email"] = "john@example.com"
+
+storageManager.saveToCloudKit(record) { result in
+    switch result {
+    case .success(let savedRecord):
+        print("Saved to CloudKit: \(savedRecord.recordID)")
+    case .failure(let error):
+        print("CloudKit save error: \(error)")
+    }
 }
 ```
 
@@ -725,37 +848,4 @@ for backup in backups {
 1. **Storage Types**: Choose appropriate storage types
 2. **Data Lifecycle**: Implement data lifecycle management
 3. **Monitoring**: Monitor storage usage
-4. **Cleanup**: Regular cleanup of old data
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Storage Full**: Implement cleanup and compression
-2. **Slow Performance**: Optimize storage and use caching
-3. **Data Corruption**: Implement data validation and backups
-4. **Security Issues**: Review encryption and access controls
-
-### Debugging Storage
-
-```swift
-let storageManager = StorageManager()
-
-// Enable debug mode
-storageManager.enableDebugMode()
-
-// Check storage status
-let status = storageManager.getStorageStatus()
-print("Storage Status: \(status)")
-
-// Check file integrity
-let integrity = storageManager.checkFileIntegrity("important_file.json")
-print("File integrity: \(integrity)")
-```
-
-### Getting Help
-
-- Check the [API Documentation](StorageAPI.md) for detailed information
-- Review [Best Practices Guide](BestPracticesGuide.md) for storage guidelines
-- Consult the [Troubleshooting Guide](TroubleshootingGuide.md) for common issues
-- Join our community for support and discussions 
+4. **Cleanup**: Regular cleanup of old data 
