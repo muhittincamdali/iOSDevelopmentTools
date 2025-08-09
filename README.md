@@ -1,4 +1,5 @@
 # 🛠️ iOS Development Tools
+[![CI](https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml)
 
 <!-- TOC START -->
 ## Table of Contents
