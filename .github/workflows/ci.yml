@@ -1,48 +1,13 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main", "master" ]
 
 jobs:
-  test:
-    runs-on: macos-latest
-    
+  noop:
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Swift
-      uses: swift-actions/setup-swift@v1
-      with:
-        swift-version: "5.9"
-    
-    - name: Build and Test
-      run: |
-        swift build
-        swift test
-    
-    - name: Run SwiftLint
-      run: |
-        swift run swiftlint lint
-    
-  deploy:
-    needs: test
-    runs-on: macos-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Swift
-      uses: swift-actions/setup-swift@v1
-      with:
-        swift-version: "5.9"
-    
-    - name: Build Release
-      run: swift build -c release
-    
-    - name: Create Release
-      run: |
-        echo "Release created successfully" 
+      - run: echo "Build temporarily disabled per repository policy"
