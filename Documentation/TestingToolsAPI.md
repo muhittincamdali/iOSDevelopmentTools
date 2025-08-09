@@ -1,5 +1,49 @@
 # Testing Tools API
 
+<!-- TOC START -->
+## Table of Contents
+- [Testing Tools API](#testing-tools-api)
+- [Overview](#overview)
+- [Core Components](#core-components)
+  - [AutomatedTestingManager](#automatedtestingmanager)
+  - [TestingConfiguration](#testingconfiguration)
+  - [TestResults](#testresults)
+- [Unit Testing](#unit-testing)
+  - [UnitTestManager](#unittestmanager)
+  - [UnitTestResults](#unittestresults)
+- [UI Testing](#ui-testing)
+  - [UITestManager](#uitestmanager)
+  - [UITestResults](#uitestresults)
+- [Integration Testing](#integration-testing)
+  - [IntegrationTestManager](#integrationtestmanager)
+  - [IntegrationTestResults](#integrationtestresults)
+- [Performance Testing](#performance-testing)
+  - [PerformanceTestManager](#performancetestmanager)
+  - [PerformanceTestResults](#performancetestresults)
+- [Security Testing](#security-testing)
+  - [SecurityTestManager](#securitytestmanager)
+  - [SecurityTestResults](#securitytestresults)
+- [Accessibility Testing](#accessibility-testing)
+  - [AccessibilityTestManager](#accessibilitytestmanager)
+  - [AccessibilityTestResults](#accessibilitytestresults)
+- [Localization Testing](#localization-testing)
+  - [LocalizationTestManager](#localizationtestmanager)
+  - [LocalizationTestResults](#localizationtestresults)
+- [Device Testing](#device-testing)
+  - [DeviceTestManager](#devicetestmanager)
+  - [DeviceTestResults](#devicetestresults)
+- [Error Handling](#error-handling)
+  - [TestingError](#testingerror)
+- [Usage Examples](#usage-examples)
+  - [Basic Testing Setup](#basic-testing-setup)
+  - [Performance Testing](#performance-testing)
+  - [Security Testing](#security-testing)
+- [Best Practices](#best-practices)
+- [Integration with CI/CD](#integration-with-cicd)
+- [Reporting](#reporting)
+<!-- TOC END -->
+
+
 ## Overview
 
 The Testing Tools API provides comprehensive testing capabilities for iOS applications, including unit testing, UI testing, integration testing, and performance testing.

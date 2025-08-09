@@ -1,5 +1,55 @@
 # Analytics Guide
 
+<!-- TOC START -->
+## Table of Contents
+- [Analytics Guide](#analytics-guide)
+- [Introduction](#introduction)
+- [Table of Contents](#table-of-contents)
+- [Getting Started with Analytics](#getting-started-with-analytics)
+  - [Prerequisites](#prerequisites)
+  - [Basic Setup](#basic-setup)
+  - [Analytics Types](#analytics-types)
+- [Basic Analytics](#basic-analytics)
+  - [Event Tracking](#event-tracking)
+  - [User Properties](#user-properties)
+  - [Screen Tracking](#screen-tracking)
+- [Advanced Analytics](#advanced-analytics)
+  - [Custom Events](#custom-events)
+  - [Cohort Analysis](#cohort-analysis)
+  - [A/B Testing Analytics](#ab-testing-analytics)
+- [User Behavior Analytics](#user-behavior-analytics)
+  - [User Journey Tracking](#user-journey-tracking)
+  - [User Engagement](#user-engagement)
+  - [User Segmentation](#user-segmentation)
+- [Performance Analytics](#performance-analytics)
+  - [App Performance](#app-performance)
+  - [Network Performance](#network-performance)
+  - [Memory and CPU Usage](#memory-and-cpu-usage)
+- [Custom Analytics](#custom-analytics)
+  - [Custom Metrics](#custom-metrics)
+  - [Custom Dimensions](#custom-dimensions)
+  - [Custom Funnels](#custom-funnels)
+- [Analytics Integration](#analytics-integration)
+  - [Third-Party Analytics](#third-party-analytics)
+  - [Real-Time Analytics](#real-time-analytics)
+  - [Batch Analytics](#batch-analytics)
+- [Data Privacy](#data-privacy)
+  - [GDPR Compliance](#gdpr-compliance)
+  - [Data Anonymization](#data-anonymization)
+  - [Data Retention](#data-retention)
+- [Best Practices](#best-practices)
+  - [Event Naming](#event-naming)
+  - [Property Tracking](#property-tracking)
+  - [Performance Optimization](#performance-optimization)
+  - [Privacy Best Practices](#privacy-best-practices)
+  - [Analytics Strategy](#analytics-strategy)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Debugging Analytics](#debugging-analytics)
+  - [Getting Help](#getting-help)
+<!-- TOC END -->
+
+
 ## Introduction
 
 This comprehensive analytics guide covers all aspects of analytics implementation in iOS applications using the iOS Development Tools framework. From basic event tracking to advanced user behavior analysis and performance analytics, this guide provides everything you need to implement effective analytics strategies.

@@ -1,5 +1,42 @@
 # Analytics API
 
+<!-- TOC START -->
+## Table of Contents
+- [Analytics API](#analytics-api)
+- [Overview](#overview)
+- [Core Components](#core-components)
+  - [AnalyticsManager](#analyticsmanager)
+  - [AnalyticsConfiguration](#analyticsconfiguration)
+  - [AnalyticsEvent](#analyticsevent)
+- [Event Tracking](#event-tracking)
+  - [Basic Event Tracking](#basic-event-tracking)
+  - [Custom Event Tracking](#custom-event-tracking)
+- [User Analytics](#user-analytics)
+  - [User Properties](#user-properties)
+  - [User Segmentation](#user-segmentation)
+- [Performance Analytics](#performance-analytics)
+  - [Performance Tracking](#performance-tracking)
+  - [Error Tracking](#error-tracking)
+- [Custom Analytics](#custom-analytics)
+  - [Custom Metrics](#custom-metrics)
+  - [Custom Dimensions](#custom-dimensions)
+- [Batch Operations](#batch-operations)
+  - [Event Batching](#event-batching)
+- [Error Handling](#error-handling)
+  - [AnalyticsError](#analyticserror)
+  - [Error Handling Examples](#error-handling-examples)
+- [Usage Examples](#usage-examples)
+  - [Basic Analytics Setup](#basic-analytics-setup)
+  - [User Journey Tracking](#user-journey-tracking)
+  - [Performance Monitoring](#performance-monitoring)
+- [Best Practices](#best-practices)
+  - [Event Naming](#event-naming)
+  - [Property Tracking](#property-tracking)
+  - [Performance Optimization](#performance-optimization)
+  - [Privacy Best Practices](#privacy-best-practices)
+<!-- TOC END -->
+
+
 ## Overview
 
 The Analytics API provides comprehensive analytics capabilities for iOS applications, including event tracking, user analytics, performance monitoring, and custom analytics implementations.

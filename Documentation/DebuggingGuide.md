@@ -1,5 +1,32 @@
 # 🐛 Debugging Guide
 
+<!-- TOC START -->
+## Table of Contents
+- [🐛 Debugging Guide](#-debugging-guide)
+- [📋 Table of Contents](#-table-of-contents)
+- [📝 Logger](#-logger)
+  - [**Basic Usage**](#basic-usage)
+  - [**Configuration**](#configuration)
+  - [**Advanced Logging**](#advanced-logging)
+- [⚡ Performance Monitoring](#-performance-monitoring)
+  - [**Performance Monitor**](#performance-monitor)
+  - [**Memory Monitoring**](#memory-monitoring)
+  - [**CPU Monitoring**](#cpu-monitoring)
+- [💥 Crash Reporting](#-crash-reporting)
+  - [**Crash Reporter**](#crash-reporter)
+- [🌐 Network Debugging](#-network-debugging)
+  - [**Network Debugger**](#network-debugger)
+  - [**Network Interceptor**](#network-interceptor)
+- [🧠 Memory Debugging](#-memory-debugging)
+  - [**Memory Leak Detector**](#memory-leak-detector)
+  - [**Memory Usage Tracker**](#memory-usage-tracker)
+- [🔧 Debug Tools](#-debug-tools)
+  - [**Debug Menu**](#debug-menu)
+- [📚 Next Steps](#-next-steps)
+- [🤝 Support](#-support)
+<!-- TOC END -->
+
+
 Complete debugging utilities documentation for iOS Development Tools.
 
 ## 📋 Table of Contents

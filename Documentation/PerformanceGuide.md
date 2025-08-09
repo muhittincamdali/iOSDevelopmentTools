@@ -1,5 +1,47 @@
 # Performance Guide
 
+<!-- TOC START -->
+## Table of Contents
+- [Performance Guide](#performance-guide)
+- [Introduction](#introduction)
+- [Table of Contents](#table-of-contents)
+- [Performance Fundamentals](#performance-fundamentals)
+  - [Performance Metrics](#performance-metrics)
+  - [Performance Targets](#performance-targets)
+  - [Performance Profiling](#performance-profiling)
+- [Memory Optimization](#memory-optimization)
+  - [Memory Management Best Practices](#memory-management-best-practices)
+  - [Image Memory Optimization](#image-memory-optimization)
+  - [Memory Leak Detection](#memory-leak-detection)
+- [CPU Optimization](#cpu-optimization)
+  - [Algorithm Optimization](#algorithm-optimization)
+  - [Background Processing](#background-processing)
+- [Network Optimization](#network-optimization)
+  - [Request Optimization](#request-optimization)
+  - [Image Loading Optimization](#image-loading-optimization)
+- [UI Performance](#ui-performance)
+  - [SwiftUI Performance Optimization](#swiftui-performance-optimization)
+  - [UIKit Performance Optimization](#uikit-performance-optimization)
+  - [Animation Optimization](#animation-optimization)
+- [Battery Optimization](#battery-optimization)
+  - [Battery-Aware Operations](#battery-aware-operations)
+  - [Background Task Optimization](#background-task-optimization)
+- [Launch Time Optimization](#launch-time-optimization)
+  - [App Launch Optimization](#app-launch-optimization)
+  - [Lazy Loading](#lazy-loading)
+- [Storage Optimization](#storage-optimization)
+  - [Data Storage Optimization](#data-storage-optimization)
+  - [Cache Management](#cache-management)
+- [Background Processing](#background-processing)
+  - [Background Task Management](#background-task-management)
+  - [Background App Refresh](#background-app-refresh)
+- [Performance Monitoring](#performance-monitoring)
+  - [Real-Time Performance Monitoring](#real-time-performance-monitoring)
+  - [Performance Reporting](#performance-reporting)
+- [Conclusion](#conclusion)
+<!-- TOC END -->
+
+
 ## Introduction
 
 This comprehensive performance guide covers all aspects of performance optimization for iOS applications using the iOS Development Tools framework. From memory management to UI optimization, this guide provides essential techniques for building high-performance iOS applications.

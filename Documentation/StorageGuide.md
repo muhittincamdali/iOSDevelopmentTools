@@ -1,5 +1,54 @@
 # Storage Guide
 
+<!-- TOC START -->
+## Table of Contents
+- [Storage Guide](#storage-guide)
+- [Introduction](#introduction)
+- [Table of Contents](#table-of-contents)
+- [Getting Started with Storage](#getting-started-with-storage)
+  - [Prerequisites](#prerequisites)
+  - [Basic Setup](#basic-setup)
+  - [Storage Types](#storage-types)
+- [Basic Storage](#basic-storage)
+  - [File Storage](#file-storage)
+  - [Data Types](#data-types)
+  - [File Operations](#file-operations)
+- [Advanced Storage](#advanced-storage)
+  - [Structured Data Storage](#structured-data-storage)
+  - [Binary Data Storage](#binary-data-storage)
+  - [Compressed Storage](#compressed-storage)
+- [Database Storage](#database-storage)
+  - [SQLite Database](#sqlite-database)
+  - [Core Data Integration](#core-data-integration)
+  - [Database Migrations](#database-migrations)
+- [Cloud Storage](#cloud-storage)
+  - [iCloud Integration](#icloud-integration)
+  - [CloudKit Integration](#cloudkit-integration)
+  - [Third-Party Cloud Services](#third-party-cloud-services)
+- [Security Storage](#security-storage)
+  - [Keychain Storage](#keychain-storage)
+  - [Encrypted Storage](#encrypted-storage)
+  - [Secure File Storage](#secure-file-storage)
+- [Performance Storage](#performance-storage)
+  - [Caching](#caching)
+  - [Memory Storage](#memory-storage)
+  - [Optimized Storage](#optimized-storage)
+- [Storage Management](#storage-management)
+  - [Storage Monitoring](#storage-monitoring)
+  - [Storage Cleanup](#storage-cleanup)
+  - [Storage Backup](#storage-backup)
+- [Best Practices](#best-practices)
+  - [Data Organization](#data-organization)
+  - [Performance Optimization](#performance-optimization)
+  - [Security Best Practices](#security-best-practices)
+  - [Storage Strategy](#storage-strategy)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Debugging Storage](#debugging-storage)
+  - [Getting Help](#getting-help)
+<!-- TOC END -->
+
+
 ## Introduction
 
 This comprehensive storage guide covers all aspects of data storage in iOS applications using the iOS Development Tools framework. From basic file operations to advanced database management and cloud storage integration, this guide provides everything you need to implement effective storage strategies.

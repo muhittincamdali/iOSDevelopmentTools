@@ -1,5 +1,35 @@
 # Testing Guide
 
+<!-- TOC START -->
+## Table of Contents
+- [Testing Guide](#testing-guide)
+- [Introduction](#introduction)
+- [Table of Contents](#table-of-contents)
+- [Getting Started with Testing](#getting-started-with-testing)
+  - [Prerequisites](#prerequisites)
+  - [Basic Setup](#basic-setup)
+  - [Test Project Structure](#test-project-structure)
+- [Unit Testing](#unit-testing)
+  - [Writing Unit Tests](#writing-unit-tests)
+  - [Mocking and Stubbing](#mocking-and-stubbing)
+  - [Test Coverage](#test-coverage)
+- [UI Testing](#ui-testing)
+  - [Recording UI Tests](#recording-ui-tests)
+  - [Writing UI Tests Programmatically](#writing-ui-tests-programmatically)
+- [Performance Testing](#performance-testing)
+  - [Launch Time Testing](#launch-time-testing)
+  - [Memory Usage Testing](#memory-usage-testing)
+- [Best Practices](#best-practices)
+  - [Test Organization](#test-organization)
+  - [Performance Considerations](#performance-considerations)
+  - [Maintenance](#maintenance)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Debugging Tests](#debugging-tests)
+  - [Getting Help](#getting-help)
+<!-- TOC END -->
+
+
 ## Introduction
 
 This comprehensive testing guide covers all aspects of testing iOS applications using the iOS Development Tools framework. From unit testing to performance testing, this guide provides everything you need to ensure your app is robust, reliable, and performant.
