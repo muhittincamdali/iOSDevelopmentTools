@@ -597,8 +597,8 @@ Comprehensive API documentation is available for all public interfaces:
 
 ### Examples
 
-* [Basic Examples](Examples/BasicExamples/) - Simple development tool implementations
-* [Advanced Examples](Examples/AdvancedExamples/) - Complex development scenarios
+* [Basic Examples](Examples/BasicExample/) - Simple development tool implementations
+* [Advanced Examples](Examples/AdvancedExample/) - Complex development scenarios
 * [Debugging Examples](Examples/DebuggingExamples/) - Debugging examples
 * [Profiling Examples](Examples/ProfilingExamples/) - Profiling examples
 * [Testing Examples](Examples/TestingExamples/) - Testing examples
@@ -656,15 +656,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-[![GitHub stars](https://img.shields.io/github/stars/muhittincamdali/iOSDevelopmentTools?style=social)](https://github.com/muhittincamdali/iOSDevelopmentTools/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/muhittincamdali/iOSDevelopmentTools?style=social)](https://github.com/muhittincamdali/iOSDevelopmentTools/network)
-[![GitHub issues](https://img.shields.io/github/issues/muhittincamdali/iOSDevelopmentTools)](https://github.com/muhittincamdali/iOSDevelopmentTools/issues)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/muhittincamdali/iOSDevelopmentTools)](https://github.com/muhittincamdali/iOSDevelopmentTools/pulls)
-[![GitHub contributors](https://img.shields.io/github/contributors/muhittincamdali/iOSDevelopmentTools)](https://github.com/muhittincamdali/iOSDevelopmentTools/graphs/contributors)
-[![GitHub last commit](https://img.shields.io/github/last-commit/muhittincamdali/iOSDevelopmentTools)](https://github.com/muhittincamdali/iOSDevelopmentTools/commits/master)
+[![GitHub stats](https://github-readme-stats.vercel.app/api?username=muhittincamdali&show_icons=true&theme=radical)](https://github.com/muhittincamdali)
+[![Top Languages](https://github-readme-stats.vercel.app/api/top-langs/?username=muhittincamdali&layout=compact&theme=radical)](https://github.com/muhittincamdali)
+[![Profile Views](https://komarev.com/ghpvc/?username=muhittincamdali&color=brightgreen)](https://github.com/muhittincamdali)
+[![GitHub Streak](https://streak-stats.demolab.com/?user=muhittincamdali&theme=radical)](https://github.com/muhittincamdali)
+
+[![GitHub stars](https://img.shields.io/github/stars/muhittincamdali/iOSDevelopmentTools?style=flat-square&logo=github)](https://github.com/muhittincamdali/iOSDevelopmentTools/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/muhittincamdali/iOSDevelopmentTools?style=flat-square&logo=github)](https://github.com/muhittincamdali/iOSDevelopmentTools/network)
+[![GitHub issues](https://img.shields.io/github/issues/muhittincamdali/iOSDevelopmentTools?style=flat-square&logo=github)](https://github.com/muhittincamdali/iOSDevelopmentTools/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/muhittincamdali/iOSDevelopmentTools?style=flat-square&logo=github)](https://github.com/muhittincamdali/iOSDevelopmentTools/pulls)
+[![GitHub contributors](https://img.shields.io/github/contributors/muhittincamdali/iOSDevelopmentTools?style=flat-square&logo=github)](https://github.com/muhittincamdali/iOSDevelopmentTools/graphs/contributors)
+[![GitHub last commit](https://img.shields.io/github/last-commit/muhittincamdali/iOSDevelopmentTools?style=flat-square&logo=github)](https://github.com/muhittincamdali/iOSDevelopmentTools/commits/master)
 
 </div>
 
 ## 🌟 Stargazers
 
-[![Stargazers repo roster for @muhittincamdali/iOSDevelopmentTools](https://reporoster.com/stars/muhittincamdali/iOSDevelopmentTools)](https://github.com/muhittincamdali/iOSDevelopmentTools/stargazers)
+[![Stargazers repo roster for @muhittincamdali/iOSDevelopmentTools](https://starchart.cc/muhittincamdali/iOSDevelopmentTools.svg)](https://github.com/muhittincamdali/iOSDevelopmentTools/stargazers)
