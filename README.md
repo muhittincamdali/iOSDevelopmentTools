@@ -676,3 +676,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🌟 Stargazers
 
 [![Stargazers repo roster for @muhittincamdali/iOSDevelopmentTools](https://starchart.cc/muhittincamdali/iOSDevelopmentTools.svg)](https://github.com/muhittincamdali/iOSDevelopmentTools/stargazers)
+## 🌟 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=muhittincamdali/iOSDevelopmentTools&type=Date)](https://star-history.com/#muhittincamdali/iOSDevelopmentTools&Date)
+
