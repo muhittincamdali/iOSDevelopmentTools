@@ -1,0 +1,112 @@
+error: 'iosdevelopmenttools': Invalid manifest (compiled with: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc", "-vfsoverlay", "/var/folders/q6/t22gr5r968j7tv3w6dblt_nc0000gn/T/TemporaryDirectory.VeIYkl/vfs.yaml", "-L", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/pm/ManifestAPI", "-lPackageDescription", "-Xlinker", "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/pm/ManifestAPI", "-target", "x86_64-apple-macosx14.0", "-sdk", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk", "-F", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks", "-F", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks", "-I", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib", "-L", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib", "-swift-version", "5", "-I", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/pm/ManifestAPI", "-sdk", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk", "-package-description-version", "5.9.0", "/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift", "-o", "/var/folders/q6/t22gr5r968j7tv3w6dblt_nc0000gn/T/TemporaryDirectory.Psielw/iosdevelopmenttools-manifest"])
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:185:20: error: extra argument 'swiftSettings' in call
+183 |         )
+184 |     ],
+185 |     swiftSettings: [
+    |                    `- error: extra argument 'swiftSettings' in call
+186 |         .define("SWIFT_PACKAGE"),
+187 |         .define("iOS_DEVELOPMENT_TOOLS_VERSION", to: "1.0.0"),
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:10:10: error: type 'Array<SupportedPlatform>.ArrayLiteralElement' (aka 'SupportedPlatform') has no member 'iPadOS'
+  8 |     platforms: [
+  9 |         .iOS(.v15),
+ 10 |         .iPadOS(.v15),
+    |          `- error: type 'Array<SupportedPlatform>.ArrayLiteralElement' (aka 'SupportedPlatform') has no member 'iPadOS'
+ 11 |         .macOS(.v12),
+ 12 |         .watchOS(.v8),
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:10:18: error: cannot infer contextual base in reference to member 'v15'
+  8 |     platforms: [
+  9 |         .iOS(.v15),
+ 10 |         .iPadOS(.v15),
+    |                  `- error: cannot infer contextual base in reference to member 'v15'
+ 11 |         .macOS(.v12),
+ 12 |         .watchOS(.v8),
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:186:10: error: type 'Any' has no member 'define'
+184 |     ],
+185 |     swiftSettings: [
+186 |         .define("SWIFT_PACKAGE"),
+    |          `- error: type 'Any' has no member 'define'
+187 |         .define("iOS_DEVELOPMENT_TOOLS_VERSION", to: "1.0.0"),
+188 |         .define("MINIMUM_IOS_VERSION", to: "15.0"),
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:187:10: error: type 'Any' has no member 'define'
+185 |     swiftSettings: [
+186 |         .define("SWIFT_PACKAGE"),
+187 |         .define("iOS_DEVELOPMENT_TOOLS_VERSION", to: "1.0.0"),
+    |          `- error: type 'Any' has no member 'define'
+188 |         .define("MINIMUM_IOS_VERSION", to: "15.0"),
+189 |         .unsafeFlags(["-enable-testing"])
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:188:10: error: type 'Any' has no member 'define'
+186 |         .define("SWIFT_PACKAGE"),
+187 |         .define("iOS_DEVELOPMENT_TOOLS_VERSION", to: "1.0.0"),
+188 |         .define("MINIMUM_IOS_VERSION", to: "15.0"),
+    |          `- error: type 'Any' has no member 'define'
+189 |         .unsafeFlags(["-enable-testing"])
+190 |     ]
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:189:10: error: type 'Any' has no member 'unsafeFlags'
+187 |         .define("iOS_DEVELOPMENT_TOOLS_VERSION", to: "1.0.0"),
+188 |         .define("MINIMUM_IOS_VERSION", to: "15.0"),
+189 |         .unsafeFlags(["-enable-testing"])
+    |          `- error: type 'Any' has no member 'unsafeFlags'
+190 |     ]
+191 | )
+error: 'iosdevelopmenttools': Invalid manifest (compiled with: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc", "-vfsoverlay", "/var/folders/q6/t22gr5r968j7tv3w6dblt_nc0000gn/T/TemporaryDirectory.GH5Glp/vfs.yaml", "-L", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/pm/ManifestAPI", "-lPackageDescription", "-Xlinker", "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/pm/ManifestAPI", "-target", "x86_64-apple-macosx14.0", "-sdk", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk", "-F", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks", "-F", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks", "-I", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib", "-L", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib", "-swift-version", "5", "-I", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/pm/ManifestAPI", "-sdk", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk", "-package-description-version", "5.9.0", "/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift", "-o", "/var/folders/q6/t22gr5r968j7tv3w6dblt_nc0000gn/T/TemporaryDirectory.rUjIyh/iosdevelopmenttools-manifest"])
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:185:20: error: extra argument 'swiftSettings' in call
+183 |         )
+184 |     ],
+185 |     swiftSettings: [
+    |                    `- error: extra argument 'swiftSettings' in call
+186 |         .define("SWIFT_PACKAGE"),
+187 |         .define("iOS_DEVELOPMENT_TOOLS_VERSION", to: "1.0.0"),
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:10:10: error: type 'Array<SupportedPlatform>.ArrayLiteralElement' (aka 'SupportedPlatform') has no member 'iPadOS'
+  8 |     platforms: [
+  9 |         .iOS(.v15),
+ 10 |         .iPadOS(.v15),
+    |          `- error: type 'Array<SupportedPlatform>.ArrayLiteralElement' (aka 'SupportedPlatform') has no member 'iPadOS'
+ 11 |         .macOS(.v12),
+ 12 |         .watchOS(.v8),
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:10:18: error: cannot infer contextual base in reference to member 'v15'
+  8 |     platforms: [
+  9 |         .iOS(.v15),
+ 10 |         .iPadOS(.v15),
+    |                  `- error: cannot infer contextual base in reference to member 'v15'
+ 11 |         .macOS(.v12),
+ 12 |         .watchOS(.v8),
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:186:10: error: type 'Any' has no member 'define'
+184 |     ],
+185 |     swiftSettings: [
+186 |         .define("SWIFT_PACKAGE"),
+    |          `- error: type 'Any' has no member 'define'
+187 |         .define("iOS_DEVELOPMENT_TOOLS_VERSION", to: "1.0.0"),
+188 |         .define("MINIMUM_IOS_VERSION", to: "15.0"),
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:187:10: error: type 'Any' has no member 'define'
+185 |     swiftSettings: [
+186 |         .define("SWIFT_PACKAGE"),
+187 |         .define("iOS_DEVELOPMENT_TOOLS_VERSION", to: "1.0.0"),
+    |          `- error: type 'Any' has no member 'define'
+188 |         .define("MINIMUM_IOS_VERSION", to: "15.0"),
+189 |         .unsafeFlags(["-enable-testing"])
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:188:10: error: type 'Any' has no member 'define'
+186 |         .define("SWIFT_PACKAGE"),
+187 |         .define("iOS_DEVELOPMENT_TOOLS_VERSION", to: "1.0.0"),
+188 |         .define("MINIMUM_IOS_VERSION", to: "15.0"),
+    |          `- error: type 'Any' has no member 'define'
+189 |         .unsafeFlags(["-enable-testing"])
+190 |     ]
+
+/Users/muhittincamdali/Desktop/Cursor Projects/GitHub/iOSDevelopmentTools/Package.swift:189:10: error: type 'Any' has no member 'unsafeFlags'
+187 |         .define("iOS_DEVELOPMENT_TOOLS_VERSION", to: "1.0.0"),
+188 |         .define("MINIMUM_IOS_VERSION", to: "15.0"),
+189 |         .unsafeFlags(["-enable-testing"])
+    |          `- error: type 'Any' has no member 'unsafeFlags'
+190 |     ]
+191 | )
