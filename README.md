@@ -1,5 +1,5 @@
 # 🛠️ iOS Development Tools
-[![CI](https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml)
+[![CI](https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg)](https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml)
 
 
 
@@ -17,7 +17,6 @@
 ![Documentation](https://img.shields.io/badge/Documentation-Generator-795548?style=for-the-badge)
 ![Architecture](https://img.shields.io/badge/Architecture-Clean-FF5722?style=for-the-badge)
 ![Swift Package Manager](https://img.shields.io/badge/SPM-Dependencies-FF6B35?style=for-the-badge)
-![CocoaPods](https://img.shields.io/badge/CocoaPods-Supported-E91E63?style=for-the-badge)
 
 **🏆 Professional iOS Development Tools Collection**
 
