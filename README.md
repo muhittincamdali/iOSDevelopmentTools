@@ -1,26 +1,99 @@
-# iOS Development Tools
+```
+    ___  ____  ____    ____                 __                                  __
+   /  _]/ __ \/ __/   / __ \___ _  _____   / /_____  ____  ___ ___  ___  ____  / /_
+  _/ / / /_/ /\ \    / / / / -_) |/ / -_) / __/ __ \/ __ \/ _ ` _ \/ -_)/ __ \/ __/
+ /___/ \____/___/   /_/_/_/\__/|___/\__/  \__/\____/\____/_/\_,_,_/\__//_/ /_/\__/
+                   / /   / __ \/ __ \/ /  / ___/
+                  / /   / /_/ / /_/ / /___\__ \
+                 /_/    \____/\____/_____/___/
+```
 
 <p align="center">
-  <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?style=flat&logo=swift&logoColor=white" alt="Swift"></a>
-  <a href="https://developer.apple.com/ios/"><img src="https://img.shields.io/badge/iOS-15.0+-000000?style=flat&logo=apple&logoColor=white" alt="iOS"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"></a>
+  <strong>🛠️ Essential iOS Development Toolkit</strong>
 </p>
 
 <p align="center">
-  <b>Essential utilities and helpers for iOS development.</b>
+  <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?style=for-the-badge&logo=swift&logoColor=white" alt="Swift 5.9+"></a>
+  <a href="https://developer.apple.com/ios/"><img src="https://img.shields.io/badge/iOS-15.0+-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS 15.0+"></a>
+  <a href="https://swift.org/package-manager/"><img src="https://img.shields.io/badge/SPM-Compatible-blue?style=for-the-badge&logo=swift&logoColor=white" alt="SPM Compatible"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License"></a>
+</p>
+
+<p align="center">
+  <a href="#installation">Installation</a> •
+  <a href="#tools-overview">Tools</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#documentation">Docs</a> •
+  <a href="#contributing">Contributing</a>
 </p>
 
 ---
 
-## Features
+## Why iOSDevelopmentTools?
 
-- **Extensions** — Useful extensions for Foundation and UIKit/SwiftUI
-- **Utilities** — Common helper functions and types
-- **Debugging** — Debug tools and logging utilities
-- **Storage** — UserDefaults, Keychain, and file management helpers
-- **Validation** — Input validation and formatting
+Stop reinventing the wheel. This toolkit provides **battle-tested, production-ready** components that every iOS app needs:
+
+- ✅ **Type-safe networking** with async/await and Combine support
+- ✅ **Secure storage** with Keychain, UserDefaults, and encrypted file storage
+- ✅ **Structured logging** with multiple output destinations
+- ✅ **Analytics abstraction** supporting multiple providers
+- ✅ **Utility extensions** for everyday Swift development
+
+---
+
+## Tools Overview
+
+| Tool | Description | Key Features |
+|------|-------------|--------------|
+| 🌐 **NetworkTools** | Modern HTTP client | Async/await, Combine, retry logic, interceptors |
+| 💾 **StorageTools** | Unified storage layer | Keychain, UserDefaults, file storage, encryption |
+| 🔍 **DebugTools** | Structured logging | Multi-level, file/console/remote output |
+| 📊 **AnalyticsTools** | Analytics abstraction | Multi-provider, event tracking, user properties |
+| 🧰 **UtilityTools** | Swift extensions | String, Date, Array, UIKit helpers |
+| ⚙️ **Core** | Framework lifecycle | Configuration, initialization, state management |
+
+---
+
+## Architecture
+
+```mermaid
+graph TB
+    subgraph "iOSDevelopmentTools"
+        A[DevelopmentToolsManager] --> B[NetworkClient]
+        A --> C[StorageManager]
+        A --> D[Logger]
+        A --> E[AnalyticsManager]
+        
+        B --> F[URLSession]
+        B --> G[Combine Publishers]
+        
+        C --> H[Keychain]
+        C --> I[UserDefaults]
+        C --> J[FileManager]
+        
+        D --> K[Console]
+        D --> L[File Output]
+        D --> M[OSLog]
+        
+        E --> N[Firebase]
+        E --> O[Mixpanel]
+        E --> P[Custom Provider]
+    end
+    
+    style A fill:#007AFF,color:#fff
+    style B fill:#34C759,color:#fff
+    style C fill:#FF9500,color:#fff
+    style D fill:#AF52DE,color:#fff
+    style E fill:#FF3B30,color:#fff
+```
+
+---
 
 ## Installation
+
+### Swift Package Manager
+
+Add to your `Package.swift`:
 
 ```swift
 dependencies: [
@@ -28,234 +101,436 @@ dependencies: [
 ]
 ```
 
-## Quick Start
+Or in Xcode: **File → Add Package Dependencies** → paste the URL.
 
-### String Extensions
+### Import
+
+```swift
+import iOSDevelopmentTools
+```
+
+---
+
+## Usage
+
+### Quick Start
 
 ```swift
 import iOSDevelopmentTools
 
-// Email validation
-"test@example.com".isValidEmail // true
-"invalid-email".isValidEmail // false
+// Initialize on app launch
+iOSDevelopmentTools.configure(
+    networkBaseURL: "https://api.example.com",
+    analyticsEnabled: true,
+    loggingEnabled: true
+)
+```
 
-// URL validation  
-"https://example.com".isValidURL // true
+---
 
-// Phone formatting
-"5551234567".formatAsPhoneNumber // "(555) 123-4567"
+## 🌐 NetworkTools
+
+Modern, type-safe HTTP client with async/await support.
+
+### Basic Requests
+
+```swift
+let client = NetworkClient.shared
+
+// GET request
+let users: [User] = try await client.get("/users")
+
+// POST request
+let newUser: User = try await client.post("/users", body: [
+    "name": "John Doe",
+    "email": "john@example.com"
+])
+
+// PUT request
+let updated: User = try await client.put("/users/123", body: updatedData)
+
+// DELETE request
+let _: EmptyResponse = try await client.delete("/users/123")
+```
+
+### Advanced Configuration
+
+```swift
+let config = NetworkConfiguration(
+    baseURL: "https://api.example.com",
+    timeout: 30,
+    retryCount: 3,
+    headers: [
+        "Authorization": "Bearer \(token)",
+        "X-API-Version": "2.0"
+    ]
+)
+
+NetworkClient.shared.configure(with: config)
+```
+
+### Custom Request with Combine
+
+```swift
+struct APIRequest {
+    let path: String
+    let method: HTTPMethod
+    let headers: [String: String]?
+    let body: Encodable?
+}
+
+let request = APIRequest(
+    path: "/users/search",
+    method: .post,
+    headers: ["X-Custom": "value"],
+    body: SearchQuery(term: "swift")
+)
+
+let response: APIResponse<[User]> = try await client.perform(request)
+print("Found \(response.data.count) users")
+```
+
+### File Upload/Download
+
+```swift
+// Upload
+let imageData = UIImage(named: "avatar")!.jpegData(compressionQuality: 0.8)!
+let url: UploadResponse = try await client.upload(
+    "/upload/avatar",
+    data: imageData,
+    mimeType: "image/jpeg"
+)
+
+// Download
+let fileData = try await client.download("/files/document.pdf")
+```
+
+---
+
+## 💾 StorageTools
+
+Unified storage layer supporting Keychain, UserDefaults, and file storage.
+
+### UserDefaults
+
+```swift
+let storage = StorageManager.shared
+
+// Save
+try storage.save("John Doe", forKey: "username")
+try storage.save(true, forKey: "onboarded")
+try storage.save(["swift", "ios"], forKey: "skills")
+
+// Retrieve
+let username: String? = try storage.retrieve(String.self, forKey: "username")
+let skills: [String]? = try storage.retrieve([String].self, forKey: "skills")
+
+// Check existence
+if storage.exists(forKey: "username") {
+    print("User exists")
+}
+
+// Remove
+try storage.remove(forKey: "username")
+```
+
+### Keychain (Secure Storage)
+
+```swift
+let keychain = StorageManager.shared.keychain
+
+// Store sensitive data
+try keychain.save("secret_token_123", forKey: "auth_token")
+try keychain.save("refresh_token_456", forKey: "refresh_token")
+
+// Retrieve
+let token: String? = try keychain.read(forKey: "auth_token")
+
+// Delete
+try keychain.delete(forKey: "auth_token")
+
+// Delete all
+try keychain.clear()
+```
+
+### Encrypted File Storage
+
+```swift
+let config = StorageConfiguration(
+    encryptionEnabled: true,
+    encryptionKey: "your-256-bit-key",
+    compressionEnabled: true
+)
+
+let secureStorage = StorageManager(configuration: config)
+
+// Store large objects securely
+let userData = UserProfile(name: "John", data: largeData)
+try secureStorage.save(userData, forKey: "user_profile")
+
+// Backup and restore
+let backup = try secureStorage.backup()
+try secureStorage.restore(from: backup)
+```
+
+---
+
+## 🔍 DebugTools
+
+Structured logging with multiple output destinations.
+
+### Basic Logging
+
+```swift
+let logger = Logger.shared
+
+logger.debug("Fetching user data...")
+logger.info("User logged in successfully")
+logger.warning("Cache is getting full")
+logger.error("Failed to save file: \(error)")
+logger.critical("Database connection lost!")
+```
+
+### Output Example
+
+```
+🔍 [2025-01-28 14:23:45.123] [DEBUG] [ViewModel.swift:42] fetchData(): Fetching user data...
+ℹ️ [2025-01-28 14:23:45.456] [INFO] [AuthService.swift:78] login(): User logged in successfully
+⚠️ [2025-01-28 14:23:46.789] [WARNING] [CacheManager.swift:156] checkSize(): Cache is getting full
+❌ [2025-01-28 14:23:47.012] [ERROR] [FileService.swift:89] save(): Failed to save file
+🚨 [2025-01-28 14:23:47.345] [CRITICAL] [Database.swift:23] connect(): Database connection lost!
+```
+
+### Custom Logger Configuration
+
+```swift
+let customLogger = Logger(subsystem: "com.myapp.networking")
+
+// Log levels filter automatically based on build configuration
+#if DEBUG
+customLogger.minimumLevel = .debug
+#else
+customLogger.minimumLevel = .warning
+#endif
+```
+
+---
+
+## 📊 AnalyticsTools
+
+Analytics abstraction layer supporting multiple providers.
+
+### Event Tracking
+
+```swift
+let analytics = AnalyticsManager.shared
+
+// Track simple event
+analytics.trackEvent("button_tapped", parameters: [
+    "button_name": "purchase",
+    "screen": "product_detail"
+])
+
+// Track screen view
+analytics.trackScreen("ProductDetail", parameters: [
+    "product_id": "12345",
+    "category": "electronics"
+])
+
+// Track errors
+analytics.trackError(error, parameters: [
+    "context": "checkout_flow",
+    "step": "payment"
+])
+```
+
+### User Properties
+
+```swift
+// Set user ID
+analytics.setUserId("user_12345")
+
+// Set user properties
+analytics.setUserProperty("premium", forKey: "subscription_tier")
+analytics.setUserProperty("ios", forKey: "platform")
+```
+
+### Multiple Providers
+
+```swift
+// Add Firebase provider
+analytics.addProvider(FirebaseAnalyticsProvider())
+
+// Add Mixpanel provider
+analytics.addProvider(MixpanelProvider(token: "your_token"))
+
+// Add custom provider
+class CustomAnalyticsProvider: AnalyticsProvider {
+    var id: String { "custom" }
+    
+    func trackEvent(_ event: AnalyticsEvent) {
+        // Send to your backend
+    }
+}
+analytics.addProvider(CustomAnalyticsProvider())
+```
+
+---
+
+## 🧰 UtilityTools
+
+Handy Swift extensions for everyday development.
+
+### String Extensions
+
+```swift
+// Validation
+"test@example.com".isValidEmail     // true
+"5551234567".isValidPhoneNumber     // true
+"abc123".isAlphanumeric             // true
+
+// Transformation
+"  hello world  ".trimmed           // "hello world"
+"hello".capitalizedFirst            // "Hello"
 
 // Truncation
-"Long text here".truncated(to: 8) // "Long tex..."
+"Long text here".truncate(to: 8)    // "Long tex..."
 
-// Localization
-"welcome_message".localized // Fetches from Localizable.strings
+// Sanitization
+"hello@world!".removeSpecialCharacters()  // "helloworld"
 ```
 
 ### Date Extensions
 
 ```swift
-// Relative time
-let date = Date().addingTimeInterval(-3600)
-date.timeAgoDisplay // "1 hour ago"
+let date = Date()
 
-// Formatting
-Date().formatted(.short) // "1/28/25"
-Date().formatted(.full) // "Tuesday, January 28, 2025"
+// Checks
+date.isToday           // true
+date.isYesterday       // false
+date.isTomorrow        // false
 
 // Components
-Date().isToday // true
-Date().isWeekend // depends on day
-Date().startOfDay // 00:00:00
-Date().endOfDay // 23:59:59
+date.startOfDay        // Today at 00:00:00
+date.endOfDay          // Today at 23:59:59
+date.startOfWeek       // First day of current week
+date.startOfMonth      // First day of current month
 ```
 
 ### Collection Extensions
 
 ```swift
-// Safe subscript
-let array = [1, 2, 3]
-array[safe: 10] // nil instead of crash
+let array = [1, 2, 3, 4, 5]
+
+// Safe subscript (no crash on out-of-bounds)
+array[safe: 10]        // nil
 
 // Unique elements
-[1, 2, 2, 3, 3, 3].unique // [1, 2, 3]
+[1, 2, 2, 3, 3].unique // [1, 2, 3]
 
 // Chunking
-[1, 2, 3, 4, 5].chunked(into: 2) // [[1, 2], [3, 4], [5]]
+array.chunked(into: 2) // [[1, 2], [3, 4], [5]]
 ```
 
-### View Extensions (SwiftUI)
+### UIColor Extensions
 
 ```swift
-// Conditional modifier
-Text("Hello")
-    .if(isHighlighted) { view in
-        view.foregroundStyle(.yellow)
-    }
-
-// Hide keyboard
-.hideKeyboardOnTap()
-
-// Corner radius for specific corners
-.cornerRadius(16, corners: [.topLeft, .topRight])
-
-// Read frame
-.readFrame { frame in
-    print(frame.size)
-}
-```
-
-### UIKit Extensions
-
-```swift
-// UIColor from hex
+// From hex
 let color = UIColor(hex: "#FF5733")
 let color2 = UIColor(hex: "007AFF")
 
-// UIView helpers
+// With alpha
+let transparentColor = UIColor(hex: "#FF5733", alpha: 0.5)
+```
+
+### UIView Extensions
+
+```swift
+// Corner radius
 view.roundCorners(radius: 12)
-view.addShadow(color: .black, opacity: 0.2, radius: 8)
+
+// Shadow
+view.addShadow(
+    color: .black,
+    opacity: 0.2,
+    offset: CGSize(width: 0, height: 2),
+    radius: 8
+)
+
+// Border
 view.addBorder(color: .gray, width: 1)
-
-// UIImage helpers
-image.resized(to: CGSize(width: 100, height: 100))
-image.cropped(to: CGRect(x: 0, y: 0, width: 50, height: 50))
-image.withTintColor(.red)
 ```
 
-### UserDefaults Wrapper
-
-```swift
-@UserDefault("hasSeenOnboarding", defaultValue: false)
-var hasSeenOnboarding: Bool
-
-@UserDefault("username", defaultValue: nil)
-var username: String?
-
-// Usage
-hasSeenOnboarding = true
-print(username ?? "Guest")
-```
-
-### Keychain Helper
-
-```swift
-let keychain = KeychainHelper.shared
-
-// Save
-try keychain.save("secret_token", forKey: "authToken")
-
-// Read
-let token: String? = try keychain.read(forKey: "authToken")
-
-// Delete
-try keychain.delete(forKey: "authToken")
-```
-
-### Logger
-
-```swift
-let logger = Logger(subsystem: "com.myapp", category: "networking")
-
-logger.debug("Debug message")
-logger.info("Info message")
-logger.warning("Warning message")
-logger.error("Error message")
-
-// With context
-logger.info("User logged in", metadata: ["userId": "123"])
-```
-
-### Device Info
-
-```swift
-let device = DeviceInfo.shared
-
-device.modelName // "iPhone 15 Pro"
-device.systemVersion // "17.2"
-device.isSimulator // true/false
-device.hasNotch // true/false
-device.screenSize // .large, .medium, .small
-```
-
-### Debouncer & Throttler
-
-```swift
-// Debounce - execute after delay, resets on each call
-let searchDebouncer = Debouncer(delay: 0.3)
-textField.addTarget(self, action: #selector(textChanged), for: .editingChanged)
-
-@objc func textChanged() {
-    searchDebouncer.debounce {
-        performSearch()
-    }
-}
-
-// Throttle - execute at most once per interval
-let scrollThrottler = Throttler(interval: 0.1)
-scrollThrottler.throttle {
-    updateUI()
-}
-```
-
-### Validation
-
-```swift
-let validator = Validator()
-
-// Email
-validator.validate("test@example.com", rules: [.email]) // .valid
-validator.validate("invalid", rules: [.email]) // .invalid("Invalid email")
-
-// Password
-validator.validate("pass", rules: [.minLength(8)]) // .invalid("Minimum 8 characters")
-
-// Combined rules
-validator.validate("Test123!", rules: [
-    .minLength(8),
-    .containsUppercase,
-    .containsLowercase,
-    .containsNumber,
-    .containsSpecialCharacter
-]) // .valid
-```
+---
 
 ## Project Structure
 
 ```
 iOSDevelopmentTools/
 ├── Sources/
-│   ├── Extensions/
-│   │   ├── String+Extensions.swift
-│   │   ├── Date+Extensions.swift
-│   │   ├── Collection+Extensions.swift
-│   │   └── View+Extensions.swift
-│   ├── Utilities/
-│   │   ├── Debouncer.swift
-│   │   ├── Throttler.swift
-│   │   └── Validator.swift
-│   ├── Storage/
-│   │   ├── UserDefaultsWrapper.swift
-│   │   └── KeychainHelper.swift
-│   └── Debugging/
-│       └── Logger.swift
+│   ├── Core/
+│   │   └── MainFramework.swift
+│   ├── NetworkTools/
+│   │   └── NetworkClient.swift
+│   ├── StorageTools/
+│   │   └── StorageManager.swift
+│   ├── DebugTools/
+│   │   └── Logger.swift
+│   ├── AnalyticsTools/
+│   │   └── AnalyticsManager.swift
+│   └── UtilityTools/
+│       └── UtilityExtensions.swift
+├── Tests/
+│   ├── UnitTests/
+│   ├── IntegrationTests/
+│   └── PerformanceTests/
 ├── Examples/
-└── Tests/
+│   ├── BasicExample.swift
+│   └── AdvancedExample.swift
+└── Documentation/
 ```
+
+---
 
 ## Requirements
 
-- iOS 15.0+ / macOS 12.0+
-- Xcode 15.0+
-- Swift 5.9+
+| Requirement | Version |
+|-------------|---------|
+| iOS | 15.0+ |
+| macOS | 12.0+ |
+| Xcode | 15.0+ |
+| Swift | 5.9+ |
+
+---
+
+## Documentation
+
+Full documentation is available in the [Documentation](Documentation/) folder:
+
+- [Getting Started Guide](Documentation/GettingStarted.md)
+- [API Reference](Documentation/APIReference.md)
+- [Migration Guide](Documentation/MigrationGuide.md)
+- [Best Practices](Documentation/BestPractices.md)
+
+---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting PRs.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
+
+---
 
 ## Author
 
@@ -264,5 +539,5 @@ MIT License. See [LICENSE](LICENSE).
 ---
 
 <p align="center">
-  <sub>Tools every iOS developer needs ❤️</sub>
+  <sub>Built with ❤️ for the iOS community</sub>
 </p>
