@@ -541,3 +541,15 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) for deta
 <p align="center">
   <sub>Built with ❤️ for the iOS community</sub>
 </p>
+
+---
+
+## 📈 Star History
+
+<a href="https://star-history.com/#muhittincamdali/iOSDevelopmentTools&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=muhittincamdali/iOSDevelopmentTools&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=muhittincamdali/iOSDevelopmentTools&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=muhittincamdali/iOSDevelopmentTools&type=Date" />
+ </picture>
+</a>
