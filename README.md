@@ -13,9 +13,13 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml">
+    <img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="CI"/>
+  </a>
   <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?style=for-the-badge&logo=swift&logoColor=white" alt="Swift 5.9+"></a>
   <a href="https://developer.apple.com/ios/"><img src="https://img.shields.io/badge/iOS-15.0+-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS 15.0+"></a>
   <a href="https://swift.org/package-manager/"><img src="https://img.shields.io/badge/SPM-Compatible-blue?style=for-the-badge&logo=swift&logoColor=white" alt="SPM Compatible"></a>
+  <a href="https://cocoapods.org/pods/iOSDevelopmentTools"><img src="https://img.shields.io/badge/CocoaPods-Compatible-EE3322?style=for-the-badge&logo=cocoapods&logoColor=white" alt="CocoaPods"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License"></a>
 </p>
 
@@ -26,6 +30,19 @@
   <a href="#documentation">Docs</a> •
   <a href="#contributing">Contributing</a>
 </p>
+
+---
+
+## 📋 Table of Contents
+
+- [Why iOSDevelopmentTools?](#why-iosdevelopmenttools)
+- [Tools Overview](#tools-overview)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
+- [Star History](#-star-history)
 
 ---
 
