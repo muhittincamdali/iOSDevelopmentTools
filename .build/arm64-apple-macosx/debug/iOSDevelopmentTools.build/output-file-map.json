@@ -1,0 +1,19 @@
+{
+  "": {
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/primary.swiftdeps"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Core/DevToolsCore.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/UI/SecureStorage.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.dia"
+  }
+}

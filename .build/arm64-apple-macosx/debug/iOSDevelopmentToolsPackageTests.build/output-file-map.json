@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/primary.swiftdeps"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.derived/runner.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/runner.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/runner.dia"
+  }
+}

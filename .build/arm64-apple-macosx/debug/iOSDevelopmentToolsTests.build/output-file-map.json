@@ -1,0 +1,110 @@
+{
+  "": {
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/primary.swiftdeps"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/AnalyticsIntegrationTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsIntegrationTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsIntegrationTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsIntegrationTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsIntegrationTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsIntegrationTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/NetworkIntegrationTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkIntegrationTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkIntegrationTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkIntegrationTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkIntegrationTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkIntegrationTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/StorageIntegrationTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageIntegrationTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageIntegrationTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageIntegrationTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageIntegrationTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageIntegrationTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/LinuxMain.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LinuxMain.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LinuxMain.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LinuxMain~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LinuxMain.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LinuxMain.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/AnalyticsPerformanceTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsPerformanceTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsPerformanceTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsPerformanceTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsPerformanceTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsPerformanceTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/NetworkPerformanceTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkPerformanceTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkPerformanceTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkPerformanceTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkPerformanceTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkPerformanceTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/StoragePerformanceTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StoragePerformanceTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StoragePerformanceTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StoragePerformanceTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StoragePerformanceTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StoragePerformanceTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UnitTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UnitTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UnitTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UnitTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UnitTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/AnalyticsManagerTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsManagerTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsManagerTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsManagerTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsManagerTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsManagerTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/LoggerTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LoggerTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LoggerTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LoggerTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LoggerTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LoggerTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/NetworkClientTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkClientTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkClientTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkClientTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkClientTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkClientTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/StorageManagerTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageManagerTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageManagerTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageManagerTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageManagerTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageManagerTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/UtilityTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UtilityTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UtilityTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UtilityTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UtilityTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UtilityTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/iOSDevelopmentToolsTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/iOSDevelopmentToolsTests/iOSDevelopmentToolsTests.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.dia"
+  }
+}

@@ -1,0 +1,899 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.xctest/Contents/MacOS/iOSDevelopmentToolsPackageTests",
+      "packagePath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools",
+      "productName" : "iOSDevelopmentToolsPackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.iOSDevelopmentTools-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/sources",
+      "importPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Core/DevToolsCore.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/UI/SecureStorage.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "iOSDevelopmentTools",
+      "moduleOutputPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules/iOSDevelopmentTools.swiftmodule",
+      "objects" : [
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx12.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j18",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/include/iOSDevelopmentTools-Swift.h",
+        "-color-diagnostics",
+        "-swift-version",
+        "5",
+        "-DSWIFT_PACKAGE",
+        "-enable-experimental-feature",
+        "StrictConcurrency",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "iosdevelopmenttools"
+      ],
+      "outputFileMapPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules/iOSDevelopmentTools.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Core/DevToolsCore.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/UI/SecureStorage.swift"
+      ],
+      "tempsPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.iOSDevelopmentToolsPackageTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/sources",
+      "importPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules/iOSDevelopmentToolsTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "iOSDevelopmentToolsPackageTests",
+      "moduleOutputPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules/iOSDevelopmentToolsPackageTests.swiftmodule",
+      "objects" : [
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx12.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j18",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/include/iOSDevelopmentToolsPackageTests-Swift.h",
+        "-color-diagnostics",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "iosdevelopmenttools"
+      ],
+      "outputFileMapPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules/iOSDevelopmentToolsPackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.iOSDevelopmentToolsTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/sources",
+      "importPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/AnalyticsIntegrationTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/NetworkIntegrationTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/StorageIntegrationTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/LinuxMain.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/AnalyticsPerformanceTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/NetworkPerformanceTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/StoragePerformanceTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/AnalyticsManagerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/LoggerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/NetworkClientTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/StorageManagerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/UtilityTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/iOSDevelopmentToolsTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/iOSDevelopmentToolsTests/iOSDevelopmentToolsTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules/iOSDevelopmentTools.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "iOSDevelopmentToolsTests",
+      "moduleOutputPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules/iOSDevelopmentToolsTests.swiftmodule",
+      "objects" : [
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsIntegrationTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkIntegrationTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageIntegrationTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LinuxMain.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsPerformanceTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkPerformanceTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StoragePerformanceTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UnitTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsManagerTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LoggerTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkClientTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageManagerTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UtilityTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j18",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-color-diagnostics",
+        "-swift-version",
+        "5",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "iosdevelopmenttools"
+      ],
+      "outputFileMapPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsIntegrationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkIntegrationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageIntegrationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LinuxMain.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsPerformanceTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkPerformanceTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StoragePerformanceTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UnitTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsManagerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LoggerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkClientTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageManagerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UtilityTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules/iOSDevelopmentToolsTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/AnalyticsIntegrationTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/NetworkIntegrationTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/StorageIntegrationTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/LinuxMain.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/AnalyticsPerformanceTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/NetworkPerformanceTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/StoragePerformanceTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/AnalyticsManagerTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/LoggerTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/NetworkClientTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/StorageManagerTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/UtilityTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/iOSDevelopmentToolsTests.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/iOSDevelopmentToolsTests/iOSDevelopmentToolsTests.swift"
+      ],
+      "tempsPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "iOSDevelopmentTools" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "iOSDevelopmentTools",
+      "-package-name",
+      "iosdevelopmenttools",
+      "-c",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Core/DevToolsCore.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/UI/SecureStorage.swift",
+      "-I",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx12.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j18",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/include/iOSDevelopmentTools-Swift.h",
+      "-color-diagnostics",
+      "-swift-version",
+      "5",
+      "-DSWIFT_PACKAGE",
+      "-enable-experimental-feature",
+      "StrictConcurrency",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "iosdevelopmenttools",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "iOSDevelopmentToolsPackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "iOSDevelopmentToolsPackageTests",
+      "-package-name",
+      "iosdevelopmenttools",
+      "-c",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.derived/runner.swift",
+      "-I",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx12.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j18",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/include/iOSDevelopmentToolsPackageTests-Swift.h",
+      "-color-diagnostics",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "iosdevelopmenttools",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "iOSDevelopmentToolsTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "iOSDevelopmentToolsTests",
+      "-package-name",
+      "iosdevelopmenttools",
+      "-c",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/AnalyticsIntegrationTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/NetworkIntegrationTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/StorageIntegrationTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/LinuxMain.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/AnalyticsPerformanceTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/NetworkPerformanceTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/StoragePerformanceTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/AnalyticsManagerTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/LoggerTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/NetworkClientTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/StorageManagerTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/UtilityTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/iOSDevelopmentToolsTests.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/iOSDevelopmentToolsTests/iOSDevelopmentToolsTests.swift",
+      "-I",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j18",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-color-diagnostics",
+      "-swift-version",
+      "5",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "iosdevelopmenttools",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "iOSDevelopmentTools" : [
+
+    ],
+    "iOSDevelopmentToolsPackageTests" : [
+      "iOSDevelopmentToolsTests",
+      "iOSDevelopmentTools"
+    ],
+    "iOSDevelopmentToolsTests" : [
+      "iOSDevelopmentTools"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Core/DevToolsCore.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/UI/SecureStorage.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/sources"
+    },
+    "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/sources"
+    },
+    "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsIntegrationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsManagerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/AnalyticsPerformanceTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LinuxMain.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/LoggerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkClientTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkIntegrationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/NetworkPerformanceTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageIntegrationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StorageManagerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/StoragePerformanceTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UnitTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/UtilityTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/iOSDevelopmentToolsTests.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsPackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/AnalyticsIntegrationTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/NetworkIntegrationTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/IntegrationTests/StorageIntegrationTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/LinuxMain.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/AnalyticsPerformanceTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/NetworkPerformanceTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/PerformanceTests/StoragePerformanceTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/AnalyticsManagerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/LoggerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/NetworkClientTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/StorageManagerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/UnitTests/UtilityTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/iOSDevelopmentToolsTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Tests/iOSDevelopmentToolsTests/iOSDevelopmentToolsTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentToolsTests.build/sources"
+    },
+    "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}
