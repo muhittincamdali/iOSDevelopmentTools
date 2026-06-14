@@ -6,6 +6,8 @@
 
 ---
 
+## 🚀 Killer Feature: Network Payload Interceptor UI
+Debug APIs without Proxyman or Charles. Shake your device to open the native, on-device Payload Interceptor to inspect, mock, and rewrite network traffic in real-time.
 > **🛡️ PART OF THE 2026 UNIFIED CORE**
 > This repository is a verified component of 'The Endless March' initiative. Purified for Swift 6, zero-dependency, and engineered for maximum hardware saturation.
 > 
