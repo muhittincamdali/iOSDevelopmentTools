@@ -9,6 +9,20 @@
     "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore.swiftdeps",
     "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore.dia"
   },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Networking/NetworkInterceptor.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/NetworkInterceptor.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/NetworkInterceptor.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/NetworkInterceptor~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/NetworkInterceptor.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/NetworkInterceptor.dia"
+  },
+  "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Runtime/SwizzlingGuard.swift": {
+    "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SwizzlingGuard.d",
+    "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SwizzlingGuard.swift.o",
+    "swiftmodule": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SwizzlingGuard~partial.swiftmodule",
+    "swift-dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SwizzlingGuard.swiftdeps",
+    "diagnostics": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SwizzlingGuard.dia"
+  },
   "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/UI/SecureStorage.swift": {
     "dependencies": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.d",
     "object": "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.swift.o",

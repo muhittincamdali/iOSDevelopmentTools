@@ -32,6 +32,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Networking/NetworkInterceptor.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Runtime/SwizzlingGuard.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/UI/SecureStorage.swift"
         },
         {
@@ -48,6 +56,8 @@
       "moduleOutputPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules/iOSDevelopmentTools.swiftmodule",
       "objects" : [
         "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/DevToolsCore.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/NetworkInterceptor.swift.o",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SwizzlingGuard.swift.o",
         "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.swift.o"
       ],
       "otherArguments" : [
@@ -110,6 +120,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/NetworkInterceptor.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SwizzlingGuard.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.swift.o"
         },
         {
@@ -120,6 +138,8 @@
       "prepareForIndexing" : false,
       "sources" : [
         "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Core/DevToolsCore.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Networking/NetworkInterceptor.swift",
+        "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Runtime/SwizzlingGuard.swift",
         "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/UI/SecureStorage.swift"
       ],
       "tempsPath" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build",
@@ -467,6 +487,8 @@
       "iosdevelopmenttools",
       "-c",
       "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Core/DevToolsCore.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Networking/NetworkInterceptor.swift",
+      "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Runtime/SwizzlingGuard.swift",
       "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/UI/SecureStorage.swift",
       "-I",
       "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/Modules",
@@ -704,6 +726,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Networking/NetworkInterceptor.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/Runtime/SwizzlingGuard.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/Sources/iOSDevelopmentTools/UI/SecureStorage.swift"
         }
       ],
@@ -736,7 +766,15 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/NetworkInterceptor.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SecureStorage.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/muhittincamdali/Desktop/Claude Projects/GitHub/iOSDevelopmentTools/.build/arm64-apple-macosx/debug/iOSDevelopmentTools.build/SwizzlingGuard.swift.o"
         },
         {
           "kind" : "file",
