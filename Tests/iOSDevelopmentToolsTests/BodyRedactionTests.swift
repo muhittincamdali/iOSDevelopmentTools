@@ -287,6 +287,26 @@ struct BodyRedactionTests {
         #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
     }
 
+    @Test("A combining mark after a header's colon does not hide the header")
+    func combiningMarkAfterColon() {
+        // Werkzeug 3.1.9 reads this part as {"password": "hunter2"}.
+        let headers = "Content-Disposition:\u{301} form-data; name=password"
+        let body = multipart([(headers, "hunter2")])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        #expect(data == multipart([(headers, redacted)]))
+    }
+
+    @Test("A part header name that is not a token withholds the body", arguments: [
+        "Content-Disposition\u{0C}: form-data; name=password",
+        "Content-Disposition\u{301}: form-data; name=password",
+        "Content Disposition: form-data; name=password",
+    ])
+    func malformedHeaderName(headers: String) {
+        let body = multipart([(headers, "hunter2")])
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
+    }
+
     @Test("A name split over RFC 2231 continuations withholds the body", arguments: [
         "Content-Disposition: form-data; name*0=\"pass\"; name*1=\"word\"",
         "Content-Disposition: form-data; NAME*0*=utf-8''pass; name*1*=word",

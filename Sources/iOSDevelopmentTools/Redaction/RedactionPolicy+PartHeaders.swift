@@ -4,6 +4,49 @@ import Foundation
 /// combining mark after a `"`, `;`, `=` or `:` would join it into one Character and hide it from
 /// the scan, while a server still sees the delimiter.
 extension RedactionPolicy {
+    /// A part's headers by lowercased name, with every value of a repeated header in order; `nil`
+    /// when a header line is folded or a header name is not a token.
+    ///
+    /// `bytes` start with the rest of the delimiter line, where spaces and tabs are transport
+    /// padding, and break lines only with CRLF.
+    static func partHeaders(_ bytes: Data) -> [String: [String]]? {
+        var headers: [String: [String]] = [:]
+        for line in lines(in: bytes).dropFirst() where !line.isEmpty {
+            // A line that starts with a space or tab continues the one before it (obsolete line
+            // folding, RFC 5322); Werkzeug (Flask) joins the two, so a name on the folded line
+            // would be read by the server but missed here.
+            guard !isSpaceOrTab(line[line.startIndex]) else { return nil }
+            guard let colon = line.firstIndex(of: UInt8(ascii: ":")) else { continue }
+            // Werkzeug trims only spaces and tabs around a header name; a server that trims more
+            // (Python's str.strip() without arguments also drops form feeds and \x1c to \x1f)
+            // would read "Content-Disposition\u{0C}" as the real header, so such a name is not kept.
+            let name = trimmingSpacesAndTabs(line[line.startIndex..<colon])
+            guard !name.isEmpty, name.allSatisfy(isTokenByte) else { return nil }
+            let value = trimmingSpacesAndTabs(line[line.index(after: colon)...])
+            headers[String(decoding: name, as: UTF8.self).lowercased(), default: []]
+                .append(String(decoding: value, as: UTF8.self))
+        }
+        return headers
+    }
+
+    private static func lines(in bytes: Data) -> [Data] {
+        let lineBreak = Data("\r\n".utf8)
+        var lines: [Data] = []
+        var lineStart = bytes.startIndex
+        while let found = bytes.range(of: lineBreak, in: lineStart..<bytes.endIndex) {
+            lines.append(bytes[lineStart..<found.lowerBound])
+            lineStart = found.upperBound
+        }
+        lines.append(bytes[lineStart...])
+        return lines
+    }
+
+    private static func trimmingSpacesAndTabs(_ bytes: Data) -> Data {
+        var trimmed = bytes.drop(while: isSpaceOrTab)
+        while let last = trimmed.last, isSpaceOrTab(last) { trimmed = trimmed.dropLast() }
+        return trimmed
+    }
+
     /// The `name` and `name*` values of a Content-Disposition value such as
     /// `form-data; name="field"; filename="a.txt"`, in order; a name may appear more than once, as
     /// in `name="a"; name="password"`.
