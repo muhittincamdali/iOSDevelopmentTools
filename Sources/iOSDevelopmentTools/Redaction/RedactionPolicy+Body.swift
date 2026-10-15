@@ -144,8 +144,12 @@ extension RedactionPolicy {
             searchStart = found.upperBound
         }
         guard !delimiters.isEmpty else { return nil }
+        // Servers ignore the preamble before the first delimiter and the epilogue after the
+        // closing one, but both would be stored as they are. Only line breaks are kept there.
+        let preamble = body[body.startIndex..<delimiters[0].lowerBound]
+        guard preamble.allSatisfy(Self.isLinearWhitespace) else { return nil }
 
-        var output = Data(body[body.startIndex..<delimiters[0].lowerBound])
+        var output = Data(preamble)
         var changed = false
         var closed = false
         for (position, found) in delimiters.enumerated() {
@@ -153,7 +157,9 @@ extension RedactionPolicy {
             let partEnd = position + 1 < delimiters.count ? delimiters[position + 1].lowerBound : body.endIndex
             let part = body[found.upperBound..<partEnd]
             if part.starts(with: Data("--".utf8)) {
-                output.append(part)
+                let epilogue = body[body.index(found.upperBound, offsetBy: 2)...]
+                guard epilogue.allSatisfy(Self.isLinearWhitespace) else { return nil }
+                output.append(body[found.upperBound...])
                 closed = true
                 break
             }
@@ -179,6 +185,11 @@ extension RedactionPolicy {
         }
         guard closed else { return nil }
         return changed ? (output, .redacted) : (body, .unchanged)
+    }
+
+    /// Space, tab, CR or LF.
+    private static func isLinearWhitespace(_ byte: UInt8) -> Bool {
+        byte == 0x20 || byte == 0x09 || byte == 0x0D || byte == 0x0A
     }
 
     /// A part's headers by lowercased name. A repeated header keeps its first value.

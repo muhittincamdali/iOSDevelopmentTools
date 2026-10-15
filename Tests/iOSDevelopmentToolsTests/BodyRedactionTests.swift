@@ -116,7 +116,7 @@ struct BodyRedactionTests {
     // MARK: Multipart
 
     private func multipart(_ parts: [(headers: String, content: String)], boundary: String = "XyZ") -> Data {
-        var text = "preamble\r\n"
+        var text = ""
         for part in parts {
             text += "--\(boundary)\r\n\(part.headers)\r\n\r\n\(part.content)\r\n"
         }
@@ -179,6 +179,23 @@ struct BodyRedactionTests {
         let (data, outcome) = policy.redact(body: Data(text.utf8), contentType: contentType, isComplete: isComplete)
         #expect(outcome == .withheld)
         #expect(data.isEmpty)
+    }
+
+    @Test("Text before the first or after the closing delimiter withholds the body", arguments: [
+        "preamble\r\n--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\n",
+        "--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\nepilogue",
+        // A second body after the closing delimiter, as a hostile client could append.
+        "--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\n"
+            + "--XyZ\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\nhunter2\r\n--XyZ--\r\n",
+    ])
+    func preambleAndEpilogue(text: String) {
+        #expect(policy.redact(body: Data(text.utf8), contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
+    }
+
+    @Test("Line breaks around the delimiters keep the body as it was")
+    func surroundingLineBreaks() {
+        let body = Data("\r\n--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\n\r\n".utf8)
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (body, .unchanged))
     }
 
     @Test("A multipart body with too many parts is withheld instead of tracked part by part")
