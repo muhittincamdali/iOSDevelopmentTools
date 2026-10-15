@@ -57,7 +57,10 @@ extension RedactionPolicy {
         return Array(json)
     }
 
-    private static func wideEncodingWithoutByteOrderMark(of json: Data) -> String.Encoding? {
+    /// UTF-16 or UTF-32 by the pattern of zero bytes in the first four (RFC 4627), as
+    /// JSONSerialization and Python's `json.loads` detect text without a byte order mark; `nil`
+    /// when the text holds no zero byte.
+    static func wideEncodingWithoutByteOrderMark(of json: Data) -> String.Encoding? {
         guard json.contains(0) else { return nil }
         let head = Array(json.prefix(4)) + [UInt8](repeating: 1, count: 4)
         switch (head[0], head[1], head[2], head[3]) {

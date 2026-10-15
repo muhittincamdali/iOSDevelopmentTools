@@ -42,7 +42,8 @@ the side of hiding too much: a JSON key named `author` is hidden because it cont
 - **JSON bodies:** the value of every sensitive key at any depth, including inside string values
   that hold JSON themselves (as GraphQL clients send `variables`), also when the content type
   does not say JSON, or says form, but the body starts with `{` or `[` (after white space or a
-  UTF-8, UTF-16 or UTF-32 byte order mark). Unicode escapes in keys are decoded
+  UTF-8, UTF-16 or UTF-32 byte order mark, and also in UTF-16 or UTF-32 without a mark, which
+  JSON parsers recognize by its zero bytes). Unicode escapes in keys are decoded
   first, so `"\u0070assword"` is caught. JSON sent with a form content type, or without one,
   is also checked as the form a server reads from the same bytes: Werkzeug splits
   `{"x":"1&password=hunter2"}` at `&` and `=` and finds a `password` field, which is replaced.

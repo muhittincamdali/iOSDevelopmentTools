@@ -133,6 +133,23 @@ struct BodyRedactionTests {
         }
     }
 
+    @Test("UTF-16 and UTF-32 JSON without a byte order mark is checked whatever the content type says", arguments: [
+        String.Encoding.utf16LittleEndian, .utf16BigEndian, .utf32LittleEndian, .utf32BigEndian,
+    ], [
+        "text/plain", nil,
+    ])
+    func wideWithoutByteOrderMark(encoding: String.Encoding, contentType: String?) throws {
+        // Python's json.loads reads all four from the zero bytes; big-endian text starts with one.
+        let body = try #require(" {\"password\":\"hunter2\"}".data(using: encoding))
+        let (data, outcome) = policy.redact(body: body, contentType: contentType)
+        // As above, a body that this platform's JSONSerialization cannot parse is withheld.
+        let isUTF16 = encoding == .utf16LittleEndian || encoding == .utf16BigEndian
+        #expect(isUTF16 ? outcome == .redacted : outcome != .unchanged)
+        if outcome == .redacted {
+            #expect(try json(data)["password"] as? String == redacted)
+        }
+    }
+
     @Test("JSON without sensitive keys keeps its exact bytes")
     func unchangedJSON() {
         let body = Data(#"{"b": 1.50, "a": [true, null]}"#.utf8)

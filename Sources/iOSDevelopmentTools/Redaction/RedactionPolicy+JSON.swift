@@ -13,6 +13,11 @@ extension RedactionPolicy {
             let first = text.unicodeScalars.first { $0 != "\u{FEFF}" && !$0.properties.isWhitespace }
             return first == "{" || first == "["
         }
+        // Without a mark, JSONSerialization and Python's json.loads tell UTF-16 and UTF-32 by
+        // the zero bytes among the first four, so big-endian text starts with a zero byte.
+        if let encoding = wideEncodingWithoutByteOrderMark(of: body) {
+            return firstCodeUnitOpensJSON(body, encoding: encoding)
+        }
         // A UTF-8 byte order mark may come first; JSONSerialization reads past it.
         let byteOrderMark: [UInt8] = [0xEF, 0xBB, 0xBF]
         let text = body.starts(with: byteOrderMark) ? body.dropFirst(byteOrderMark.count) : body[...]
@@ -26,6 +31,27 @@ extension RedactionPolicy {
         if body.starts(with: [0xFF, 0xFE, 0x00, 0x00]) || body.starts(with: [0x00, 0x00, 0xFE, 0xFF]) { return .utf32 }
         if body.starts(with: [0xFF, 0xFE]) || body.starts(with: [0xFE, 0xFF]) { return .utf16 }
         return nil
+    }
+
+    /// Whether the first code unit that is not JSON white space is `{` or `[`. Scanning code
+    /// units, instead of decoding the body, keeps a large binary body that happens to have zero
+    /// bytes in the right places from being converted to a string.
+    private static func firstCodeUnitOpensJSON(_ body: Data, encoding: String.Encoding) -> Bool {
+        let width = encoding == .utf32BigEndian || encoding == .utf32LittleEndian ? 4 : 2
+        let bigEndian = encoding == .utf16BigEndian || encoding == .utf32BigEndian
+        var start = body.startIndex
+        while body.distance(from: start, to: body.endIndex) >= width {
+            let value = (0..<width).reduce(UInt32(0)) { result, offset in
+                let byte = body[body.index(start, offsetBy: bigEndian ? offset : width - 1 - offset)]
+                return result << 8 | UInt32(byte)
+            }
+            switch value {
+            case 0x20, 0x09, 0x0A, 0x0D: start = body.index(start, offsetBy: width)
+            case 0x7B, 0x5B: return true
+            default: return false
+            }
+        }
+        return false
     }
 
     /// What checking a piece of text as JSON found.

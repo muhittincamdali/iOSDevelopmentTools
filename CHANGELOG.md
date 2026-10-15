@@ -39,7 +39,8 @@ new major version.
   with bare CR or LF line breaks, with a line that starts with the boundary and goes on, with more
   than one boundary parameter, with a folded part header, with a name split into RFC 2231 pieces,
   with a malformed header parameter or header name, or with a boundary outside the RFC 2046
-  characters) are withheld. JSON is also recognized after a UTF-16 or UTF-32 byte order mark.
+  characters) are withheld. JSON is also recognized in UTF-16 and UTF-32, with or without a byte
+  order mark.
   Separators are found in the UTF-8 bytes, so a combining mark after one cannot hide it.
   Parameters are checked both as split on `&` alone, as Python and `URLSearchParams` read them,
   and as split on `&` and `;`. JSON in
