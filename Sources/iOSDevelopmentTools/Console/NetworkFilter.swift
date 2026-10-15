@@ -18,6 +18,7 @@ public struct NetworkFilter: Sendable, Hashable {
         /// Still loading.
         case pending
 
+        /// The raw value, so the cases can be used in `ForEach`.
         public var id: String { rawValue }
 
         /// A short name for a picker.
@@ -54,11 +55,13 @@ public struct NetworkFilter: Sendable, Hashable {
         }
     }
 
+    /// The outcomes to show; ``Outcome/all`` shows every entry.
     public var outcome: Outcome
     /// Text that the URL, method or status code must contain, ignoring case. Leading and trailing
     /// spaces are ignored; an empty text matches everything.
     public var text: String
 
+    /// Creates a filter. The defaults show every entry.
     public init(outcome: Outcome = .all, text: String = "") {
         self.outcome = outcome
         self.text = text

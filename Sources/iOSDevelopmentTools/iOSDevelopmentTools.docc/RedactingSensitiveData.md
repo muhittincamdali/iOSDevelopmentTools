@@ -1,0 +1,77 @@
+# Redacting sensitive data
+
+Understand what is replaced before a request is stored, and how to change it.
+
+## Overview
+
+Every value that reaches a ``NetworkLogger`` goes through its ``RedactionPolicy`` first. The
+console, ``HTTPArchive`` files, ``NetworkEntry/curlCommand()`` and screenshots of the console
+therefore never contain the original values. Your app still receives everything unchanged.
+
+### How names are matched
+
+A name is sensitive when its normalized form contains one of the policy's
+``RedactionPolicy/nameFragments``. Normalizing lowercases the name, removes percent-encoding (up
+to four times, so doubly encoded names are caught) and drops everything that is not an ASCII
+letter or digit:
+
+| Name in the request | Normalized | Matches |
+| --- | --- | --- |
+| `Authorization` | `authorization` | `auth` |
+| `X-API-Key` | `xapikey` | `apikey` |
+| `refresh_token` | `refreshtoken` | `token` |
+| `API%5FKEY` | `apikey` | `apikey` |
+| `pass%2577ord` | `password` | `password` |
+
+The default fragments are listed in ``RedactionPolicy/defaultNameFragments``. Matching errs on
+the side of hiding too much: a JSON key named `author` is hidden because it contains `auth`.
+
+### What is redacted
+
+- **URLs:** the values of sensitive query parameters (split on `&` and `;`), of sensitive
+  parameters in the fragment (as in `#access_token=` of OAuth redirects), of `;name=value`
+  parameters in path segments (`;jsessionid=`), and the whole user info (`user:password@`).
+- **Headers:** headers with a sensitive name (`Authorization`, `Cookie`, `Set-Cookie`,
+  `X-API-Key`, …) and headers whose value starts with an authentication scheme (`Bearer …`,
+  `Basic …`) whatever their name.
+- **JSON bodies:** the value of every sensitive key at any depth, also when the content type
+  does not say JSON but the body starts with `{` or `[`. Unicode escapes in keys are decoded
+  first, so `"password"` is caught.
+- **Form bodies** (`application/x-www-form-urlencoded`): sensitive fields.
+- **Multipart bodies:** sensitive fields by their `Content-Disposition` name (quoted names may
+  contain `;`), and JSON or form parts by their own content type.
+
+### Bodies that cannot be checked are withheld
+
+A structured body that cannot be parsed cannot be checked: a JSON body cut off at the capture
+limit, malformed JSON, JSON nested deeper than 64 levels, or a multipart body without its closing
+boundary. Storing such a body unchecked could store a secret, so the policy withholds it: the
+entry keeps the body's size and marks it ``RedactionOutcome/withheld``, without its bytes. Raise
+``NetworkLogger/Configuration/maximumBodySize`` to keep larger JSON bodies, or create a policy
+with `withholdsUncheckedBodies: false` to store them unchecked.
+
+### Change the policy
+
+Add fragments for your own names:
+
+```swift
+NetworkLogger.shared.configuration.redaction = RedactionPolicy(
+    nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]
+)
+```
+
+Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
+
+### Limits
+
+- Values in plain text, XML and other unstructured bodies are not checked.
+- Path segments are not checked, apart from `;name=value` parameters. A secret in the path
+  itself (`/reset/8f2c…`) is stored.
+- A secret under a name that contains none of the fragments is stored. Add the name's
+  distinctive part to the fragments.
+- Log messages in ``LogStore`` are stored as you write them. Do not log secrets.
+
+## See Also
+
+- ``RedactionPolicy``
+- ``CapturedBody``

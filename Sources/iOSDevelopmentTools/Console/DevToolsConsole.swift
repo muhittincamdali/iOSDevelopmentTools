@@ -2,8 +2,8 @@ import SwiftUI
 
 /// The in-app console: recorded requests, log messages and a device report, in three tabs.
 ///
-/// Show it in a sheet with ``SwiftUI/View/devToolsConsole(isPresented:networkLogger:logStore:)``,
-/// on a shake with ``SwiftUI/View/devToolsConsoleOnShake(networkLogger:logStore:)`` (iOS), or in
+/// Show it in a sheet with ``SwiftUICore/View/devToolsConsole(isPresented:networkLogger:logStore:)``,
+/// on a shake with ``SwiftUICore/View/devToolsConsoleOnShake(networkLogger:logStore:)`` (iOS), or in
 /// a window of its own on macOS:
 ///
 /// ```swift
@@ -14,8 +14,11 @@ import SwiftUI
 public struct DevToolsConsole: View {
     /// The console's tabs.
     public enum Tab: String, Hashable, CaseIterable, Sendable {
+        /// Recorded requests.
         case network
+        /// Log messages.
         case logs
+        /// The device report.
         case device
     }
 

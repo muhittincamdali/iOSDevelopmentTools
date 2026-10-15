@@ -3,13 +3,20 @@ import os
 
 /// How important a log message is, from ``debug`` to ``fault``.
 public enum LogLevel: Int, Sendable, Hashable, Comparable, CaseIterable, Codable {
+    /// Detail for debugging, usually switched off with ``LogStore/Configuration/minimumLevel``.
     case debug
+    /// Something that happened as expected.
     case info
+    /// Something worth noticing, such as a configuration change.
     case notice
+    /// Something unexpected that the app recovered from.
     case warning
+    /// An operation failed.
     case error
+    /// A bug or a state the app should never be in.
     case fault
 
+    /// Orders levels from ``debug`` (lowest) to ``fault`` (highest).
     public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
@@ -40,9 +47,11 @@ public enum LogLevel: Int, Sendable, Hashable, Comparable, CaseIterable, Codable
 
 /// One message in a ``LogStore``.
 public struct LogEntry: Sendable, Identifiable, Hashable {
+    /// A unique identifier for the message.
     public let id: UUID
     /// When the message was logged.
     public let date: Date
+    /// How important the message is.
     public let level: LogLevel
     /// The category it was logged under, such as `network` or `checkout`.
     public let category: String
@@ -57,6 +66,7 @@ public struct LogEntry: Sendable, Identifiable, Hashable {
     /// The line that logged it.
     public let line: Int
 
+    /// Creates an entry. ``LogStore`` creates entries for you; this is for previews and tests.
     public init(
         id: UUID = UUID(), date: Date, level: LogLevel, category: String, message: String,
         isTruncated: Bool = false, file: String, function: String, line: Int
@@ -90,6 +100,7 @@ public struct LogFilter: Sendable, Hashable {
     /// Leading and trailing spaces are ignored; an empty text matches everything.
     public var text: String
 
+    /// Creates a filter. The defaults show every message.
     public init(minimumLevel: LogLevel = .debug, categories: Set<String> = [], text: String = "") {
         self.minimumLevel = minimumLevel
         self.categories = categories

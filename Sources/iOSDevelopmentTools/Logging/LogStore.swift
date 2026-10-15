@@ -43,6 +43,7 @@ public final class LogStore: Sendable {
         /// Messages are logged with private visibility, as unified logging does by default.
         public var systemLogSubsystem: String?
 
+        /// Creates a configuration. Out-of-range limits are clamped.
         public init(
             maximumEntries: Int = 2_000,
             maximumMessageLength: Int = 4_096,
@@ -147,26 +148,32 @@ public final class LogStore: Sendable {
         systemLogger?.log(level: level.osLogType, "\(text)")
     }
 
+    /// Logs a message at ``LogLevel/debug``.
     public func debug(_ message: @autoclosure () -> String, category: String = "default", file: String = #fileID, function: String = #function, line: Int = #line) {
         log(.debug, message(), category: category, file: file, function: function, line: line)
     }
 
+    /// Logs a message at ``LogLevel/info``.
     public func info(_ message: @autoclosure () -> String, category: String = "default", file: String = #fileID, function: String = #function, line: Int = #line) {
         log(.info, message(), category: category, file: file, function: function, line: line)
     }
 
+    /// Logs a message at ``LogLevel/notice``.
     public func notice(_ message: @autoclosure () -> String, category: String = "default", file: String = #fileID, function: String = #function, line: Int = #line) {
         log(.notice, message(), category: category, file: file, function: function, line: line)
     }
 
+    /// Logs a message at ``LogLevel/warning``.
     public func warning(_ message: @autoclosure () -> String, category: String = "default", file: String = #fileID, function: String = #function, line: Int = #line) {
         log(.warning, message(), category: category, file: file, function: function, line: line)
     }
 
+    /// Logs a message at ``LogLevel/error``.
     public func error(_ message: @autoclosure () -> String, category: String = "default", file: String = #fileID, function: String = #function, line: Int = #line) {
         log(.error, message(), category: category, file: file, function: function, line: line)
     }
 
+    /// Logs a message at ``LogLevel/fault``.
     public func fault(_ message: @autoclosure () -> String, category: String = "default", file: String = #fileID, function: String = #function, line: Int = #line) {
         log(.fault, message(), category: category, file: file, function: function, line: line)
     }

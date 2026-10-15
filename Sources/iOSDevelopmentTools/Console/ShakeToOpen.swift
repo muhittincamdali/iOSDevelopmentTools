@@ -5,7 +5,7 @@ import UIKit
 
 extension Notification.Name {
     /// Posted on the main thread when the device is shaken, once
-    /// ``SwiftUI/View/devToolsConsoleOnShake(networkLogger:logStore:)`` is in use.
+    /// ``SwiftUICore/View/devToolsConsoleOnShake(networkLogger:logStore:)`` is in use.
     public static let devToolsDeviceDidShake = Notification.Name("io.github.muhittincamdali.iOSDevelopmentTools.deviceDidShake")
 }
 
@@ -14,7 +14,7 @@ extension View {
     /// **Device › Shake**).
     ///
     /// The first use adds a `motionEnded(_:with:)` implementation to `UIWindow` that calls the
-    /// existing one and then posts ``Foundation/Notification/Name/devToolsDeviceDidShake``. Other
+    /// existing one and then posts ``Foundation/NSNotification/Name/devToolsDeviceDidShake``. Other
     /// responders are not changed, and nothing is changed until the modifier is used.
     public func devToolsConsoleOnShake(networkLogger: NetworkLogger = .shared, logStore: LogStore = .shared) -> some View {
         modifier(ShakeToOpenModifier(networkLogger: networkLogger, logStore: logStore))

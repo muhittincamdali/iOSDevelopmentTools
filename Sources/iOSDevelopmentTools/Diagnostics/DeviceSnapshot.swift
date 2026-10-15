@@ -12,11 +12,15 @@ import Foundation
 public struct DeviceSnapshot: Sendable, Hashable {
     /// One labeled value, as shown in the console's Device tab.
     public struct Row: Sendable, Hashable, Identifiable {
+        /// The name of the value, such as `Memory`.
         public let label: String
+        /// The formatted value.
         public let value: String
+        /// The label, which is unique within a snapshot.
         public var id: String { label }
     }
 
+    /// When the snapshot was taken.
     public let date: Date
     /// `CFBundleDisplayName`, or `CFBundleName` when there is no display name.
     public let appName: String?
@@ -24,25 +28,33 @@ public struct DeviceSnapshot: Sendable, Hashable {
     public let appVersion: String?
     /// `CFBundleVersion`.
     public let buildNumber: String?
+    /// The app's bundle identifier.
     public let bundleIdentifier: String?
     /// The OS name and version, such as `iOS 27.0.1`.
     public let operatingSystem: String
     /// The model identifier, such as `iPhone18,1` or `Mac16,10`. In the simulator it is the
     /// identifier of the simulated device.
     public let hardwareModel: String
+    /// Whether the app runs in the iOS simulator.
     public let isSimulator: Bool
+    /// Active processor cores.
     public let processorCount: Int
     /// Installed memory in bytes.
     public let physicalMemory: UInt64
     /// Memory the app uses in bytes, the figure Xcode's memory gauge and jetsam use
     /// (`phys_footprint`), or `nil` when the system does not report it.
     public let memoryFootprint: UInt64?
+    /// How hot the device is, as `ProcessInfo` reports it.
     public let thermalState: ProcessInfo.ThermalState
+    /// Whether Low Power Mode is on.
     public let isLowPowerModeEnabled: Bool
     /// Whether a debugger such as LLDB is attached to the process.
     public let isDebuggerAttached: Bool
+    /// The current locale, such as `en_US`.
     public let localeIdentifier: String
+    /// The current time zone, such as `Europe/Istanbul`.
     public let timeZoneIdentifier: String
+    /// The user's preferred languages, most preferred first.
     public let preferredLanguages: [String]
     /// Seconds since the device started.
     public let systemUptime: TimeInterval

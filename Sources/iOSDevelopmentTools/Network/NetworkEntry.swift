@@ -100,13 +100,20 @@ public struct NetworkEntry: Sendable, Identifiable, Hashable {
     ///
     /// A phase the system did not report (for example DNS on a reused connection) is `nil`.
     public struct Timings: Sendable, Hashable {
+        /// Looking up the host name.
         public var domainLookup: TimeInterval?
+        /// Opening the connection, including the TLS handshake.
         public var connect: TimeInterval?
+        /// The TLS handshake.
         public var secureConnection: TimeInterval?
+        /// Sending the request.
         public var send: TimeInterval?
+        /// Waiting for the first byte of the response.
         public var wait: TimeInterval?
+        /// Receiving the response.
         public var receive: TimeInterval?
 
+        /// Creates timings; phases that are left out are `nil`.
         public init(
             domainLookup: TimeInterval? = nil, connect: TimeInterval? = nil, secureConnection: TimeInterval? = nil,
             send: TimeInterval? = nil, wait: TimeInterval? = nil, receive: TimeInterval? = nil
@@ -120,6 +127,7 @@ public struct NetworkEntry: Sendable, Identifiable, Hashable {
         }
     }
 
+    /// A unique identifier for the entry.
     public let id: UUID
     /// When the request was sent.
     public let startDate: Date
@@ -193,6 +201,7 @@ public struct NetworkError: Sendable, Hashable, Codable {
     /// A description for people.
     public let message: String
 
+    /// Creates an error description.
     public init(domain: String, code: Int, message: String) {
         self.domain = domain
         self.code = code
