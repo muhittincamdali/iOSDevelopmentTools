@@ -30,21 +30,23 @@ new major version.
   capture cannot see, and publishes changes through an `AsyncStream`.
 - `RedactionPolicy` replaces sensitive values before anything is stored: headers by name and by
   authentication scheme, query, fragment and matrix parameters, URL user info, JSON keys at any
-  depth (also inside strings that hold JSON), form fields (also in bodies sent without a
-  `Content-Type`) and multipart fields. Names are normalized (case, separators,
+  depth (also inside strings that hold JSON, and inside form and URL parameter values that decode to
+  JSON), form fields (also in bodies sent without a `Content-Type`, and in JSON bodies sent as a
+  form, which are checked both ways) and multipart fields. Names are normalized (case, separators,
   percent-encoding, invisible characters, NFKC compatibility forms such as full-width letters)
-  before they are matched. Structured bodies that cannot
-  be checked (cut off, malformed, nested deeper than 64 levels, multipart with more than 1,000
-  parts, with text outside its boundaries, with bare CR or LF line breaks, with a line that
-  starts with the boundary and goes on, with more than one boundary parameter, with a folded
-  part header, with a name split into RFC 2231 pieces, with a malformed header parameter or
-  header name, or with a boundary outside the RFC 2046 characters) are withheld. JSON is also
-  recognized after a UTF-16 or UTF-32 byte order mark. Separators are found in the UTF-8 bytes,
-  so a combining mark after one cannot hide it.
+  before they are matched. Structured bodies that cannot be checked (cut off, malformed, nested
+  deeper than 64 levels, multipart with more than 1,000 parts, with text outside its boundaries,
+  with bare CR or LF line breaks, with a line that starts with the boundary and goes on, with more
+  than one boundary parameter, with a folded part header, with a name split into RFC 2231 pieces,
+  with a malformed header parameter or header name, or with a boundary outside the RFC 2046
+  characters) are withheld. JSON is also recognized after a UTF-16 or UTF-32 byte order mark.
+  Separators are found in the UTF-8 bytes, so a combining mark after one cannot hide it. JSON in
+  which an object repeats a key is withheld, because parsers differ in which value they keep.
 - `NetworkEntry.curlCommand()` and `HTTPArchive` export requests as shell-safe `curl` commands
   and as HAR 1.2 files.
 - `LogStore` keeps leveled, categorized log messages in a ring buffer and writes them to the
-  unified logging system; `LogFilter` filters them.
+  unified logging system; messages and categories are cut off at a number of Unicode scalars, so
+  combining marks cannot stretch them; `LogFilter` filters them.
 - `DeviceSnapshot` reports app version, OS, model, memory and memory footprint, thermal state,
   Low Power Mode, attached debugger, locale and uptime.
 - `DevToolsConsole`, a SwiftUI console with Network, Logs and Device tabs, search, filters and
