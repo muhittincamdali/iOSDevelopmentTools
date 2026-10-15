@@ -58,7 +58,11 @@ boundary, with more than 1,000 parts, with text before the first boundary or aft
 one (servers ignore that text, so it is not checked as a field), with a boundary or a part
 header line after a bare CR or LF (servers such as Werkzeug take that for a line break), or with
 a line that starts with the boundary and goes on, as `--boundaryX` (servers that compare only the
-prefix start a part there). Storing such a body unchecked could store a secret, so the policy withholds it: the
+prefix start a part there). Multipart bodies are also withheld when the content type has more
+than one `boundary` parameter (or a `boundary*` one), when a part header line starts with a space
+or tab and so continues the line before it, and when a `name` is split into RFC 2231 pieces
+(`name*0`, `name*1`): Werkzeug, behind Flask, uses the last boundary, joins folded lines and joins
+the pieces, so the field it reads could differ from the one checked. Storing such a body unchecked could store a secret, so the policy withholds it: the
 entry keeps the body's size and marks it ``RedactionOutcome/withheld``, without its bytes. Raise
 ``NetworkLogger/Configuration/maximumBodySize`` to keep larger JSON bodies, or create a policy
 with `withholdsUncheckedBodies: false` to store them unchecked.

@@ -35,8 +35,10 @@ new major version.
   percent-encoding, invisible characters, NFKC compatibility forms such as full-width letters)
   before they are matched. Structured bodies that cannot
   be checked (cut off, malformed, nested deeper than 64 levels, multipart with more than 1,000
-  parts, with text outside its boundaries, with bare CR or LF line breaks or with a line that
-  starts with the boundary and goes on) are withheld.
+  parts, with text outside its boundaries, with bare CR or LF line breaks, with a line that
+  starts with the boundary and goes on, with more than one boundary parameter, with a folded
+  part header or with a name split into RFC 2231 pieces) are withheld. JSON is also recognized
+  after a UTF-16 or UTF-32 byte order mark.
 - `NetworkEntry.curlCommand()` and `HTTPArchive` export requests as shell-safe `curl` commands
   and as HAR 1.2 files.
 - `LogStore` keeps leveled, categorized log messages in a ring buffer and writes them to the
