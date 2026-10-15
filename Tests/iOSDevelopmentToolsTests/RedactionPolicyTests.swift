@@ -15,6 +15,11 @@ struct RedactionPolicyTests {
         ("pass%2577ord", "password"),
         ("pass\u{200B}word", "password"),
         ("Pass+Word", "password"),
+        // Compatibility forms (full-width, ligatures), also when percent-encoded, fold to ASCII.
+        ("ｐａｓｓｗｏｒｄ", "password"),
+        ("ＡＰＩ＿ＫＥＹ", "apikey"),
+        ("%EF%BD%90assword", "password"),
+        ("ﬁle", "file"),
         // Each %-sequence is decoded on its own, so an invalid one does not stop the others.
         ("pass%77ord%ZZ", "passwordzz"),
         ("%ZZpass%2577ord", "zzpassword"),

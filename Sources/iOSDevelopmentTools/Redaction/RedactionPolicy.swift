@@ -4,9 +4,10 @@ import Foundation
 ///
 /// A header, query parameter, form field, multipart field or JSON key is sensitive when its
 /// normalized name contains one of the policy's name fragments. Normalizing lowercases the name,
-/// removes percent-encoding and drops every character that is not an ASCII letter or digit, so
-/// `Authorization`, `X-API-Key`, `api_key`, `apiKey`, `API%5FKEY` and `pass\u{200B}word` all
-/// match the fragments `authorization`, `apikey` and `password`.
+/// removes percent-encoding, applies Unicode compatibility normalization (NFKC, so full-width
+/// `ｐａｓｓｗｏｒｄ` reads as `password`) and drops every character that is not an ASCII letter
+/// or digit, so `Authorization`, `X-API-Key`, `api_key`, `apiKey`, `API%5FKEY` and
+/// `pass\u{200B}word` all match the fragments `authorization`, `apikey` and `password`.
 ///
 /// Matching on fragments errs on the side of hiding too much: with the default fragments a JSON
 /// key named `author` is hidden because it contains `auth`. Pass your own fragments to change that.
@@ -61,9 +62,12 @@ public struct RedactionPolicy: Sendable, Hashable {
         return nameFragments.contains { normalizedName.contains($0) }
     }
 
-    /// The name reduced to lowercase ASCII letters and digits, after removing percent-encoding.
+    /// The name reduced to lowercase ASCII letters and digits, after removing percent-encoding
+    /// and applying NFKC.
     ///
-    /// Decoding is repeated (at most four times) so a doubly encoded name is caught as well.
+    /// Decoding is repeated (at most four times) so a doubly encoded name is caught as well. NFKC
+    /// maps full-width, circled, ligature and similar compatibility forms to the letters they stand
+    /// for; without it they would be dropped as non-ASCII and hide the name.
     static func normalized(_ name: String) -> String {
         var decoded = name.replacingOccurrences(of: "+", with: " ")
         for _ in 0..<4 {
@@ -73,7 +77,7 @@ public struct RedactionPolicy: Sendable, Hashable {
             decoded = next
         }
         var result = String.UnicodeScalarView()
-        for scalar in decoded.unicodeScalars where scalar.isASCII {
+        for scalar in decoded.precomposedStringWithCompatibilityMapping.unicodeScalars where scalar.isASCII {
             switch scalar.value {
             case 0x30...0x39, 0x61...0x7A: result.append(scalar)
             case 0x41...0x5A: result.append(Unicode.Scalar(UInt8(scalar.value + 0x20)))

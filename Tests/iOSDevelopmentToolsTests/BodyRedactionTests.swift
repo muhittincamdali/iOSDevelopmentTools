@@ -37,6 +37,16 @@ struct BodyRedactionTests {
         #expect(!String(decoding: data, as: UTF8.self).contains("secret"))
     }
 
+    @Test("Full-width letters in keys do not hide a sensitive name")
+    func fullWidthKeys() throws {
+        let body = Data(#"{"ｐａｓｓｗｏｒｄ":"hunter2","ｔｉｔｌｅ":"x"}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/json")
+        #expect(outcome == .redacted)
+        let object = try json(data)
+        #expect(object["ｐａｓｓｗｏｒｄ"] as? String == redacted)
+        #expect(object["ｔｉｔｌｅ"] as? String == "x")
+    }
+
     @Test("Duplicate keys cannot smuggle a value through")
     func duplicateKeys() {
         let body = Data(#"{"token":"a","token":"b"}"#.utf8)

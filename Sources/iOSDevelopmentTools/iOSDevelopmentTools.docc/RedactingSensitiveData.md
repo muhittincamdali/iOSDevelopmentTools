@@ -12,8 +12,9 @@ therefore never contain the original values. Your app still receives everything 
 
 A name is sensitive when its normalized form contains one of the policy's
 ``RedactionPolicy/nameFragments``. Normalizing lowercases the name, removes percent-encoding (up
-to four times, so doubly encoded names are caught) and drops everything that is not an ASCII
-letter or digit:
+to four times, so doubly encoded names are caught), applies Unicode compatibility normalization
+(NFKC, which turns full-width and similar forms into the letters they stand for) and drops
+everything that is not an ASCII letter or digit:
 
 | Name in the request | Normalized | Matches |
 | --- | --- | --- |
@@ -22,6 +23,7 @@ letter or digit:
 | `refresh_token` | `refreshtoken` | `token` |
 | `API%5FKEY` | `apikey` | `apikey` |
 | `pass%2577ord` | `password` | `password` |
+| `ｐａｓｓｗｏｒｄ` | `password` | `password` |
 
 The default fragments are listed in ``RedactionPolicy/defaultNameFragments``. Matching errs on
 the side of hiding too much: a JSON key named `author` is hidden because it contains `auth`.

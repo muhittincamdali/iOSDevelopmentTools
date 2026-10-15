@@ -32,7 +32,8 @@ new major version.
   authentication scheme, query, fragment and matrix parameters, URL user info, JSON keys at any
   depth (also inside strings that hold JSON), form fields (also in bodies sent without a
   `Content-Type`) and multipart fields. Names are normalized (case, separators,
-  percent-encoding, invisible characters) before they are matched. Structured bodies that cannot
+  percent-encoding, invisible characters, NFKC compatibility forms such as full-width letters)
+  before they are matched. Structured bodies that cannot
   be checked (cut off, malformed, nested deeper than 64 levels, multipart with more than 1,000
   parts, with text outside its boundaries, with bare CR or LF line breaks or with a line that
   starts with the boundary and goes on) are withheld.
