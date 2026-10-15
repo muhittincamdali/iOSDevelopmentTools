@@ -218,3 +218,21 @@ public struct NetworkError: Sendable, Hashable, Codable {
         domain == NSURLErrorDomain && code == NSURLErrorCancelled
     }
 }
+
+extension NetworkEntry.Timings {
+    /// Phase durations of the last transaction (the one that produced the response).
+    init(metrics: URLSessionTaskMetrics) {
+        self.init()
+        guard let transaction = metrics.transactionMetrics.last else { return }
+        func span(_ start: Date?, _ end: Date?) -> TimeInterval? {
+            guard let start, let end else { return nil }
+            return max(0, end.timeIntervalSince(start))
+        }
+        domainLookup = span(transaction.domainLookupStartDate, transaction.domainLookupEndDate)
+        connect = span(transaction.connectStartDate, transaction.connectEndDate)
+        secureConnection = span(transaction.secureConnectionStartDate, transaction.secureConnectionEndDate)
+        send = span(transaction.requestStartDate, transaction.requestEndDate)
+        wait = span(transaction.requestEndDate, transaction.responseStartDate)
+        receive = span(transaction.responseStartDate, transaction.responseEndDate)
+    }
+}

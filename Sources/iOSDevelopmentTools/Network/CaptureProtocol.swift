@@ -14,33 +14,7 @@ final class CaptureProtocol: URLProtocol, ForwardedTaskHandler, @unchecked Senda
     /// `Content-Length`; larger ones are streamed.
     static let inMemoryBodyLimit = 4 * 1024 * 1024
 
-    /// How long after reporting a redirect the app's session is given to follow it, by stopping
-    /// this load, before the redirect counts as refused and its response is passed on.
-    static let redirectDecisionTime: DispatchTimeInterval = .milliseconds(500)
-
-    /// Where a redirect stands. The app's session follows a redirect by stopping this load and
-    /// starting a new one; it gives no signal when its delegate refuses one.
-    private enum Redirect {
-        case none
-        /// Reported to the app's session, which has not stopped this load yet.
-        case pending
-        /// Not followed in time: the redirect response goes to the app as the final response.
-        case refused
-    }
-
-    /// A forwarded response held back while a redirect is pending, with the forwarding
-    /// session's disposition handler, which is called once the redirect is followed or refused.
-    private struct HeldResponse {
-        let response: URLResponse
-        let completionHandler: @Sendable (URLSession.ResponseDisposition) -> Void
-    }
-
-    /// The end of the forwarded task, held back while a redirect is pending.
-    private struct HeldCompletion {
-        let error: (any Error)?
-    }
-
-    private struct State {
+    struct State {
         var task: URLSessionDataTask?
         var pump: RequestBodyPump?
         var entryID: NetworkEntry.ID?
@@ -57,7 +31,7 @@ final class CaptureProtocol: URLProtocol, ForwardedTaskHandler, @unchecked Senda
         var isCompleted = false
     }
 
-    private let state = OSAllocatedUnfairLock(uncheckedState: State())
+    let state = OSAllocatedUnfairLock(uncheckedState: State())
     private var clientThread: Thread?
     private var runLoopModes: [String] = [RunLoop.Mode.default.rawValue]
 
@@ -192,58 +166,6 @@ final class CaptureProtocol: URLProtocol, ForwardedTaskHandler, @unchecked Senda
         }
     }
 
-    /// Reports the redirect to the app's session and lets the forwarded task go on to the
-    /// redirect response, which is held back until the app's session decides.
-    ///
-    /// Nothing that ends this load is sent with the redirect. Apple's CustomHTTPProtocol sample
-    /// fails the load right after reporting the redirect, but the session can take that failure
-    /// before it has switched to the redirected request: about one load in two thousand then
-    /// ended in `CocoaError(.userCancelled)` instead of the redirect target, and a response
-    /// sent at that moment could finish the app's task twice. A session that follows the
-    /// redirect stops this load and starts a new one for the redirected request; a session whose
-    /// delegate refuses it does nothing, so after ``redirectDecisionTime`` the held redirect
-    /// response and its body go to the app, as a refused redirect returns them without capture.
-    func forwardedTask(willRedirectWith response: HTTPURLResponse, to request: URLRequest) -> URLRequest? {
-        guard let redirect = (request as NSURLRequest).mutableCopy() as? NSMutableURLRequest else { return request }
-        // The redirected request goes back through the app's session, which captures it again.
-        URLProtocol.removeProperty(forKey: Self.handledKey, in: redirect)
-        let redirectRequest = redirect as URLRequest
-        let (logger, entryID, isStopped) = state.withLockUnchecked { state in
-            if !state.isStopped { state.redirect = .pending }
-            return (state.logger, state.entryID, state.isStopped)
-        }
-        guard !isStopped else { return nil }
-        if let logger, let entryID { logger.redirect(entryID, response: response, to: redirectRequest) }
-        deliver { protocolInstance, client in
-            client.urlProtocol(protocolInstance, wasRedirectedTo: redirectRequest, redirectResponse: response)
-        }
-        DispatchQueue.global().asyncAfter(deadline: .now() + Self.redirectDecisionTime) { [weak self] in
-            self?.deliver { protocolInstance, client in
-                protocolInstance.passOnRefusedRedirect(to: client)
-            }
-        }
-        return nil
-    }
-
-    /// Runs on the client thread once ``redirectDecisionTime`` has passed: when the app's
-    /// session has not stopped this load, it refused the redirect, and the held response goes on.
-    private func passOnRefusedRedirect(to client: any URLProtocolClient) {
-        let (held, completion) = state.withLockUnchecked { state -> (HeldResponse?, HeldCompletion?) in
-            guard state.redirect == .pending, !state.isStopped else { return (nil, nil) }
-            state.redirect = .refused
-            defer {
-                state.heldResponse = nil
-                state.heldCompletion = nil
-            }
-            return (state.heldResponse, state.heldCompletion)
-        }
-        if let held {
-            client.urlProtocol(self, didReceive: held.response, cacheStoragePolicy: .notAllowed)
-            held.completionHandler(.allow)
-        }
-        if let completion { deliverCompletion(completion.error) }
-    }
-
     func forwardedTask(didFinishCollecting metrics: URLSessionTaskMetrics) {
         let timings = NetworkEntry.Timings(metrics: metrics)
         let networkProtocol = metrics.transactionMetrics.last?.networkProtocolName
@@ -283,7 +205,7 @@ final class CaptureProtocol: URLProtocol, ForwardedTaskHandler, @unchecked Senda
         }
     }
 
-    private func deliverCompletion(_ error: (any Error)?) {
+    func deliverCompletion(_ error: (any Error)?) {
         deliver { protocolInstance, client in
             if let error {
                 client.urlProtocol(protocolInstance, didFailWithError: error)
@@ -309,7 +231,7 @@ final class CaptureProtocol: URLProtocol, ForwardedTaskHandler, @unchecked Senda
     // MARK: Client thread
 
     /// Runs `action` with the client on the thread that started loading, unless loading stopped.
-    private func deliver(ignoringStop: Bool = false, _ action: @escaping (CaptureProtocol, any URLProtocolClient) -> Void) {
+    func deliver(ignoringStop: Bool = false, _ action: @escaping (CaptureProtocol, any URLProtocolClient) -> Void) {
         let delivery = Delivery { [weak self] in
             guard let self, let client = self.client else { return }
             if !ignoringStop, self.state.withLockUnchecked({ $0.isStopped }) { return }
@@ -320,36 +242,5 @@ final class CaptureProtocol: URLProtocol, ForwardedTaskHandler, @unchecked Senda
             return
         }
         delivery.perform(#selector(Delivery.run), on: clientThread, with: nil, waitUntilDone: false, modes: runLoopModes)
-    }
-}
-
-/// A block that can be scheduled on another thread's run loop with `perform(_:on:with:waitUntilDone:modes:)`.
-private final class Delivery: NSObject, @unchecked Sendable {
-    private let block: () -> Void
-
-    init(_ block: @escaping () -> Void) {
-        self.block = block
-    }
-
-    @objc func run() {
-        block()
-    }
-}
-
-extension NetworkEntry.Timings {
-    /// Phase durations of the last transaction (the one that produced the response).
-    init(metrics: URLSessionTaskMetrics) {
-        self.init()
-        guard let transaction = metrics.transactionMetrics.last else { return }
-        func span(_ start: Date?, _ end: Date?) -> TimeInterval? {
-            guard let start, let end else { return nil }
-            return max(0, end.timeIntervalSince(start))
-        }
-        domainLookup = span(transaction.domainLookupStartDate, transaction.domainLookupEndDate)
-        connect = span(transaction.connectStartDate, transaction.connectEndDate)
-        secureConnection = span(transaction.secureConnectionStartDate, transaction.secureConnectionEndDate)
-        send = span(transaction.requestStartDate, transaction.requestEndDate)
-        wait = span(transaction.requestEndDate, transaction.responseStartDate)
-        receive = span(transaction.responseStartDate, transaction.responseEndDate)
     }
 }
