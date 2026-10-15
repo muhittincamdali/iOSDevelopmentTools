@@ -228,6 +228,15 @@ struct BodyRedactionTests {
         #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
     }
 
+    @Test("A name split over RFC 2231 continuations withholds the body", arguments: [
+        "Content-Disposition: form-data; name*0=\"pass\"; name*1=\"word\"",
+        "Content-Disposition: form-data; NAME*0*=utf-8''pass; name*1*=word",
+    ])
+    func nameContinuations(headers: String) {
+        let body = multipart([(headers, "hunter2")])
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
+    }
+
     @Test("A part with two content types is withheld")
     func repeatedContentType() {
         let headers = "Content-Disposition: form-data; name=\"a\"\r\nContent-Type: text/plain\r\nContent-Type: application/json"
