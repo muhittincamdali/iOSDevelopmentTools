@@ -107,6 +107,19 @@ struct RedactionPolicyTests {
             == "https://e.com/?pass%77ord%ZZ=\(redacted)&api_key%=\(redacted)&page=2")
     }
 
+    @Test("JSON in a query value is checked once decoded")
+    func jsonInQuery() {
+        let url = URL(string: "https://x.test/a?q=%7B%22password%22%3A%22hunter2%22%2C%22page%22%3A2%7D&n=%7B%22a%22:1%7D")!
+        let result = policy.redact(url: url)
+        #expect(result == "https://x.test/a?q=%7B%22page%22:2,%22password%22:%22%5BREDACTED%5D%22%7D&n=%7B%22a%22:1%7D")
+        // JSON in a value that cannot be checked, here with a repeated key, is replaced whole.
+        let repeated = URL(string: "https://x.test/a?q=%7B%22a%22:1,%22a%22:2%7D&page=2")!
+        #expect(policy.redact(url: repeated) == "https://x.test/a?q=\(redacted)&page=2")
+        // A value that only starts like JSON keeps its bytes.
+        let text = URL(string: "https://x.test/a?q=%7Bpassword%7D")!
+        #expect(policy.redact(url: text) == text.absoluteString)
+    }
+
     @Test("Semicolons separate parameters as well")
     func semicolonSeparators() {
         let url = URL(string: "https://example.com/a?x=1;secret=2")!

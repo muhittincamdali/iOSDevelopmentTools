@@ -232,6 +232,17 @@ struct BodyRedactionTests {
         #expect(policy.redact(body: json, contentType: "application/json") == (json, .unchanged))
     }
 
+    @Test("JSON in a form field is checked once decoded")
+    func jsonInFormField() throws {
+        let body = Data("user=ada&data=%7B%22password%22%3A%22hunter2%22%7D&json=+%7B%22a%22:+1%7D".utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded")
+        #expect(outcome == .redacted)
+        let text = String(decoding: data, as: UTF8.self)
+        #expect(text == "user=ada&data=%7B%22password%22:%22%5BREDACTED%5D%22%7D&json=+%7B%22a%22:+1%7D")
+        let value = try #require(text.split(separator: "&")[1].dropFirst("data=".count).removingPercentEncoding)
+        #expect(try json(Data(value.utf8))["password"] as? String == redacted)
+    }
+
     @Test("A cut-off form body is still redacted up to where it ends")
     func truncatedForm() {
         let body = Data("user=ada&password=s3".utf8)

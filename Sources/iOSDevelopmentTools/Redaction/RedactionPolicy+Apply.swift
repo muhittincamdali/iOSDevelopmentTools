@@ -88,14 +88,38 @@ extension RedactionPolicy {
         return result
     }
 
-    /// The pair with its value replaced when its name is sensitive. The bytes are cut only at
-    /// ASCII delimiters, so they still hold whole UTF-8 sequences.
+    /// The pair with its value replaced when its name is sensitive, or with sensitive keys
+    /// replaced when its value is JSON. The bytes are cut only at ASCII delimiters, so they still
+    /// hold whole UTF-8 sequences.
     private func redact(pair: ArraySlice<UInt8>) -> String {
         let text = String(decoding: pair, as: UTF8.self)
         guard let equals = pair.firstIndex(of: UInt8(ascii: "=")) else { return text }
         let name = String(decoding: pair[..<equals], as: UTF8.self)
-        return isSensitive(name: name) ? "\(name)=\(Self.replacement)" : text
+        guard !isSensitive(name: name) else { return "\(name)=\(Self.replacement)" }
+        let value = String(decoding: pair[pair.index(after: equals)...], as: UTF8.self)
+        return "\(name)=\(redact(fieldValue: value))"
     }
+
+    /// A form or query value that holds JSON once decoded, as in `data=%7B%22password%22…`, with
+    /// sensitive keys replaced and encoded again; a value that holds JSON that cannot be checked
+    /// is replaced whole. Other values are returned as they are.
+    private func redact(fieldValue value: String) -> String {
+        let decoded = Data(Self.percentDecoded(value.replacingOccurrences(of: "+", with: " ")).utf8)
+        guard Self.looksLikeJSON(decoded) else { return value }
+        switch check(json: decoded, allowingFragments: false, depth: 0) {
+        case .notJSON, .unchanged:
+            return value
+        case .unreadable:
+            return Self.replacement
+        case .redacted(let json):
+            let text = String(decoding: json, as: UTF8.self)
+            return text.addingPercentEncoding(withAllowedCharacters: Self.unencodedValueCharacters) ?? Self.replacement
+        }
+    }
+
+    /// RFC 3986 unreserved characters, plus `:` and `,`, which no form or query parser splits on.
+    private static let unencodedValueCharacters = CharacterSet(
+        charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:,")
 
     /// Replaces the user info in `scheme://user:password@host`. The user name goes as well,
     /// because services such as Git hosts accept a token in its place.
