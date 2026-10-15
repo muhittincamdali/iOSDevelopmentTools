@@ -15,8 +15,10 @@ timeout = 20
 # contents cannot point at a renamed heading.
 include_fragments = "anchor-only"
 
-# 403/429 from rate limiting are not broken links; everything else outside 2xx is.
-accept = ["200..=299", "403", "429"]
+# A link passes when it answers with a success or a redirect. 403 and 429 fail as well, so a page
+# that refuses the checker or rate-limits it is noticed instead of passing unseen; retries above
+# cover short rate limits.
+accept = ["200..=399"]
 
 exclude_loopback = true
 exclude_private = true
