@@ -25,6 +25,8 @@ struct RedactionPolicyTests {
         ("%ZZpass%2577ord", "zzpassword"),
         ("pass%7", "pass7"),
         ("pass%FFword", "password"),
+        // U+0600 joins the "%" after it into one Character; the sequence is still decoded.
+        ("pass\u{600}%77ord", "password"),
         ("", ""),
     ])
     func normalization(name: String, expected: String) {

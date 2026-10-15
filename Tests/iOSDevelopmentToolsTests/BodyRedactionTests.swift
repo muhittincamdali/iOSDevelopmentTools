@@ -162,6 +162,16 @@ struct BodyRedactionTests {
         }
     }
 
+    @Test("A combining mark in a content type does not hide what kind it is")
+    func combiningMarkInContentType() {
+        let form = policy.redact(body: Data("password=hunter2".utf8), contentType: "application/x-www-form-urlencoded\u{301}")
+        #expect(form == (Data("password=\(redacted)".utf8), .redacted))
+        let body = multipart([("Content-Disposition: form-data; name=\"password\"", "hunter2")])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/\u{301}form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        #expect(data == multipart([("Content-Disposition: form-data; name=\"password\"", redacted)]))
+    }
+
     @Test("JSON sent with a form content type is checked as JSON")
     func jsonWithFormContentType() throws {
         let body = Data(#"{"user":"ada","password":"hunter2"}"#.utf8)

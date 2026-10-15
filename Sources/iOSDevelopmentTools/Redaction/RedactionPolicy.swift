@@ -71,7 +71,8 @@ public struct RedactionPolicy: Sendable, Hashable {
     static func normalized(_ name: String) -> String {
         var decoded = name.replacingOccurrences(of: "+", with: " ")
         for _ in 0..<4 {
-            guard decoded.contains("%") else { break }
+            // A byte test: a prepended mark such as U+0600 joins a "%" into one Character.
+            guard decoded.utf8.contains(UInt8(ascii: "%")) else { break }
             let next = percentDecoded(decoded)
             guard next != decoded else { break }
             decoded = next

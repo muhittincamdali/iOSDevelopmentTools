@@ -39,7 +39,7 @@ extension RedactionPolicy {
         let withheld = (Data(), RedactionOutcome.withheld)
         let unchecked = withholdsUncheckedBodies ? withheld : (body, .unchanged)
 
-        if mediaType.contains("multipart/") {
+        if Self.contains("multipart/", in: mediaType) {
             // A multipart part may itself be multipart; one level of nesting is checked.
             guard isComplete, nesting < 2, let boundary = Self.boundary(in: contentType ?? ""),
                   let result = redact(multipart: body, boundary: boundary, nesting: nesting) else { return unchecked }
@@ -47,11 +47,11 @@ extension RedactionPolicy {
         }
         // JSON comes before forms: a JSON body sent with a form content type reads as one field
         // with no "=" and would be stored unchecked, with every key in it.
-        if mediaType.contains("json") || Self.looksLikeJSON(body) {
+        if Self.contains("json", in: mediaType) || Self.looksLikeJSON(body) {
             guard isComplete, let result = redact(json: body) else { return unchecked }
             return result
         }
-        if mediaType.contains("x-www-form-urlencoded") {
+        if Self.contains("x-www-form-urlencoded", in: mediaType) {
             guard let text = String(data: body, encoding: .utf8) else { return unchecked }
             let redacted = redact(parameters: Substring(text))
             return redacted == text ? (body, .unchanged) : (Data(redacted.utf8), .redacted)
@@ -64,6 +64,12 @@ extension RedactionPolicy {
             return redacted == text ? (body, .unchanged) : (Data(redacted.utf8), .redacted)
         }
         return (body, .unchanged)
+    }
+
+    /// Whether `text` contains `fragment`, compared as UTF-8 bytes. `String.contains` compares
+    /// Characters, and a combining mark after the fragment's last letter would hide it.
+    private static func contains(_ fragment: String, in text: String) -> Bool {
+        text.utf8.firstRange(of: fragment.utf8) != nil
     }
 
     private static func looksLikeJSON(_ body: Data) -> Bool {
