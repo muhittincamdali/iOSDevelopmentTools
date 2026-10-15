@@ -47,12 +47,34 @@ struct BodyRedactionTests {
         #expect(object["ｔｉｔｌｅ"] as? String == "x")
     }
 
-    @Test("Duplicate keys cannot smuggle a value through")
-    func duplicateKeys() {
-        let body = Data(#"{"token":"a","token":"b"}"#.utf8)
-        let (data, _) = policy.redact(body: body, contentType: "application/json")
-        let text = String(decoding: data, as: UTF8.self)
-        #expect(!text.contains("\"a\"") && !text.contains("\"b\""))
+    // JSONSerialization keeps one value of a repeated key; Python and JavaScript keep the last.
+    @Test("A repeated key withholds the body, at any depth", arguments: [
+        #"{"token":"a","token":"b"}"#,
+        #"{"a":1,"a":{"password":"hunter2"}}"#,
+        #"{"a":{"password":"hunter2"},"a":1}"#,
+        #"[{"a":{"token":"hunter2"},"a":0}]"#,
+        #"{"x":{"y":[1,{"a":1,"a":{"secret":"hunter2"}}]}}"#,
+        #"{"a":1,"a":{"password":"hunter2"}}"#,
+        #"{"😀":1,"😀":{"password":"hunter2"}}"#,
+        "{\"\u{E9}\":1,\"e\u{301}\":{\"password\":\"hunter2\"}}",
+        #"{"variables":"{\"a\":1,\"a\":{\"password\":\"hunter2\"}}"}"#,
+    ])
+    func duplicateKeys(body: String) {
+        #expect(policy.redact(body: Data(body.utf8), contentType: "application/json") == (Data(), .withheld))
+        // The same bytes sent as UTF-16 are read the same way.
+        let wide = body.data(using: .utf16LittleEndian)!
+        #expect(policy.redact(body: wide, contentType: "application/json") == (Data(), .withheld))
+    }
+
+    @Test("Equal keys in different objects are not repeats", arguments: [
+        #"{"a":{"x":1},"b":{"x":2}}"#,
+        #"[{"a":1},{"a":2}]"#,
+        #"{"a":"a","b":["a","a"],"c":{"a":{"a":1}}}"#,
+        #"{"a\"b":1,"a\\b":2,"ab":3}"#,
+    ])
+    func keysInSeparateObjects(body: String) {
+        let data = Data(body.utf8)
+        #expect(policy.redact(body: data, contentType: "application/json") == (data, .unchanged))
     }
 
     @Test("JSON sent with a non-JSON content type is still checked")
