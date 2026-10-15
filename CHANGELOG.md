@@ -30,7 +30,8 @@ new major version.
   capture cannot see, and publishes changes through an `AsyncStream`.
 - `RedactionPolicy` replaces sensitive values before anything is stored: headers by name and by
   authentication scheme, query, fragment and matrix parameters, URL user info, JSON keys at any
-  depth, form fields and multipart fields. Names are normalized (case, separators,
+  depth (also inside strings that hold JSON), form fields (also in bodies sent without a
+  `Content-Type`) and multipart fields. Names are normalized (case, separators,
   percent-encoding, invisible characters) before they are matched. Structured bodies that cannot
   be checked (cut off, malformed, nested deeper than 64 levels, multipart with more than 1,000
   parts or with text outside its boundaries) are withheld.
