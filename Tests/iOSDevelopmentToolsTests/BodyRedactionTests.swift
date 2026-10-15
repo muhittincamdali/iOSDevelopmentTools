@@ -229,6 +229,20 @@ struct BodyRedactionTests {
         #expect(text.contains("name=\"password\"\r\n\r\n\(redacted)\r\n--B--"))
     }
 
+    @Test("A boundary or a header line break after a bare CR or LF withholds the body", arguments: [
+        // Werkzeug reads a password part here, after the LF that ends "hi".
+        "--B\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nhi\n--B\n"
+            + "Content-Disposition: form-data; name=\"password\"\n\nhunter2\r\n--B--",
+        "--B\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nhi\r--B\r\n"
+            + "Content-Disposition: form-data; name=\"password\"\r\n\r\nhunter2\r\n--B--",
+        "\n--B\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--B--",
+        // Headers that end at "\n\n" put hunter2 in the content for such a server.
+        "--B\r\nContent-Disposition: form-data; name=\"password\"\n\nhunter2\r\n\r\nv\r\n--B--",
+    ])
+    func bareLineBreaks(text: String) {
+        #expect(policy.redact(body: Data(text.utf8), contentType: "multipart/form-data; boundary=B") == (Data(), .withheld))
+    }
+
     @Test("Text before the first or after the closing delimiter withholds the body", arguments: [
         "preamble\r\n--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\n",
         "--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\nepilogue",

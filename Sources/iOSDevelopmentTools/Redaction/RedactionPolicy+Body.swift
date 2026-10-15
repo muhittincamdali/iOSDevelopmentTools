@@ -169,9 +169,16 @@ extension RedactionPolicy {
             // RFC 2046: a delimiter starts a line. "--boundary" inside a line is content; taking it
             // for a delimiter would let a part end early, and a server would still read the parts
             // that follow it.
-            guard Self.startsLine(at: found.lowerBound, in: body) else {
+            switch Self.linePosition(of: found.lowerBound, in: body) {
+            case .insideLine:
                 searchStart = body.index(after: found.lowerBound)
                 continue
+            case .afterBareLineBreak:
+                // RFC 2046 lines end in CRLF, but Werkzeug (Flask) and other servers also split
+                // on a bare LF and would read a part that starts there, so it cannot be content.
+                return nil
+            case .lineStart:
+                break
             }
             // The closing delimiter is one more than the parts.
             guard delimiters.count <= Self.maximumMultipartParts else { return nil }
@@ -198,7 +205,9 @@ extension RedactionPolicy {
                 closed = true
                 break
             }
-            guard let headersRange = part.range(of: headerEnd) else { return nil }
+            guard let headersRange = part.range(of: headerEnd),
+                  !Self.containsBareLineBreak(part[part.startIndex..<headersRange.lowerBound])
+            else { return nil }
             let headerText = String(decoding: part[part.startIndex..<headersRange.lowerBound], as: UTF8.self)
             let headers = Self.partHeaders(headerText)
             let name = headers["content-disposition"].flatMap { Self.parameter("name", in: $0) ?? Self.parameter("name*", in: $0) }
@@ -229,12 +238,45 @@ extension RedactionPolicy {
         byte == 0x20 || byte == 0x09 || byte == 0x0D || byte == 0x0A
     }
 
-    /// Whether `index` is the start of `body` or follows a CRLF.
-    private static func startsLine(at index: Data.Index, in body: Data) -> Bool {
-        guard index != body.startIndex else { return true }
-        guard body.distance(from: body.startIndex, to: index) >= 2 else { return false }
-        return body[index - 2] == 0x0D && body[index - 1] == 0x0A
+    private enum LinePosition {
+        /// The start of the body, or after a CRLF.
+        case lineStart
+        /// After a CR or LF that is not part of a CRLF.
+        case afterBareLineBreak
+        case insideLine
     }
+
+    private static func linePosition(of index: Data.Index, in body: Data) -> LinePosition {
+        guard index != body.startIndex else { return .lineStart }
+        let previous = body[body.index(before: index)]
+        if previous == lineFeed, body.distance(from: body.startIndex, to: index) >= 2,
+           body[body.index(index, offsetBy: -2)] == carriageReturn {
+            return .lineStart
+        }
+        return previous == lineFeed || previous == carriageReturn ? .afterBareLineBreak : .insideLine
+    }
+
+    /// Whether `bytes` hold a CR or LF that is not part of a CRLF. Servers that split part
+    /// headers on a bare LF could end the headers, and start the content, earlier than the
+    /// first blank CRLF line.
+    private static func containsBareLineBreak(_ bytes: Data.SubSequence) -> Bool {
+        var index = bytes.startIndex
+        while index < bytes.endIndex {
+            let byte = bytes[index]
+            let next = bytes.index(after: index)
+            if byte == carriageReturn {
+                guard next < bytes.endIndex, bytes[next] == lineFeed else { return true }
+                index = bytes.index(after: next)
+                continue
+            }
+            if byte == lineFeed { return true }
+            index = next
+        }
+        return false
+    }
+
+    private static let carriageReturn: UInt8 = 0x0D
+    private static let lineFeed: UInt8 = 0x0A
 
     /// A part's headers by lowercased name. A repeated header keeps its first value.
     static func partHeaders(_ text: String) -> [String: String] {
