@@ -213,18 +213,25 @@ extension RedactionPolicy {
             else { return nil }
             let headerText = String(decoding: part[part.startIndex..<headersRange.lowerBound], as: UTF8.self)
             let headers = Self.partHeaders(headerText)
-            let name = headers["content-disposition"].flatMap { Self.parameter("name", in: $0) ?? Self.parameter("name*", in: $0) }
+            // Servers differ in which of several Content-Disposition headers, or of several name
+            // parameters, they read, so every one is checked.
+            let names = (headers["content-disposition"] ?? []).flatMap {
+                Self.parameterValues("name", in: $0) + Self.parameterValues("name*", in: $0)
+            }
+            // Likewise, a part with two content types could be read as either.
+            let partTypes = headers["content-type"] ?? []
+            guard partTypes.count <= 1 else { return nil }
             let hasLineBreak = part.count >= 2 && part.suffix(2).elementsEqual(lineBreak)
             let contentEnd = hasLineBreak ? part.index(part.endIndex, offsetBy: -2) : part.endIndex
             let content = Data(part[headersRange.upperBound..<contentEnd])
             output.append(part[part.startIndex..<headersRange.upperBound])
-            if let name, isSensitive(name: name) {
+            if names.contains(where: isSensitive(name:)) {
                 output.append(Data(Self.replacement.utf8))
                 changed = true
             } else {
                 // A part that is not sensitive by name may still be JSON, a form or multipart.
                 // A part without a Content-Type is text/plain (RFC 7578), not a form.
-                let partType = headers["content-type"] ?? "text/plain"
+                let partType = partTypes.first ?? "text/plain"
                 let (checked, outcome) = redact(body: content, contentType: partType, isComplete: true, nesting: nesting + 1)
                 if outcome == .withheld { return nil }
                 output.append(checked)
@@ -289,28 +296,28 @@ extension RedactionPolicy {
     private static let carriageReturn: UInt8 = 0x0D
     private static let lineFeed: UInt8 = 0x0A
 
-    /// A part's headers by lowercased name. A repeated header keeps its first value.
-    static func partHeaders(_ text: String) -> [String: String] {
-        var headers: [String: String] = [:]
+    /// A part's headers by lowercased name, with every value of a repeated header in order.
+    static func partHeaders(_ text: String) -> [String: [String]] {
+        var headers: [String: [String]] = [:]
         for line in text.components(separatedBy: "\r\n") {
             let header = line.split(separator: ":", maxSplits: 1)
             guard header.count == 2 else { continue }
             let name = header[0].trimmingCharacters(in: .whitespaces).lowercased()
-            if headers[name] == nil {
-                headers[name] = header[1].trimmingCharacters(in: .whitespaces)
-            }
+            headers[name, default: []].append(header[1].trimmingCharacters(in: .whitespaces))
         }
         return headers
     }
 
-    /// A parameter of a header value such as `form-data; name="field"; filename="a.txt"`.
+    /// The values of a parameter of a header value such as `form-data; name="field"; filename="a.txt"`,
+    /// in order; a parameter may appear more than once, as in `name="a"; name="password"`.
     ///
     /// Quoted values may contain `;` and backslash escapes, so `name="a;password"` reads as one
     /// name instead of ending at the semicolon.
-    static func parameter(_ wanted: String, in value: String) -> String? {
+    static func parameterValues(_ wanted: String, in value: String) -> [String] {
+        var values: [String] = []
         var characters = value[...]
         // Skip the disposition type.
-        guard let firstSemicolon = characters.firstIndex(of: ";") else { return nil }
+        guard let firstSemicolon = characters.firstIndex(of: ";") else { return [] }
         characters = characters[characters.index(after: firstSemicolon)...]
         while !characters.isEmpty {
             characters = characters.drop(while: { $0 == " " || $0 == "\t" || $0 == ";" })
@@ -343,9 +350,9 @@ extension RedactionPolicy {
                 }
             }
             if key.trimmingCharacters(in: .whitespaces).lowercased() == wanted {
-                return parameterValue
+                values.append(parameterValue)
             }
         }
-        return nil
+        return values
     }
 }

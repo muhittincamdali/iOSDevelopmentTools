@@ -185,11 +185,31 @@ struct BodyRedactionTests {
 
     @Test("Parameter parsing handles escapes, extended names and bare values")
     func parameterParsing() {
-        #expect(RedactionPolicy.parameter("name", in: #"form-data; name="a\"b"; filename="x""#) == #"a"b"#)
-        #expect(RedactionPolicy.parameter("name*", in: "form-data; name*=utf-8''pass%77ord") == "utf-8''pass%77ord")
-        #expect(RedactionPolicy.parameter("name", in: "form-data; filename=x; name = token ") == "token")
-        #expect(RedactionPolicy.parameter("name", in: "form-data") == nil)
-        #expect(RedactionPolicy.parameter("name", in: "form-data; ;; =; name") == "")
+        #expect(RedactionPolicy.parameterValues("name", in: #"form-data; name="a\"b"; filename="x""#) == [#"a"b"#])
+        #expect(RedactionPolicy.parameterValues("name*", in: "form-data; name*=utf-8''pass%77ord") == ["utf-8''pass%77ord"])
+        #expect(RedactionPolicy.parameterValues("name", in: "form-data; filename=x; name = token ") == ["token"])
+        #expect(RedactionPolicy.parameterValues("name", in: "form-data") == [])
+        #expect(RedactionPolicy.parameterValues("name", in: "form-data; ;; =; name") == [""])
+        #expect(RedactionPolicy.parameterValues("name", in: #"form-data; name="a"; NAME=b"#) == ["a", "b"])
+    }
+
+    @Test("Every Content-Disposition name of a part is checked", arguments: [
+        "Content-Disposition: form-data; name=\"note\"\r\nContent-Disposition: form-data; name=\"password\"",
+        "Content-Disposition: form-data; name=\"note\"; name=\"password\"",
+        "Content-Disposition: form-data; name=\"note\"; name*=utf-8''password",
+    ])
+    func repeatedNames(headers: String) {
+        let body = multipart([(headers, "hunter2")])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        #expect(data == multipart([(headers, redacted)]))
+    }
+
+    @Test("A part with two content types is withheld")
+    func repeatedContentType() {
+        let headers = "Content-Disposition: form-data; name=\"a\"\r\nContent-Type: text/plain\r\nContent-Type: application/json"
+        let body = multipart([(headers, #"{"token":"t"}"#)])
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
     }
 
     @Test("A JSON part is checked by its own content type")
