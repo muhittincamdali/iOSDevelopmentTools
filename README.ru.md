@@ -1,0 +1,305 @@
+<!-- i18n-source: README.md@bc7d1987b8be523da404a298030afc3d21ff5c59 status=reviewed -->
+<!-- brand:start -->
+
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
+
+<!-- lang-selector:start -->
+<p align="center"><a href="README.md">English</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a> · <a href="README.es.md">Español</a> · <a href="README.de.md">Deutsch</a> · <a href="README.fr.md">Français</a> · <a href="README.pt-BR.md">Português (Brasil)</a> · <a href="README.ru.md">Русский</a></p>
+<!-- lang-selector:end -->
+
+<p align="center">
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml"><img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="Статус CI"></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="Последняя версия: v1.0.0"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg" alt="Поддерживаемые платформы: iOS 17+ · macOS 14+"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg" alt="Версия языка: Swift 6.2+"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg" alt="Лицензия: MIT"></picture></a>
+</p>
+
+<p align="center">
+<a href="#быстрый-старт"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-start-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-start-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-start-ru-light.svg" alt="Начать"></picture></a>
+<a href="https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-docs-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-docs-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-docs-ru-light.svg" alt="Документация"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/tree/master/Examples"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-examples-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-examples-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-examples-ru-light.svg" alt="Примеры"></picture></a>
+</p>
+
+> Это перевод README на английском языке. Если они расходятся, актуальна английская версия.
+
+<!-- brand:end -->
+
+Swift-пакет, который встраивает консоль отладки в ваше приложение для iOS или macOS. Он записывает
+запросы, которые приложение выполняет через `URLSession`, хранит ваши сообщения журнала и собирает отчёт
+об устройстве, а затем показывает всё это в консоли на SwiftUI. Консоль открывается встряхиванием,
+кнопкой или в отдельном окне. Откройте запрос, чтобы увидеть его заголовки, тела и время выполнения,
+или поделитесь им как командой cURL либо файлом HAR для инструментов разработчика в браузере, Charles
+или Proxyman. Пароли, токены, cookie и API-ключи заменяются до того, как что-либо будет сохранено,
+поэтому они не попадают ни в консоль, ни в экспортированный файл, ни на скриншот в баг-репорте. Пакет
+предназначен для debug- и тестовых сборок, не имеет зависимостей и написан с расчётом на strict
+concurrency в Swift 6.
+
+<p align="center">
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/network-dark.png"><img src="docs/images/network-light.png" width="300" alt="Вкладка Network со списком семи реальных запросов из демонстрационного приложения: неудачный запрос к неизвестному хосту, ответы 503 и 404 и четыре успешных запроса с указанием длительности и размера"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/request-dark.png"><img src="docs/images/request-light.png" width="300" alt="Запрос входа, открытый в консоли: заголовок Authorization и пароль в теле JSON показаны как [REDACTED]"></picture>
+</p>
+
+## Основные возможности
+
+- **Одна строка для записи** — `NetworkCapture.start()` записывает `URLSession.shared` и все сессии,
+  которые создаются потом из конфигурации default или ephemeral, включая библиотеки, построенные на
+  `URLSession`. Ваше приложение получает каждый ответ без изменений.
+- **Маскирование до сохранения** — значения заголовков, query, форм, multipart и JSON с
+  чувствительными именами заменяются, как бы имя ни было написано (`X-API-Key`, `api_key`,
+  `API%5FKEY`). Тело JSON, которое нельзя проверить, например потому, что оно обрезано, не
+  сохраняется непроверенным, а удерживается.
+- **Фиксированный расход памяти** — по умолчанию не более 500 запросов и 256 KiB на каждое тело;
+  сообщения журнала хранятся в кольцевом буфере, а загрузки больше 4 MiB передаются потоком, а не
+  копируются.
+- **Экспорт** — любой запрос как безопасная для оболочки команда `curl`, любой список запросов как
+  HTTP Archive (HAR 1.2).
+- **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
+  записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
+  ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
+- **Протестировано** — 104 теста Swift Testing на macOS и 105 в симуляторе iOS. Запросы идут из
+  сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
+  приложение и что было сохранено.
+
+## Быстрый старт
+
+**1. Добавьте пакет**
+
+В Xcode выберите **File › Add Package Dependencies…** и введите адрес репозитория:
+
+```text
+https://github.com/muhittincamdali/iOSDevelopmentTools.git
+```
+
+Вставьте его в поле поиска в правом верхнем углу окна. Оставьте **Dependency Rule** равным
+**Up to Next Major Version** начиная с `2.0.0` и нажмите **Add Package**. В следующем окне выберите
+target вашего приложения рядом с **iOSDevelopmentTools** и снова нажмите **Add Package**.
+
+**2. Импортируйте модуль**
+
+```swift
+import iOSDevelopmentTools
+```
+
+Поместите эту строку в начало файла, где объявлен ваш `App`, под `import SwiftUI`.
+
+**3. Запустите запись и добавьте консоль**
+
+В файле `App` вашего приложения запустите перехват в `init` и добавьте консоль к корневому view.
+Строки `#if DEBUG` не пускают оба вызова в release-сборки:
+
+```swift
+@main
+struct MyApp: App {
+    init() {
+        #if DEBUG
+        NetworkCapture.start()
+        #endif
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                #if DEBUG
+                .devToolsConsoleOnShake()
+                #endif
+        }
+    }
+}
+```
+
+Запустите приложение в симуляторе iPhone, дождитесь любого запроса и выберите **Device › Shake** в
+меню Simulator. Консоль откроется на вкладке Network, и запрос будет в списке.
+
+## Установка
+
+### Swift Package Manager
+
+В Xcode выберите **File › Add Package Dependencies…** и введите адрес репозитория:
+
+```text
+https://github.com/muhittincamdali/iOSDevelopmentTools.git
+```
+
+Или добавьте его в `dependencies` вашего `Package.swift`:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.0.0")
+],
+targets: [
+    .target(name: "YourApp", dependencies: [
+        .product(name: "iOSDevelopmentTools", package: "iOSDevelopmentTools")
+    ])
+]
+```
+
+## Использование
+
+Примеры ниже скопированы из
+[ReadmeSamples.swift](Examples/DevToolsDemo/DevToolsDemo/ReadmeSamples.swift); этот файл компилируют
+демонстрационное приложение и набор тестов.
+
+### Открыть консоль по кнопке
+
+```swift
+struct DebugMenuButton: View {
+    @State private var showsTools = false
+
+    var body: some View {
+        Button("Developer Tools") { showsTools = true }
+            .devToolsConsole(isPresented: $showsTools)
+    }
+}
+```
+
+### Записывать сессию, которую вы создаёте сами
+
+Сессии, созданные из `.default` или `.ephemeral` после `NetworkCapture.start()`, записываются
+автоматически. Для сессии, созданной раньше, добавьте запись в её конфигурацию:
+
+```swift
+func makeAPISession() -> URLSession {
+    let configuration = URLSessionConfiguration.default
+    configuration.timeoutIntervalForRequest = 30
+    NetworkCapture.install(into: configuration)
+    return URLSession(configuration: configuration)
+}
+```
+
+### Выбрать, что сохранять
+
+Значения лимитов вне допустимых диапазонов приводятся к границам диапазона. Фрагменты имён
+сопоставляются с нормализованными именами, поэтому `"iban"` ловит и `IBAN`, и `iban_number`, и
+`ibanNumber`:
+
+```swift
+func configureNetworkLogger() {
+    NetworkLogger.shared.configuration = NetworkLogger.Configuration(
+        maximumEntries: 1_000,
+        maximumBodySize: 512 * 1024,
+        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        ignoredHosts: ["analytics.example.com"]
+    )
+}
+```
+
+### Записывать сообщения в журнал
+
+```swift
+func logCheckout(orderID: String, error: (any Error)?) {
+    if let error {
+        LogStore.shared.error("Order \(orderID) failed: \(error.localizedDescription)", category: "checkout")
+    } else {
+        LogStore.shared.info("Order \(orderID) placed", category: "checkout")
+    }
+}
+```
+
+### Экспортировать запросы и отчёты
+
+```swift
+func exportForBugReport() throws -> (har: Data, curl: [String], device: String) {
+    let entries = NetworkLogger.shared.entries
+    let har = try HTTPArchive(entries: entries).jsonData()
+    let curl = entries.map { $0.curlCommand() }
+    let device = DeviceSnapshot.current().report()
+    return (har, curl, device)
+}
+```
+
+Меню «Поделиться» в консоли делают то же самое для пользователя: **Export HAR** на вкладке Network,
+**Share as cURL** в запросе, **Share Report** на вкладке Device.
+
+### Использование на macOS
+
+У приложения для Mac нет встряхивания. Дайте консоли отдельное окно и откройте его сочетанием клавиш:
+
+```swift
+struct MacDebugScenes: Scene {
+    var body: some Scene {
+        Window("Developer Tools", id: "devtools") {
+            DevToolsConsole()
+        }
+        .keyboardShortcut("d", modifiers: [.command, .option])
+    }
+}
+```
+
+## Демо
+
+<table>
+<tr>
+<td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/logs-dark.png"><img src="docs/images/logs-light.png" width="260" alt="Вкладка Logs с сообщениями info, warning и error из демонстрационного приложения; у каждого указаны категория, время и строка исходного кода"></picture></td>
+<td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/device-dark.png"><img src="docs/images/device-light.png" width="260" alt="Вкладка Device с версией приложения, версией iOS, имитируемой моделью, памятью, памятью приложения, тепловым состоянием, Low Power Mode и состоянием отладчика"></picture></td>
+</tr>
+</table>
+
+Скриншоты сделаны в [демонстрационном приложении](Examples) на симуляторе iPhone 17 Pro с iOS 27 с
+помощью [`scripts/capture-screens.sh`](scripts/capture-screens.sh). Запросы настоящие: приложение
+отправляет их на `api.github.com` и `postman-echo.com`. Чтобы запустить его, откройте
+`Examples/DevToolsDemo/DevToolsDemo.xcodeproj`, выберите симулятор iPhone или **My Mac**, запустите и
+нажмите **Send All**.
+
+## Документация
+
+Справочник API и статьи:
+
+- [Справочник API](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/)
+  — каждый публичный тип с параметрами и ограничениями.
+
+## Руководства
+
+- [Начало работы](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/gettingstarted)
+  — добавить пакет, запустить перехват, открыть консоль, записывать сообщения в журнал.
+- [Перехват сетевого трафика](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
+  — какие сессии записываются, как запросы доходят до сервера, лимиты памяти и что не записывается.
+- [Маскирование чувствительных данных](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
+  — как сопоставляются имена, что заменяется, почему некоторые тела удерживаются, и ограничения.
+- [Как не включать инструменты в release-сборки](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
+  — условия компиляции и отдельный внутренний target.
+
+## Требования
+
+| Платформа | Минимальная версия |
+| ------------------- | ------------------ |
+| iOS | 17 |
+| macOS | 14 |
+| Инструменты | Swift 6.2 · Xcode 26+ |
+
+Жест встряхивания есть только в iOS; в macOS консоль открывается в окне или в sheet.
+
+## Архитектура
+
+```text
+URLSession ──► CaptureProtocol ──► ForwardingSession ──► server
+ (your app)      │  redacts a copy        │
+                 ▼                        ▼  response, unchanged, back to your app
+            NetworkLogger ◄──────── status, body prefix, metrics
+                 │
+LogStore ────────┼──► DevToolsConsole (Network · Logs · Device tabs)
+DeviceSnapshot ──┘
+```
+
+- `NetworkCapture` регистрирует `CaptureProtocol`, то есть `URLProtocol`, для `URLSession.shared` и
+  добавляет его в конфигурации default и ephemeral. Протокол отправляет каждый запрос дальше через одну
+  внутреннюю `URLSession` и вызывает сессию приложения обратно в потоке, который начал загрузку.
+- `RedactionPolicy` срабатывает до создания `NetworkEntry`, поэтому хранилища и экспорт видят только
+  замаскированные значения.
+- `NetworkLogger` и `LogStore` — кольцевые буферы под защитой блокировок, которые публикуют изменения
+  через `AsyncStream`; observable-модели консоли читают их не чаще примерно семи раз в секунду.
+- Всё за пределами view консоли — `Sendable` и может вызываться из любого потока.
+
+## План развития
+
+В планах, без определённого порядка: сохранение запросов между запусками, бэкенд `swift-log` для
+`LogStore`, поддержка консоли на tvOS и visionOS и подмена запросов (mocking). Предложения приветствуются
+в [issues](https://github.com/muhittincamdali/iOSDevelopmentTools/issues).
+
+## Участие в разработке
+
+Мы рады вашему участию. Перед открытием pull request прочитайте [руководство для участников](https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/CONTRIBUTING.md) и [кодекс поведения](https://github.com/muhittincamdali/.github/blob/main/CODE_OF_CONDUCT.md). О проблемах безопасности сообщайте конфиденциально, как описано в [политике безопасности](https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/SECURITY.md).
+
+## Лицензия
+
+Распространяется по лицензии MIT. Подробнее — в файле [LICENSE](LICENSE).
