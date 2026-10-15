@@ -21,11 +21,17 @@ also something the console can show.
 
 ### Files
 
-| File                                                                     | What it shows                                                                                           |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| [DevToolsDemoApp.swift](DevToolsDemo/DevToolsDemo/DevToolsDemoApp.swift) | `NetworkCapture.start()` at launch, and a `Window` scene for the console on macOS                       |
-| [DemoView.swift](DevToolsDemo/DevToolsDemo/DemoView.swift)               | The sample requests, a button that opens the console, `devToolsConsoleOnShake()` and `NetworkEntryView` |
-| [ReadmeSamples.swift](DevToolsDemo/DevToolsDemo/ReadmeSamples.swift)     | Every code sample in the README. `swift test` compiles and runs them too, through a link in `Tests/`    |
+| File                                                                     | What it shows                                                                                                       |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| [DevToolsDemoApp.swift](DevToolsDemo/DevToolsDemo/DevToolsDemoApp.swift) | `NetworkCapture.start()` at launch, and a `Window` scene for the console on macOS                                   |
+| [DemoView.swift](DevToolsDemo/DevToolsDemo/DemoView.swift)               | The sample requests, a button that opens the console, `devToolsConsoleOnShake()` and `NetworkEntryView`             |
+| [ReadmeSamples.swift](DevToolsDemo/DevToolsDemo/ReadmeSamples.swift)     | The code samples in the README's Usage section. `swift test` compiles and runs them too, through a link in `Tests/` |
+
+The quick start's `App` and the `Package.swift` lines in the README are templates for your own
+project and are not part of this app. The quick start's `devToolsConsoleOnShake()` is iOS only:
+[DemoView.swift](DevToolsDemo/DevToolsDemo/DemoView.swift) puts it under `#if os(iOS)`, and
+[DevToolsDemoApp.swift](DevToolsDemo/DevToolsDemo/DevToolsDemoApp.swift) gives the console a
+window on macOS instead.
 
 ### Launch arguments
 
