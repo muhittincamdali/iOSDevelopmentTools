@@ -43,15 +43,17 @@ extension RedactionPolicy {
 
     func redact(urlString: String) -> String {
         guard isEnabled else { return urlString }
+        // Delimiters are found as UTF-8 bytes, not Characters: a combining mark after "?" or "#"
+        // would join it into one Character and hide the query or fragment.
         var remainder = Substring(urlString)
         var fragment: Substring?
-        if let hash = remainder.firstIndex(of: "#") {
-            fragment = remainder[remainder.index(after: hash)...]
+        if let hash = remainder.utf8.firstIndex(of: UInt8(ascii: "#")) {
+            fragment = remainder[remainder.utf8.index(after: hash)...]
             remainder = remainder[..<hash]
         }
         var query: Substring?
-        if let question = remainder.firstIndex(of: "?") {
-            query = remainder[remainder.index(after: question)...]
+        if let question = remainder.utf8.firstIndex(of: UInt8(ascii: "?")) {
+            query = remainder[remainder.utf8.index(after: question)...]
             remainder = remainder[..<question]
         }
         var result = redactMatrixParameters(in: redactUserInfo(in: remainder))
@@ -59,61 +61,69 @@ extension RedactionPolicy {
             result += "?" + redact(parameters: query)
         }
         if let fragment {
-            result += "#" + (fragment.contains("=") ? redact(parameters: fragment) : String(fragment))
+            result += "#" + (fragment.utf8.contains(UInt8(ascii: "=")) ? redact(parameters: fragment) : String(fragment))
         }
         return result
     }
 
     /// `name=value` pairs separated by `&` or `;`, with sensitive values replaced. Separators,
     /// names and the encoding of values that are kept stay as they were.
+    ///
+    /// The text is split as UTF-8 bytes, not Characters, as servers split it: a combining mark
+    /// after `=`, `&` or `;` would join it into one Character, and `password=` followed by U+0301
+    /// and a value would read as a pair without a value.
     func redact(parameters: Substring) -> String {
+        let bytes = Array(parameters.utf8)
         var result = ""
-        result.reserveCapacity(parameters.utf8.count)
-        var pairStart = parameters.startIndex
-        var index = parameters.startIndex
-        while index <= parameters.endIndex {
-            let atEnd = index == parameters.endIndex
-            if atEnd || parameters[index] == "&" || parameters[index] == ";" {
-                result += redact(pair: parameters[pairStart..<index])
-                if atEnd { break }
-                result.append(parameters[index])
-                pairStart = parameters.index(after: index)
-            }
-            index = parameters.index(after: index)
+        result.reserveCapacity(bytes.count)
+        var pairStart = 0
+        for index in 0...bytes.count {
+            let atEnd = index == bytes.count
+            guard atEnd || bytes[index] == UInt8(ascii: "&") || bytes[index] == UInt8(ascii: ";") else { continue }
+            result += redact(pair: bytes[pairStart..<index])
+            if atEnd { break }
+            result.unicodeScalars.append(Unicode.Scalar(bytes[index]))
+            pairStart = index + 1
         }
         return result
     }
 
-    private func redact(pair: Substring) -> String {
-        guard let equals = pair.firstIndex(of: "=") else { return String(pair) }
-        let name = pair[..<equals]
-        return isSensitive(name: String(name)) ? "\(name)=\(Self.replacement)" : String(pair)
+    /// The pair with its value replaced when its name is sensitive. The bytes are cut only at
+    /// ASCII delimiters, so they still hold whole UTF-8 sequences.
+    private func redact(pair: ArraySlice<UInt8>) -> String {
+        let text = String(decoding: pair, as: UTF8.self)
+        guard let equals = pair.firstIndex(of: UInt8(ascii: "=")) else { return text }
+        let name = String(decoding: pair[..<equals], as: UTF8.self)
+        return isSensitive(name: name) ? "\(name)=\(Self.replacement)" : text
     }
 
     /// Replaces the user info in `scheme://user:password@host`. The user name goes as well,
     /// because services such as Git hosts accept a token in its place.
     private func redactUserInfo(in prefix: Substring) -> String {
-        guard let schemeEnd = prefix.range(of: "://") else { return String(prefix) }
+        guard let schemeEnd = prefix.utf8.firstRange(of: "://".utf8) else { return String(prefix) }
         let authorityStart = schemeEnd.upperBound
-        let authorityEnd = prefix[authorityStart...].firstIndex(of: "/") ?? prefix.endIndex
-        guard let at = prefix[authorityStart..<authorityEnd].lastIndex(of: "@") else { return String(prefix) }
+        let authorityEnd = prefix.utf8[authorityStart...].firstIndex(of: UInt8(ascii: "/")) ?? prefix.endIndex
+        guard let at = prefix.utf8[authorityStart..<authorityEnd].lastIndex(of: UInt8(ascii: "@")) else {
+            return String(prefix)
+        }
         return String(prefix[..<authorityStart]) + Self.replacement + String(prefix[at...])
     }
 
     /// Checks `;name=value` parameters in path segments, as in `/cart;jsessionid=…/items`.
     private func redactMatrixParameters(in prefix: String) -> String {
-        guard prefix.contains(";") else { return prefix }
+        guard prefix.utf8.contains(UInt8(ascii: ";")) else { return prefix }
         let pathStart: String.Index
-        if let schemeEnd = prefix.range(of: "://") {
-            pathStart = prefix[schemeEnd.upperBound...].firstIndex(of: "/") ?? prefix.endIndex
+        if let schemeEnd = prefix.utf8.firstRange(of: "://".utf8) {
+            pathStart = prefix.utf8[schemeEnd.upperBound...].firstIndex(of: UInt8(ascii: "/")) ?? prefix.endIndex
         } else {
             pathStart = prefix.startIndex
         }
-        let segments = prefix[pathStart...].split(separator: "/", omittingEmptySubsequences: false)
-        let path = segments.map { segment -> String in
-            guard let semicolon = segment.firstIndex(of: ";") else { return String(segment) }
-            let parameters = segment[segment.index(after: semicolon)...]
-            return String(segment[...semicolon]) + redact(parameters: parameters)
+        let segments = prefix.utf8[pathStart...].split(separator: UInt8(ascii: "/"), omittingEmptySubsequences: false)
+        let path = segments.map { segmentBytes -> String in
+            let segment = Substring(segmentBytes)
+            guard let semicolon = segment.utf8.firstIndex(of: UInt8(ascii: ";")) else { return String(segment) }
+            let parametersStart = segment.utf8.index(after: semicolon)
+            return String(segment[..<parametersStart]) + redact(parameters: segment[parametersStart...])
         }
         return String(prefix[..<pathStart]) + path.joined(separator: "/")
     }

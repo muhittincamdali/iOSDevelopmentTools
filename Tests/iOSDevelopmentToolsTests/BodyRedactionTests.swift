@@ -148,6 +148,20 @@ struct BodyRedactionTests {
         #expect(String(decoding: data, as: UTF8.self) == "user=ada&pass%77ord=\(redacted)&remember=1")
     }
 
+    @Test("A combining mark after a form delimiter does not hide a field", arguments: [
+        ("password=\u{301}hunter2", "password=\(RedactionPolicy.replacement)"),
+        ("user=ada&\u{301}password=hunter2", "user=ada&\u{301}password=\(RedactionPolicy.replacement)"),
+        ("user=ada;\u{301}token=t", "user=ada;\u{301}token=\(RedactionPolicy.replacement)"),
+    ])
+    func combiningMarkInForm(body: String, expected: String) {
+        // Werkzeug 3.1.9 reads the first body as {"password": "\u{301}hunter2"}.
+        for contentType in ["application/x-www-form-urlencoded", nil] {
+            let (data, outcome) = policy.redact(body: Data(body.utf8), contentType: contentType)
+            #expect(outcome == .redacted)
+            #expect(data == Data(expected.utf8))
+        }
+    }
+
     @Test("JSON sent with a form content type is checked as JSON")
     func jsonWithFormContentType() throws {
         let body = Data(#"{"user":"ada","password":"hunter2"}"#.utf8)

@@ -134,6 +134,18 @@ struct RedactionPolicyTests {
         #expect(policy.redact(url: pathAt) == pathAt.absoluteString)
     }
 
+    @Test("A combining mark after a delimiter does not hide a URL part", arguments: [
+        ("https://e.com/p?\u{301}token=x", "https://e.com/p?\u{301}token=\(RedactionPolicy.replacement)"),
+        ("https://e.com/p?a=1&token=\u{301}x", "https://e.com/p?a=1&token=\(RedactionPolicy.replacement)"),
+        ("https://e.com/cb#\u{301}access_token=abc", "https://e.com/cb#\u{301}access_token=\(RedactionPolicy.replacement)"),
+        ("https://e.com/shop;\u{301}jsessionid=ABC/x", "https://e.com/shop;\u{301}jsessionid=\(RedactionPolicy.replacement)/x"),
+        ("https://alice:pw@\u{301}e.com/a", "https://\(RedactionPolicy.replacement)@\u{301}e.com/a"),
+    ])
+    func combiningMarkAfterDelimiter(url: String, expected: String) {
+        // Compared as bytes: String equality would treat some different scalar sequences as equal.
+        #expect(Array(policy.redact(urlString: url).utf8) == Array(expected.utf8))
+    }
+
     @Test("Names without a value and empty queries survive")
     func edgeQueries() {
         #expect(policy.redact(urlString: "https://e.com/?") == "https://e.com/?")
