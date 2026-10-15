@@ -74,6 +74,14 @@ struct RedactionPolicyTests {
         #expect(result.map(\.name) == headers.map(\.name))
     }
 
+    @Test("Registered and vendor authentication schemes are recognized in any header", arguments: [
+        "token ghp_abc", "Token abc", "Bot MTk4NjIy", "DPoP eyJhbGciOi", "AWS4-HMAC-SHA256 Credential=AKIA/x",
+        "SharedKey account:c2ln", "SCRAM-SHA-256 data=biws", "Negotiate YIIG", "NTLM TlRMTVNT",
+    ])
+    func authenticationSchemes(value: String) {
+        #expect(policy.redact(headers: [HTTPHeader(name: "X-Upstream", value: value)]).first?.value == redacted)
+    }
+
     @Test("Sensitive query values are replaced and everything else keeps its encoding")
     func queryParameters() {
         let url = URL(string: "https://api.example.com/v1/search?q=a%20b&api_key=XYZ&Token=1&page=2")!

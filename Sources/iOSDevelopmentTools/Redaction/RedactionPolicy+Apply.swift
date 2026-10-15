@@ -3,9 +3,11 @@ import Foundation
 extension RedactionPolicy {
     /// The headers with every sensitive value replaced.
     ///
-    /// A header is sensitive when its name is, or when its value starts with an HTTP
-    /// authentication scheme (`Basic`, `Bearer`, `Digest`, `Negotiate`, `NTLM`), as in a custom
-    /// header that carries a bearer token under an unremarkable name.
+    /// A header is sensitive when its name is, or when its value starts with an authentication
+    /// scheme followed by credentials, as in a custom header that carries a bearer token under an
+    /// unremarkable name. The schemes are the ones in the IANA HTTP Authentication Scheme Registry
+    /// (`Basic`, `Bearer`, `Digest`, `DPoP`, `Negotiate`, …) and widespread vendor schemes:
+    /// `NTLM`, `Token` (GitHub and others), `Bot` (Discord), `AWS4-HMAC-SHA256` and `SharedKey`.
     public func redact(headers: [HTTPHeader]) -> [HTTPHeader] {
         guard isEnabled else { return headers }
         return headers.map { header in
@@ -14,7 +16,13 @@ extension RedactionPolicy {
         }
     }
 
-    private static let authenticationSchemes = ["basic", "bearer", "digest", "negotiate", "ntlm"]
+    private static let authenticationSchemes: Set<String> = [
+        // IANA HTTP Authentication Scheme Registry.
+        "basic", "bearer", "concealed", "digest", "dpop", "gnap", "hoba", "mutual", "negotiate",
+        "privatetoken", "scram-sha-1", "scram-sha-256", "vapid",
+        // Vendor schemes in common use.
+        "ntlm", "token", "bot", "aws4-hmac-sha256", "sharedkey", "sharedkeylite",
+    ]
 
     private static func startsWithAuthenticationScheme(_ value: String) -> Bool {
         let words = value.drop(while: \.isWhitespace).split(maxSplits: 1, whereSeparator: \.isWhitespace)
