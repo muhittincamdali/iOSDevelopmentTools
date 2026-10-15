@@ -156,12 +156,26 @@ struct ConsoleTests {
         return text
     }
 
+    /// Text recognition reads small type unreliably: a runner without a Retina display renders the
+    /// view at one pixel per point, and "Failed" came back as "Fall•d". The image is enlarged
+    /// before it is read, so the result does not depend on the display of the machine.
     private func recognizedText(in image: CGImage) throws -> String {
         let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .fast
+        request.recognitionLevel = .accurate
         request.usesLanguageCorrection = false
-        try VNImageRequestHandler(cgImage: image).perform([request])
+        try VNImageRequestHandler(cgImage: enlarged(image, by: 3)).perform([request])
         return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+    }
+
+    private func enlarged(_ image: CGImage, by factor: Int) -> CGImage {
+        guard let context = CGContext(
+            data: nil, width: image.width * factor, height: image.height * factor, bitsPerComponent: 8,
+            bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return image }
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(x: 0, y: 0, width: context.width, height: context.height))
+        return context.makeImage() ?? image
     }
 
     @Test("The Network and Logs tabs draw the recorded content, and say so when empty", arguments: [DevToolsConsole.Tab.network, .logs])
