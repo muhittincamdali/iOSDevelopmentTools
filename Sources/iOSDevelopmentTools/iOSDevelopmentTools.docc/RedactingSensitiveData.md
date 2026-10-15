@@ -45,7 +45,7 @@ the side of hiding too much: a JSON key named `author` is hidden because it cont
 
 A structured body that cannot be parsed cannot be checked: a JSON body cut off at the capture
 limit, malformed JSON, JSON nested deeper than 64 levels, or a multipart body without its closing
-boundary. Storing such a body unchecked could store a secret, so the policy withholds it: the
+boundary or with more than 1,000 parts. Storing such a body unchecked could store a secret, so the policy withholds it: the
 entry keeps the body's size and marks it ``RedactionOutcome/withheld``, without its bytes. Raise
 ``NetworkLogger/Configuration/maximumBodySize`` to keep larger JSON bodies, or create a policy
 with `withholdsUncheckedBodies: false` to store them unchecked.
