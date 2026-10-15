@@ -45,8 +45,9 @@ written for Swift 6 strict concurrency.
   names are replaced, however the name is spelled (`X-API-Key`, `api_key`, `API%5FKEY`). A JSON
   body that cannot be checked, for example because it was cut off, is withheld instead of stored
   unchecked.
-- **Fixed memory use** — at most 500 requests and 256 KiB of each body by default, log messages
-  in a ring buffer, and uploads over 4 MiB streamed instead of copied.
+- **Bounded storage** — at most 500 requests and 256 KiB of each body by default, log messages
+  in a ring buffer, and uploads over 4 MiB streamed instead of copied. Headers and URLs are
+  stored whole.
 - **Export** — any request as a shell-safe `curl` command, any list of requests as an HTTP
   Archive (HAR 1.2).
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes

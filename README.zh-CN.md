@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@cfdd383b1445c7d1bf8bf2a5fe021828ceb0a1c6 status=reviewed -->
+<!-- i18n-source: README.md@60797a2d0702eda079d32350eba5394a65ed70bf status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -44,8 +44,8 @@
 - **存储前先脱敏** — 名称敏感的请求头、查询参数、表单、multipart 和 JSON 值都会被替换，无论名称
   怎么拼写（`X-API-Key`、`api_key`、`API%5FKEY`）。无法检查的 JSON 消息体，例如被截断的，
   会被扣留，而不是未经检查就存储。
-- **内存占用固定** — 默认最多保留 500 个请求，每个消息体最多 256 KiB；日志消息保存在环形缓冲区中，
-  超过 4 MiB 的上传以流的方式处理，而不是复制。
+- **存储有上限** — 默认最多保留 500 个请求，每个消息体最多 256 KiB；日志消息保存在环形缓冲区中，
+  超过 4 MiB 的上传以流的方式处理，而不是复制。头部和 URL 会完整保存，不会截断。
 - **导出** — 任何请求都可以导出为可安全用于 shell 的 `curl` 命令，任何请求列表都可以导出为
   HTTP Archive (HAR 1.2)。
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统

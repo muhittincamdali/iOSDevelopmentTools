@@ -9,8 +9,8 @@ import os
 ///
 /// Everything is redacted with ``Configuration/redaction`` before it is stored, and the logger
 /// keeps at most ``Configuration/maximumEntries`` entries and
-/// ``Configuration/maximumBodySize`` bytes of each body, so its memory use has a fixed upper
-/// bound. All methods can be called from any thread.
+/// ``Configuration/maximumBodySize`` bytes of each body. Headers and URLs are stored whole, so
+/// they are not covered by these limits. All methods can be called from any thread.
 public final class NetworkLogger: Sendable {
     /// What a logger records and how much of it.
     public struct Configuration: Sendable, Hashable {

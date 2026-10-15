@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@cfdd383b1445c7d1bf8bf2a5fe021828ceb0a1c6 status=reviewed -->
+<!-- i18n-source: README.md@60797a2d0702eda079d32350eba5394a65ed70bf status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -49,9 +49,9 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   değerleri, ad nasıl yazılmış olursa olsun (`X-API-Key`, `api_key`, `API%5FKEY`) değiştirilir.
   Kontrol edilemeyen bir JSON gövdesi, örneğin yarıda kesildiği için, denetlenmeden saklanmak
   yerine alıkonur.
-- **Sabit bellek kullanımı** — varsayılan olarak en fazla 500 istek ve her gövdenin 256 KiB'ı;
+- **Sınırlı saklama** — varsayılan olarak en fazla 500 istek ve her gövdenin 256 KiB'ı;
   günlük mesajları bir halka arabellekte tutulur, 4 MiB'ı aşan yüklemeler kopyalanmak yerine
-  akış olarak işlenir.
+  akış olarak işlenir. Başlıklar ve URL'ler kısaltılmadan saklanır.
 - **Dışa aktarma** — her istek kabukta güvenle kullanılabilen bir `curl` komutu olarak, her istek
   listesi ise HTTP Archive (HAR 1.2) olarak.
 - **Günlükler ve cihaz raporu** — `LogStore` seviyeli ve kategorili mesajları tutar, aynı zamanda

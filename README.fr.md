@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@cfdd383b1445c7d1bf8bf2a5fe021828ceb0a1c6 status=reviewed -->
+<!-- i18n-source: README.md@60797a2d0702eda079d32350eba5394a65ed70bf status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -49,9 +49,9 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   du JSON dont le nom est sensible sont remplacées, quelle que soit l'écriture du nom (`X-API-Key`,
   `api_key`, `API%5FKEY`). Un corps JSON impossible à vérifier, par exemple parce qu'il a été tronqué,
   est retenu au lieu d'être stocké sans contrôle.
-- **Mémoire bornée** — par défaut, au plus 500 requêtes et 256 KiB par corps ; les messages de journal
+- **Stockage borné** — par défaut, au plus 500 requêtes et 256 KiB par corps ; les messages de journal
   sont conservés dans un tampon circulaire, et les envois de plus de 4 MiB sont transmis en flux au lieu
-  d'être copiés.
+  d'être copiés. Les en-têtes et les URL sont stockés en entier.
 - **Export** — n'importe quelle requête sous forme de commande `curl` sûre pour le shell, n'importe
   quelle liste de requêtes sous forme de HTTP Archive (HAR 1.2).
 - **Journaux et rapport sur l'appareil** — `LogStore` conserve des messages avec niveau et catégorie et

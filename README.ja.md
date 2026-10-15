@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@cfdd383b1445c7d1bf8bf2a5fe021828ceb0a1c6 status=reviewed -->
+<!-- i18n-source: README.md@60797a2d0702eda079d32350eba5394a65ed70bf status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -47,9 +47,9 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **保存前にマスキング** — 機密性の高い名前を持つヘッダー、クエリ、フォーム、multipart、JSON の値は、
   名前の綴りにかかわらず (`X-API-Key`、`api_key`、`API%5FKEY`) 置き換えられます。たとえば途中で切れた
   ためなど、検査できない JSON ボディは、未検査のまま保存されるのではなく保留されます。
-- **メモリ使用量は一定** — デフォルトでは最大 500 件のリクエスト、各ボディは 256 KiB までです。
+- **保存量に上限** — デフォルトでは最大 500 件のリクエスト、各ボディは 256 KiB までです。
   ログメッセージはリングバッファに保持され、4 MiB を超えるアップロードはコピーせずにストリーミング
-  されます。
+  されます。ヘッダーと URL は切り詰めずに保存されます。
 - **エクスポート** — あらゆるリクエストをシェルで安全に使える `curl` コマンドとして、あらゆる
   リクエストの一覧を HTTP Archive (HAR 1.2) として書き出せます。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ

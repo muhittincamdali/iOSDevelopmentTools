@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@cfdd383b1445c7d1bf8bf2a5fe021828ceb0a1c6 status=reviewed -->
+<!-- i18n-source: README.md@60797a2d0702eda079d32350eba5394a65ed70bf status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -49,9 +49,9 @@ concurrency в Swift 6.
   чувствительными именами заменяются, как бы имя ни было написано (`X-API-Key`, `api_key`,
   `API%5FKEY`). Тело JSON, которое нельзя проверить, например потому, что оно обрезано, не
   сохраняется непроверенным, а удерживается.
-- **Фиксированный расход памяти** — по умолчанию не более 500 запросов и 256 KiB на каждое тело;
+- **Ограниченный объём хранения** — по умолчанию не более 500 запросов и 256 KiB на каждое тело;
   сообщения журнала хранятся в кольцевом буфере, а загрузки больше 4 MiB передаются потоком, а не
-  копируются.
+  копируются. Заголовки и URL сохраняются целиком.
 - **Экспорт** — любой запрос как безопасная для оболочки команда `curl`, любой список запросов как
   HTTP Archive (HAR 1.2).
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно

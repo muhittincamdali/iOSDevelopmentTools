@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@cfdd383b1445c7d1bf8bf2a5fe021828ceb0a1c6 status=reviewed -->
+<!-- i18n-source: README.md@60797a2d0702eda079d32350eba5394a65ed70bf status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -49,9 +49,9 @@ concurrency do Swift 6.
   nomes sensíveis são substituídos, não importa como o nome seja escrito (`X-API-Key`, `api_key`,
   `API%5FKEY`). Um corpo JSON que não pode ser verificado, por exemplo por ter sido cortado, é retido
   em vez de armazenado sem verificação.
-- **Uso fixo de memória** — por padrão, no máximo 500 requisições e 256 KiB de cada corpo; as mensagens
+- **Armazenamento limitado** — por padrão, no máximo 500 requisições e 256 KiB de cada corpo; as mensagens
   de log ficam em um buffer circular, e uploads acima de 4 MiB são transmitidos em streaming em vez de
-  copiados.
+  copiados. Cabeçalhos e URLs são armazenados inteiros.
 - **Exportação** — qualquer requisição como comando `curl` seguro para o shell, qualquer lista de
   requisições como HTTP Archive (HAR 1.2).
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as

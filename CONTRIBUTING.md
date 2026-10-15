@@ -62,8 +62,9 @@ as described in [SECURITY.md](SECURITY.md), not in a public issue.
 
 - **Nothing unredacted is stored.** Every value goes through `RedactionPolicy` before a
   `NetworkEntry` is created. A redaction change needs a test with the bypass it closes.
-- **Memory has an upper bound.** Stores are ring buffers, limits are clamped, request bodies over
-  4 MiB are streamed. New buffers need a limit and a test at the limit.
+- **Buffers have an upper bound.** Stores are ring buffers, limits are clamped, request bodies over
+  4 MiB are streamed. Headers and URLs are stored whole. New buffers need a limit and a test at
+  the limit.
 - **Conversions cannot trap.** A `Double` is checked for NaN, infinity and range before it is
   converted to an integer, a `Duration` or JSON, with a test for each.
 - **The app sees the network unchanged.** Capture tests check what the stub server received and

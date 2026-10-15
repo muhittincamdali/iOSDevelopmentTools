@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@cfdd383b1445c7d1bf8bf2a5fe021828ceb0a1c6 status=reviewed -->
+<!-- i18n-source: README.md@60797a2d0702eda079d32350eba5394a65ed70bf status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -49,8 +49,9 @@ und ist für Swift 6 Strict Concurrency geschrieben.
   sensiblen Namen werden ersetzt, egal wie der Name geschrieben ist (`X-API-Key`, `api_key`,
   `API%5FKEY`). Ein JSON-Body, der sich nicht prüfen lässt, zum Beispiel weil er abgeschnitten wurde,
   wird zurückgehalten, statt ungeprüft gespeichert zu werden.
-- **Fester Speicherbedarf** — standardmäßig höchstens 500 Anfragen und 256 KiB pro Body; Log-Meldungen
+- **Begrenzte Speicherung** — standardmäßig höchstens 500 Anfragen und 256 KiB pro Body; Log-Meldungen
   liegen in einem Ringpuffer, und Uploads über 4 MiB werden gestreamt statt kopiert.
+  Header und URLs werden vollständig gespeichert.
 - **Export** — jede Anfrage als shell-sicherer `curl`-Befehl, jede Liste von Anfragen als HTTP Archive
   (HAR 1.2).
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie

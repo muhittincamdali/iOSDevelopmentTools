@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@cfdd383b1445c7d1bf8bf2a5fe021828ceb0a1c6 status=reviewed -->
+<!-- i18n-source: README.md@60797a2d0702eda079d32350eba5394a65ed70bf status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -46,8 +46,9 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **저장 전에 가리기** — 민감한 이름을 가진 헤더, 쿼리, 폼, multipart, JSON 값은 이름의 철자가
   어떻든(`X-API-Key`, `api_key`, `API%5FKEY`) 다른 값으로 바뀝니다. 예를 들어 중간에 잘려서 검사할 수
   없는 JSON 본문은 검사 없이 저장하는 대신 보류합니다.
-- **고정된 메모리 사용량** — 기본값으로 요청은 최대 500개, 본문은 각각 최대 256 KiB입니다. 로그
+- **저장량 제한** — 기본값으로 요청은 최대 500개, 본문은 각각 최대 256 KiB입니다. 로그
   메시지는 링 버퍼에 보관하고, 4 MiB를 넘는 업로드는 복사하지 않고 스트리밍합니다.
+  헤더와 URL은 자르지 않고 그대로 저장합니다.
 - **내보내기** — 모든 요청을 셸에서 안전하게 쓸 수 있는 `curl` 명령으로, 모든 요청 목록을 HTTP
   Archive(HAR 1.2)로 내보낼 수 있습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
