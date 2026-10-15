@@ -138,6 +138,13 @@ extension RedactionPolicy {
         var delimiters: [Range<Data.Index>] = []
         var searchStart = body.startIndex
         while let found = body.range(of: delimiter, in: searchStart..<body.endIndex) {
+            // RFC 2046: a delimiter starts a line. "--boundary" inside a line is content; taking it
+            // for a delimiter would let a part end early, and a server would still read the parts
+            // that follow it.
+            guard Self.startsLine(at: found.lowerBound, in: body) else {
+                searchStart = body.index(after: found.lowerBound)
+                continue
+            }
             // The closing delimiter is one more than the parts.
             guard delimiters.count <= Self.maximumMultipartParts else { return nil }
             delimiters.append(found)
@@ -190,6 +197,13 @@ extension RedactionPolicy {
     /// Space, tab, CR or LF.
     private static func isLinearWhitespace(_ byte: UInt8) -> Bool {
         byte == 0x20 || byte == 0x09 || byte == 0x0D || byte == 0x0A
+    }
+
+    /// Whether `index` is the start of `body` or follows a CRLF.
+    private static func startsLine(at index: Data.Index, in body: Data) -> Bool {
+        guard index != body.startIndex else { return true }
+        guard body.distance(from: body.startIndex, to: index) >= 2 else { return false }
+        return body[index - 2] == 0x0D && body[index - 1] == 0x0A
     }
 
     /// A part's headers by lowercased name. A repeated header keeps its first value.

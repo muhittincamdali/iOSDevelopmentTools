@@ -181,6 +181,20 @@ struct BodyRedactionTests {
         #expect(data.isEmpty)
     }
 
+    @Test("A boundary inside a line is content, so it cannot end the body early")
+    func boundaryInsideLine() throws {
+        let body = Data((
+            "--B\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nhello--B--\r\n"
+            + "--B\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\nhunter2\r\n--B--\r\n"
+        ).utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=B")
+        #expect(outcome == .redacted)
+        let text = String(decoding: data, as: UTF8.self)
+        #expect(!text.contains("hunter2"))
+        #expect(text.contains("hello--B--\r\n--B\r\n"))
+        #expect(text.contains("name=\"password\"\r\n\r\n\(redacted)\r\n--B--"))
+    }
+
     @Test("Text before the first or after the closing delimiter withholds the body", arguments: [
         "preamble\r\n--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\n",
         "--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\nepilogue",

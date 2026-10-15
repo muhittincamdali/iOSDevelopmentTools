@@ -39,7 +39,8 @@ the side of hiding too much: a JSON key named `author` is hidden because it cont
   first, so `"password"` is caught.
 - **Form bodies** (`application/x-www-form-urlencoded`): sensitive fields.
 - **Multipart bodies:** sensitive fields by their `Content-Disposition` name (quoted names may
-  contain `;`), and JSON or form parts by their own content type.
+  contain `;`), and JSON or form parts by their own content type. As in RFC 2046, a boundary
+  counts only at the start of a line, so `--boundary` inside a value cannot end a part early.
 
 ### Bodies that cannot be checked are withheld
 
