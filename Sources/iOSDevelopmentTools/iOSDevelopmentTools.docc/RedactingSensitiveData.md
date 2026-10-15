@@ -37,8 +37,8 @@ the side of hiding too much: a JSON key named `author` is hidden because it cont
   ``RedactionPolicy/redact(headers:)``) whatever their name.
 - **JSON bodies:** the value of every sensitive key at any depth, including inside string values
   that hold JSON themselves (as GraphQL clients send `variables`), also when the content type
-  does not say JSON but the body starts with `{` or `[` (after white space or a UTF-8 byte order
-  mark). Unicode escapes in keys are decoded
+  does not say JSON, or says form, but the body starts with `{` or `[` (after white space or a
+  UTF-8 byte order mark). Unicode escapes in keys are decoded
   first, so `"password"` is caught.
 - **Form bodies** (`application/x-www-form-urlencoded`): sensitive fields. A body sent without
   a `Content-Type` is checked as a form too, because `URLSession` sends it as one.
@@ -78,6 +78,8 @@ Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
 - Values in plain text, XML and other unstructured bodies are not checked.
 - Path segments are not checked, apart from `;name=value` parameters. A secret in the path
   itself (`/reset/8f2c…`) is stored.
+- A JSON value inside a form field, as in `data=%7B%22password%22%3A%22…%22%7D`, is not
+  checked; only the field's own name is.
 - A secret under a name that contains none of the fragments is stored. Add the name's
   distinctive part to the fragments.
 - Log messages in ``LogStore`` are stored as you write them. Do not log secrets.

@@ -119,6 +119,19 @@ struct BodyRedactionTests {
         #expect(String(decoding: data, as: UTF8.self) == "user=ada&pass%77ord=\(redacted)&remember=1")
     }
 
+    @Test("JSON sent with a form content type is checked as JSON")
+    func jsonWithFormContentType() throws {
+        let body = Data(#"{"user":"ada","password":"hunter2"}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded")
+        #expect(outcome == .redacted)
+        let object = try json(data)
+        #expect(object["password"] as? String == redacted)
+        #expect(object["user"] as? String == "ada")
+        // Cut off, it cannot be checked as JSON, so it is withheld rather than read as a form.
+        let cutOff = policy.redact(body: body.prefix(30), contentType: "application/x-www-form-urlencoded", isComplete: false)
+        #expect(cutOff == (Data(), .withheld))
+    }
+
     @Test("A cut-off form body is still redacted up to where it ends")
     func truncatedForm() {
         let body = Data("user=ada&password=s3".utf8)

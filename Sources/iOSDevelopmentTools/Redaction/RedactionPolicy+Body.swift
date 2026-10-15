@@ -19,8 +19,8 @@ extension RedactionPolicy {
 
     /// The body with sensitive values replaced.
     ///
-    /// JSON bodies (by content type, or because they start with `{` or `[`) have the values of
-    /// sensitive keys replaced at any depth. Form bodies (`application/x-www-form-urlencoded`) and
+    /// JSON bodies (by content type, or because they start with `{` or `[`, whatever their content
+    /// type says) have the values of sensitive keys replaced at any depth. Form bodies (`application/x-www-form-urlencoded`) and
     /// multipart bodies (`multipart/form-data`) have the values of sensitive fields replaced. A
     /// body without a content type is checked as a form, because `URLSession` sends it as one.
     /// Other bodies are returned unchanged.
@@ -45,14 +45,16 @@ extension RedactionPolicy {
                   let result = redact(multipart: body, boundary: boundary, nesting: nesting) else { return unchecked }
             return result
         }
+        // JSON comes before forms: a JSON body sent with a form content type reads as one field
+        // with no "=" and would be stored unchecked, with every key in it.
+        if mediaType.contains("json") || Self.looksLikeJSON(body) {
+            guard isComplete, let result = redact(json: body) else { return unchecked }
+            return result
+        }
         if mediaType.contains("x-www-form-urlencoded") {
             guard let text = String(data: body, encoding: .utf8) else { return unchecked }
             let redacted = redact(parameters: Substring(text))
             return redacted == text ? (body, .unchanged) : (Data(redacted.utf8), .redacted)
-        }
-        if mediaType.contains("json") || Self.looksLikeJSON(body) {
-            guard isComplete, let result = redact(json: body) else { return unchecked }
-            return result
         }
         if contentType == nil {
             // URLSession sends a body without a Content-Type as application/x-www-form-urlencoded.
