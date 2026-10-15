@@ -16,7 +16,7 @@ struct NetworkDetailView: View {
     }
 }
 
-/// One request in detail: summary, timings, headers and bodies, with a menu to share it as a
+/// One request in detail: summary, headers, bodies and timings, with a menu to share it as a
 /// cURL command or a HAR file. The console shows it when a request is selected; use it directly
 /// to show a request somewhere else, inside a `NavigationStack`.
 public struct NetworkEntryView: View {
@@ -35,24 +35,11 @@ public struct NetworkEntryView: View {
                 LabeledValue("Status", statusText)
                 LabeledValue("Started", entry.startDate.formatted(.dateTime.year().month().day().hour().minute().second()))
                 LabeledValue("Duration", ConsoleFormat.duration(entry.duration))
-                if let networkProtocol = entry.networkProtocol {
-                    LabeledValue("Protocol", networkProtocol)
-                }
                 if let redirect = entry.redirectURL {
                     LabeledValue("Redirected to", redirect, monospaced: true)
                 }
                 if let error = entry.error {
                     LabeledValue("Error", "\(error.message) (\(error.domain) \(error.code))")
-                }
-            }
-            if let timings = entry.timings {
-                Section("Timings") {
-                    timingRow("DNS", timings.domainLookup)
-                    timingRow("Connect", timings.connect)
-                    timingRow("TLS", timings.secureConnection)
-                    timingRow("Send", timings.send)
-                    timingRow("Wait", timings.wait)
-                    timingRow("Receive", timings.receive)
                 }
             }
             HeadersSection(title: "Request Headers", headers: entry.requestHeaders)
@@ -62,6 +49,21 @@ public struct NetworkEntryView: View {
             HeadersSection(title: "Response Headers", headers: entry.responseHeaders)
             if let body = entry.responseBody {
                 Section("Response Body") { BodyView(captured: body) }
+            }
+            if entry.timings != nil || entry.networkProtocol != nil {
+                Section("Timings") {
+                    if let networkProtocol = entry.networkProtocol {
+                        LabeledValue("Protocol", networkProtocol)
+                    }
+                    if let timings = entry.timings {
+                        timingRow("DNS", timings.domainLookup)
+                        timingRow("Connect", timings.connect)
+                        timingRow("TLS", timings.secureConnection)
+                        timingRow("Send", timings.send)
+                        timingRow("Wait", timings.wait)
+                        timingRow("Receive", timings.receive)
+                    }
+                }
             }
         }
         .formStyle(.grouped)
