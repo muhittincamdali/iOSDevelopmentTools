@@ -1,0 +1,107 @@
+{
+  "name": "iOSDevelopmentTools",
+  "repository": "muhittincamdali/iOSDevelopmentTools",
+  "branch": "master",
+  "tagline": {
+    "en": "Inspect your app's network requests, logs and device state in an in-app console, with secrets redacted.",
+    "tr": "Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir.",
+    "zh-CN": "在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。",
+    "ja": "アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。",
+    "ko": "앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다.",
+    "es": "Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos.",
+    "de": "Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt.",
+    "fr": "Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués.",
+    "pt-BR": "Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos.",
+    "ru": "Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."
+  },
+  "tags": {
+    "en": [
+      "Network",
+      "Logs",
+      "iOS · macOS",
+      "No dependencies"
+    ],
+    "tr": [
+      "Ağ",
+      "Günlükler",
+      "iOS · macOS",
+      "Bağımlılık yok"
+    ],
+    "zh-CN": [
+      "网络",
+      "日志",
+      "iOS · macOS",
+      "无依赖"
+    ],
+    "ja": [
+      "ネットワーク",
+      "ログ",
+      "iOS · macOS",
+      "依存関係なし"
+    ],
+    "ko": [
+      "네트워크",
+      "로그",
+      "iOS · macOS",
+      "의존성 없음"
+    ],
+    "es": [
+      "Red",
+      "Registros",
+      "iOS · macOS",
+      "Sin dependencias"
+    ],
+    "de": [
+      "Netzwerk",
+      "Logs",
+      "iOS · macOS",
+      "Keine Abhängigkeiten"
+    ],
+    "fr": [
+      "Réseau",
+      "Journaux",
+      "iOS · macOS",
+      "Sans dépendance"
+    ],
+    "pt-BR": [
+      "Rede",
+      "Logs",
+      "iOS · macOS",
+      "Sem dependências"
+    ],
+    "ru": [
+      "Сеть",
+      "Логи",
+      "iOS · macOS",
+      "Без зависимостей"
+    ]
+  },
+  "motif": "phone",
+  "buttons": [
+    "start",
+    "docs",
+    "examples"
+  ],
+  "links": {
+    "docs": "https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/",
+    "examples": "Examples/"
+  },
+  "languages": [
+    "en",
+    "tr",
+    "zh-CN",
+    "ja",
+    "ko",
+    "es",
+    "de",
+    "fr",
+    "pt-BR",
+    "ru"
+  ],
+  "docc": {
+    "targets": [
+      "iOSDevelopmentTools"
+    ]
+  },
+  "socialTheme": "dark"
+}
