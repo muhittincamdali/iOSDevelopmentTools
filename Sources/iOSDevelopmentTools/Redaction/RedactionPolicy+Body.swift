@@ -21,7 +21,8 @@ extension RedactionPolicy {
     /// type says) have the values of sensitive keys replaced at any depth. Form bodies (`application/x-www-form-urlencoded`) and
     /// multipart bodies (`multipart/form-data`) have the values of sensitive fields replaced. A
     /// body without a content type is checked as a form, because `URLSession` sends it as one.
-    /// Other bodies are returned unchanged.
+    /// JSON with a form content type, or with none, is checked both as JSON and as a form, and
+    /// withheld when both readings find a sensitive value. Other bodies are returned unchanged.
     ///
     /// - Parameters:
     ///   - body: The bytes to check.
@@ -43,11 +44,13 @@ extension RedactionPolicy {
                   let result = redact(multipart: body, boundary: boundary, nesting: nesting) else { return unchecked }
             return result
         }
+        // URLSession sends a body without a Content-Type as application/x-www-form-urlencoded.
+        let readsAsForm = Self.contains("x-www-form-urlencoded", in: mediaType) || contentType == nil
         // JSON comes before forms: a JSON body sent with a form content type reads as one field
         // with no "=" and would be stored unchecked, with every key in it.
         if Self.contains("json", in: mediaType) || Self.looksLikeJSON(body) {
             guard isComplete, let result = redact(json: body) else { return unchecked }
-            return result
+            return readsAsForm ? redact(formReadingOf: body, jsonResult: result) : result
         }
         if Self.contains("x-www-form-urlencoded", in: mediaType) {
             guard let text = String(data: body, encoding: .utf8) else { return unchecked }
@@ -55,13 +58,29 @@ extension RedactionPolicy {
             return redacted == text ? (body, .unchanged) : (Data(redacted.utf8), .redacted)
         }
         if contentType == nil {
-            // URLSession sends a body without a Content-Type as application/x-www-form-urlencoded.
             // Bytes that are not UTF-8 cannot hide a field name, so they are decoded leniently.
             let text = String(decoding: body, as: UTF8.self)
             let redacted = redact(parameters: Substring(text))
             return redacted == text ? (body, .unchanged) : (Data(redacted.utf8), .redacted)
         }
         return (body, .unchanged)
+    }
+
+    /// A JSON body that a server reads as a form, checked both ways.
+    ///
+    /// A form parser such as Werkzeug (behind Flask) splits the text at every `&` and `=`, also
+    /// inside JSON strings: `{"x":"1&password=hunter2"}` holds no sensitive key, but its form
+    /// reading has a `password` field. When only the form reading finds a sensitive field, the
+    /// form-redacted text is stored. When both readings find one, neither redaction hides the
+    /// other's value, so the body is withheld.
+    private func redact(formReadingOf body: Data, jsonResult: (body: Data, outcome: RedactionOutcome)) -> (body: Data, outcome: RedactionOutcome) {
+        // Bytes that are not UTF-8 cannot hide a field name, so they are decoded leniently. Zero
+        // bytes in UTF-16 or UTF-32 are dropped from names like any other non-letter.
+        let text = String(decoding: body, as: UTF8.self)
+        let formRedacted = redact(parameters: Substring(text))
+        guard formRedacted != text else { return jsonResult }
+        guard jsonResult.outcome == .unchanged else { return (Data(), .withheld) }
+        return (Data(formRedacted.utf8), .redacted)
     }
 
     /// Whether `text` contains `fragment`, compared as UTF-8 bytes. `String.contains` compares

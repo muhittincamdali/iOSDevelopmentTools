@@ -207,6 +207,31 @@ struct BodyRedactionTests {
         #expect(cutOff == (Data(), .withheld))
     }
 
+    @Test("JSON that a server reads as a form is checked as a form too", arguments: [
+        (#"{"x":"1&password=hunter2"}"#, "application/x-www-form-urlencoded"),
+        (#"{"x":"1&password=hunter2"}"#, nil),
+        (#"["&password=hunter2"]"#, "application/x-www-form-urlencoded"),
+    ] as [(String, String?)])
+    func jsonReadAsForm(body: String, contentType: String?) {
+        // Werkzeug reads password=hunter2"} (or hunter2"]) from these bodies.
+        let (data, outcome) = policy.redact(body: Data(body.utf8), contentType: contentType)
+        #expect(outcome == .redacted)
+        let text = String(decoding: data, as: UTF8.self)
+        #expect(text.hasSuffix("&password=\(redacted)"))
+        #expect(!text.contains("hunter2"))
+    }
+
+    @Test("JSON with secrets in both its JSON and its form reading is withheld")
+    func jsonAndFormSecrets() {
+        // As a form, the field is {"token":"abc with the value ="} ; as JSON, token is "abc==".
+        let body = Data(#"{"token":"abc==","n":1}"#.utf8)
+        #expect(policy.redact(body: body, contentType: "application/x-www-form-urlencoded") == (Data(), .withheld))
+        #expect(policy.redact(body: body, contentType: nil) == (Data(), .withheld))
+        // Sent as JSON, it is read only as JSON.
+        let json = Data(#"{"x":"1&password=hunter2"}"#.utf8)
+        #expect(policy.redact(body: json, contentType: "application/json") == (json, .unchanged))
+    }
+
     @Test("A cut-off form body is still redacted up to where it ends")
     func truncatedForm() {
         let body = Data("user=ada&password=s3".utf8)
@@ -261,6 +286,15 @@ struct BodyRedactionTests {
             ("Content-Disposition: form-data; name=\"avatar\"; filename=\"a.png\"\r\nContent-Type: image/png", "PNGDATA"),
         ])
         #expect(data == expected)
+    }
+
+    @Test("A form part that holds JSON is checked as a form too")
+    func jsonInFormPart() {
+        let headers = "Content-Disposition: form-data; name=\"note\"\r\nContent-Type: application/x-www-form-urlencoded"
+        let body = multipart([(headers, #"{"x":"1&password=hunter2"}"#)])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        #expect(data == multipart([(headers, #"{"x":"1&password=\#(redacted)"#)]))
     }
 
     @Test("A quoted name with a semicolon is read as one name")
