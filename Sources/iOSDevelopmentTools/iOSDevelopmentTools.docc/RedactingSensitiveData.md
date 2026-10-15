@@ -60,6 +60,12 @@ servers find them, not in Swift `Character`s: a combining mark such as U+0301 ri
 separator joins it into one `Character`, which would hide the separator from the check while the
 server still sees it.
 
+Query, fragment and form parameters are read the two ways servers split them. Python's
+`parse_qsl` and `URLSearchParams` split only on `&` and read `token;x=hunter2` as one field named
+`token;x`, which is sensitive; other servers also split on `;` and read `token` and `x=hunter2`.
+Both readings are checked, and when both find a sensitive value, everything after the first `=`
+of that field is replaced.
+
 ### Bodies that cannot be checked are withheld
 
 A structured body that cannot be parsed cannot be checked: a JSON body cut off at the capture limit,

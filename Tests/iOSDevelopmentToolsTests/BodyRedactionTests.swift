@@ -178,6 +178,26 @@ struct BodyRedactionTests {
         #expect(String(decoding: data, as: UTF8.self) == "user=ada&pass%77ord=\(redacted)&remember=1")
     }
 
+    @Test("A form field whose name holds a semicolon is checked as one field too", arguments: [
+        "application/x-www-form-urlencoded", nil,
+    ])
+    func semicolonInFormName(contentType: String?) {
+        // Python's parse_qsl splits only on "&" and reads a field "token;x" with the value.
+        let body = Data("a=1&token;x=hunter2&pass;word=hunter2".utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: contentType)
+        #expect(outcome == .redacted)
+        #expect(String(decoding: data, as: UTF8.self) == "a=1&token;x=\(redacted)&pass;word=\(redacted)")
+    }
+
+    @Test("A form part whose field name holds a semicolon is redacted")
+    func semicolonInFormPart() {
+        let headers = "Content-Disposition: form-data; name=\"note\"\r\nContent-Type: application/x-www-form-urlencoded"
+        let body = multipart([(headers, "token;x=hunter2")])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        #expect(data == multipart([(headers, "token;x=\(redacted)")]))
+    }
+
     @Test("A combining mark after a form delimiter does not hide a field", arguments: [
         ("password=\u{301}hunter2", "password=\(RedactionPolicy.replacement)"),
         ("user=ada&\u{301}password=hunter2", "user=ada&\u{301}password=\(RedactionPolicy.replacement)"),

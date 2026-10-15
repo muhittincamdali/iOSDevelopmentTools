@@ -76,16 +76,40 @@ extension RedactionPolicy {
         let bytes = Array(parameters.utf8)
         var result = ""
         result.reserveCapacity(bytes.count)
-        var pairStart = 0
+        var fieldStart = 0
         for index in 0...bytes.count {
             let atEnd = index == bytes.count
-            guard atEnd || bytes[index] == UInt8(ascii: "&") || bytes[index] == UInt8(ascii: ";") else { continue }
-            result += redact(pair: bytes[pairStart..<index])
+            guard atEnd || bytes[index] == UInt8(ascii: "&") else { continue }
+            result += redact(field: bytes[fieldStart..<index])
             if atEnd { break }
             result.unicodeScalars.append(Unicode.Scalar(bytes[index]))
-            pairStart = index + 1
+            fieldStart = index + 1
         }
         return result
+    }
+
+    /// The text between two `&`, checked as servers read it either way.
+    ///
+    /// Most parsers (Python's `parse_qsl`, `URLSearchParams`) split only on `&` and read
+    /// `token;x=hunter2` as one field named `token;x`; others also split on `;` and read a field
+    /// `x`. Each reading is checked. When both find something, neither result is known to hide
+    /// what the other one found, so the whole value after the first `=` is replaced.
+    private func redact(field: ArraySlice<UInt8>) -> String {
+        let wholeField = redact(pair: field)
+        guard field.contains(UInt8(ascii: ";")) else { return wholeField }
+        var pieces: [String] = []
+        var pieceStart = field.startIndex
+        for index in field.startIndex...field.endIndex {
+            guard index == field.endIndex || field[index] == UInt8(ascii: ";") else { continue }
+            pieces.append(redact(pair: field[pieceStart..<index]))
+            pieceStart = index + 1
+        }
+        let splitField = pieces.joined(separator: ";")
+        let original = String(decoding: field, as: UTF8.self)
+        if wholeField == original { return splitField }
+        if splitField == original { return wholeField }
+        guard let equals = field.firstIndex(of: UInt8(ascii: "=")) else { return wholeField }
+        return "\(String(decoding: field[..<equals], as: UTF8.self))=\(Self.replacement)"
     }
 
     /// The pair with its value replaced when its name is sensitive, or with sensitive keys

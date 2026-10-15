@@ -40,7 +40,9 @@ new major version.
   than one boundary parameter, with a folded part header, with a name split into RFC 2231 pieces,
   with a malformed header parameter or header name, or with a boundary outside the RFC 2046
   characters) are withheld. JSON is also recognized after a UTF-16 or UTF-32 byte order mark.
-  Separators are found in the UTF-8 bytes, so a combining mark after one cannot hide it. JSON in
+  Separators are found in the UTF-8 bytes, so a combining mark after one cannot hide it.
+  Parameters are checked both as split on `&` alone, as Python and `URLSearchParams` read them,
+  and as split on `&` and `;`. JSON in
   which an object repeats a key is withheld, because parsers differ in which value they keep.
 - `NetworkEntry.curlCommand()` and `HTTPArchive` export requests as shell-safe `curl` commands
   and as HAR 1.2 files.

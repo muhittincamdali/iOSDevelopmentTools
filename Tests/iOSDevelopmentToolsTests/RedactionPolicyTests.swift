@@ -126,6 +126,20 @@ struct RedactionPolicyTests {
         #expect(policy.redact(url: url) == "https://example.com/a?x=1;secret=\(redacted)")
     }
 
+    @Test("A name with a semicolon is checked as one parameter and as two", arguments: [
+        // Python's parse_qsl and URLSearchParams split only on "&" and read a name "session;id".
+        ("https://e.com/p?session;id=hunter2&a=1", "https://e.com/p?session;id=[REDACTED]&a=1"),
+        ("https://e.com/p?token;x=hunter2", "https://e.com/p?token;x=[REDACTED]"),
+        // Servers that also split on ";" read "password" here.
+        ("https://e.com/p?a=1;password=hunter2", "https://e.com/p?a=1;password=[REDACTED]"),
+        // Both readings find a value: everything after the first "=" goes.
+        ("https://e.com/p?pass;word=1;token=2&b=3", "https://e.com/p?pass;word=[REDACTED]&b=3"),
+        ("https://e.com/p?a=1;b=2", "https://e.com/p?a=1;b=2"),
+    ])
+    func semicolonInName(url: String, expected: String) throws {
+        #expect(policy.redact(url: try #require(URL(string: url))) == expected)
+    }
+
     @Test("Matrix parameters in the path are checked")
     func matrixParameters() {
         let url = URL(string: "https://example.com/shop;jsessionid=ABC123/cart;color=red?x=1")!
