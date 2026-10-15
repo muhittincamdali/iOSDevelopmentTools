@@ -32,7 +32,8 @@ new major version.
   authentication scheme, query, fragment and matrix parameters, URL user info, JSON keys at any
   depth, form fields and multipart fields. Names are normalized (case, separators,
   percent-encoding, invisible characters) before they are matched. Structured bodies that cannot
-  be checked are withheld.
+  be checked (cut off, malformed, nested deeper than 64 levels, multipart with more than 1,000
+  parts) are withheld.
 - `NetworkEntry.curlCommand()` and `HTTPArchive` export requests as shell-safe `curl` commands
   and as HAR 1.2 files.
 - `LogStore` keeps leveled, categorized log messages in a ring buffer and writes them to the
@@ -43,7 +44,7 @@ new major version.
   share menus; `NetworkEntryView` for one request; `devToolsConsole(isPresented:)` and, on iOS,
   `devToolsConsoleOnShake()`.
 - DocC documentation with four articles, and the DevToolsDemo example app for iOS and macOS.
-- 103 Swift Testing tests that run on macOS, and 104 on an iOS simulator, including end-to-end
+- 104 Swift Testing tests that run on macOS, and 105 on an iOS simulator, including end-to-end
   capture through a stub server, redaction bypass attempts, and NaN, infinite and out-of-range
   inputs to every conversion.
 
