@@ -225,14 +225,45 @@ struct BodyRedactionTests {
         #expect(!String(decoding: data, as: UTF8.self).contains("s3cret"))
     }
 
-    @Test("Parameter parsing handles escapes, extended names and bare values")
+    @Test("Parameter parsing handles escapes, extended names and token values")
     func parameterParsing() {
-        #expect(RedactionPolicy.parameterValues("name", in: #"form-data; name="a\"b"; filename="x""#) == [#"a"b"#])
-        #expect(RedactionPolicy.parameterValues("name*", in: "form-data; name*=utf-8''pass%77ord") == ["utf-8''pass%77ord"])
-        #expect(RedactionPolicy.parameterValues("name", in: "form-data; filename=x; name = token ") == ["token"])
-        #expect(RedactionPolicy.parameterValues("name", in: "form-data") == [])
-        #expect(RedactionPolicy.parameterValues("name", in: "form-data; ;; =; name") == [""])
-        #expect(RedactionPolicy.parameterValues("name", in: #"form-data; name="a"; NAME=b"#) == ["a", "b"])
+        #expect(RedactionPolicy.fieldNames(in: #"form-data; name="a\"b"; filename="x""#) == [#"a"b"#])
+        #expect(RedactionPolicy.fieldNames(in: "form-data; name*=utf-8''pass%77ord") == ["utf-8''pass%77ord"])
+        #expect(RedactionPolicy.fieldNames(in: "form-data;; filename=x ;\tname=token ") == ["token"])
+        #expect(RedactionPolicy.fieldNames(in: "form-data") == [])
+        #expect(RedactionPolicy.fieldNames(in: #"form-data; name="a"; NAME=b"#) == ["a", "b"])
+    }
+
+    @Test("A malformed disposition parameter makes the names unreadable", arguments: [
+        "form-data; name = token",
+        "form-data; name= token",
+        "form-data; ;; =; name",
+        "form-data; name",
+        "form-data; name=",
+        "form-data; name=a b",
+        #"form-data; name="a"b"#,
+        #"form-data; name="unclosed"#,
+        #"form-data; x="a\"; name=password"#,
+        "form-data; n\u{301}ame=a",
+        "form-data; name=a;\u{301} name=password",
+        "form-data; x=\"\u{301}; name=password",
+    ])
+    func malformedParameter(disposition: String) {
+        #expect(RedactionPolicy.fieldNames(in: disposition) == nil)
+    }
+
+    // Werkzeug 3.1.9 reads each of these as {"password": "hunter2"}: it skips a malformed
+    // parameter up to the next ";", even one inside the quotes that follow it, and a combining
+    // mark after a closing quote does not join it.
+    @Test("A disposition that a server reads differently withholds the body", arguments: [
+        #"form-data; x ="; name=password""#,
+        #"form-data; name="note"; x ="; name=password""#,
+        #"form-data; a@b="; name=password""#,
+        "form-data; name=\"a\"\u{301}; name=\"password\"",
+    ])
+    func dispositionDifferential(disposition: String) {
+        let body = multipart([("Content-Disposition: \(disposition)", "hunter2")])
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
     }
 
     @Test("Every Content-Disposition name of a part is checked", arguments: [

@@ -242,10 +242,10 @@ extension RedactionPolicy {
             let headers = Self.partHeaders(headerText)
             // Servers differ in which of several Content-Disposition headers, or of several name
             // parameters, they read, so every one is checked.
-            let dispositions = headers["content-disposition"] ?? []
-            guard !dispositions.contains(where: Self.hasNameContinuation) else { return nil }
-            let names = dispositions.flatMap {
-                Self.parameterValues("name", in: $0) + Self.parameterValues("name*", in: $0)
+            var names: [String] = []
+            for disposition in headers["content-disposition"] ?? [] {
+                guard let dispositionNames = Self.fieldNames(in: disposition) else { return nil }
+                names += dispositionNames
             }
             // Likewise, a part with two content types could be read as either.
             let partTypes = headers["content-type"] ?? []
@@ -343,63 +343,5 @@ extension RedactionPolicy {
             headers[name, default: []].append(header[1].trimmingCharacters(in: .whitespaces))
         }
         return headers
-    }
-
-    /// The values of a parameter of a header value such as `form-data; name="field"; filename="a.txt"`,
-    /// in order; a parameter may appear more than once, as in `name="a"; name="password"`.
-    static func parameterValues(_ wanted: String, in value: String) -> [String] {
-        parameters(in: value).filter { $0.name == wanted }.map(\.value)
-    }
-
-    /// Whether a header value splits its `name` over RFC 2231 continuations (`name*0`, `name*1`, ...).
-    /// Werkzeug (Flask) joins the pieces, so `name*0="pass"; name*1="word"` reads as `password`,
-    /// and a name spread over pieces cannot be checked piece by piece.
-    static func hasNameContinuation(_ value: String) -> Bool {
-        parameters(in: value).contains { $0.name.hasPrefix("name*") && $0.name != "name*" }
-    }
-
-    /// The parameters of a header value after its first `;`, in order, with lowercased names.
-    ///
-    /// Quoted values may contain `;` and backslash escapes, so `name="a;password"` reads as one
-    /// name instead of ending at the semicolon.
-    private static func parameters(in value: String) -> [(name: String, value: String)] {
-        var parameters: [(name: String, value: String)] = []
-        var characters = value[...]
-        // Skip the disposition type.
-        guard let firstSemicolon = characters.firstIndex(of: ";") else { return [] }
-        characters = characters[characters.index(after: firstSemicolon)...]
-        while !characters.isEmpty {
-            characters = characters.drop(while: { $0 == " " || $0 == "\t" || $0 == ";" })
-            let key = characters.prefix(while: { $0 != "=" && $0 != ";" })
-            characters = characters.dropFirst(key.count)
-            var parameterValue = ""
-            if characters.first == "=" {
-                characters = characters.dropFirst()
-                if characters.first == "\"" {
-                    characters = characters.dropFirst()
-                    var escaped = false
-                    while let character = characters.first {
-                        characters = characters.dropFirst()
-                        if escaped {
-                            parameterValue.append(character)
-                            escaped = false
-                        } else if character == "\\" {
-                            escaped = true
-                        } else if character == "\"" {
-                            break
-                        } else {
-                            parameterValue.append(character)
-                        }
-                    }
-                    characters = characters.drop(while: { $0 != ";" })
-                } else {
-                    let raw = characters.prefix(while: { $0 != ";" })
-                    parameterValue = raw.trimmingCharacters(in: .whitespaces)
-                    characters = characters.dropFirst(raw.count)
-                }
-            }
-            parameters.append((key.trimmingCharacters(in: .whitespaces).lowercased(), parameterValue))
-        }
-        return parameters
     }
 }
