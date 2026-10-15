@@ -57,7 +57,7 @@ new major version.
   share menus; `NetworkEntryView` for one request; `devToolsConsole(isPresented:)` and, on iOS,
   `devToolsConsoleOnShake()`.
 - DocC documentation with four articles, and the DevToolsDemo example app for iOS and macOS.
-- 142 on an iOS simulator, including end-to-end
+- 148 Swift Testing tests that run on macOS, and 149 on an iOS simulator, including end-to-end
   capture through a stub server, redaction bypass attempts, and NaN, infinite and out-of-range
   inputs to every conversion.
 
