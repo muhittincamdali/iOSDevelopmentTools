@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Testing
 import UniformTypeIdentifiers
+import Vision
 import os
 @testable import iOSDevelopmentTools
 #if canImport(UIKit)
@@ -117,33 +118,83 @@ struct ConsoleTests {
         #expect((log["entries"] as? [Any])?.count == 2)
     }
 
-    /// Lays the view out in a hosting view, which runs its body and layout code.
-    private func layOut(_ view: some View) -> CGSize {
+    /// The text in the view as drawn: the view is shown in a phone-sized window, rendered and
+    /// read back with Vision's text recognition. Rendering is repeated for a moment, because lists
+    /// fill their rows in later layout passes.
+    private func renderedText(of view: some View, expecting expected: [String]) throws -> String {
         let size = CGSize(width: 390, height: 844)
         #if canImport(UIKit)
-        let controller = UIHostingController(rootView: view)
-        controller.view.frame = CGRect(origin: .zero, size: size)
-        controller.view.layoutIfNeeded()
-        return controller.view.bounds.size
+        let window = UIWindow(frame: CGRect(origin: .zero, size: size))
+        window.rootViewController = UIHostingController(rootView: view)
+        window.isHidden = false
+        defer { window.isHidden = true }
+        func snapshot() throws -> CGImage {
+            window.layoutIfNeeded()
+            let image = UIGraphicsImageRenderer(size: size).image { context in
+                window.layer.render(in: context.cgContext)
+            }
+            return try #require(image.cgImage)
+        }
         #else
         let host = NSHostingView(rootView: view)
         host.frame = CGRect(origin: .zero, size: size)
-        host.layoutSubtreeIfNeeded()
-        return host.bounds.size
+        let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = host
+        func snapshot() throws -> CGImage {
+            host.layoutSubtreeIfNeeded()
+            let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            return try #require(bitmap.cgImage)
+        }
         #endif
+        var text = ""
+        for _ in 0..<20 {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+            text = try recognizedText(in: snapshot())
+            if expected.allSatisfy(text.contains) { break }
+        }
+        return text
     }
 
-    @Test("The console and every tab lay out with data and without", arguments: DevToolsConsole.Tab.allCases)
-    func consoleLaysOut(tab: DevToolsConsole.Tab) {
-        let logger = logger(with: [("/a", 200, nil), ("/b", nil, .timedOut)])
+    private func recognizedText(in image: CGImage) throws -> String {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .fast
+        request.usesLanguageCorrection = false
+        try VNImageRequestHandler(cgImage: image).perform([request])
+        return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+    }
+
+    @Test("The Network and Logs tabs draw the recorded content, and say so when empty", arguments: [DevToolsConsole.Tab.network, .logs])
+    func consoleDrawsContent(tab: DevToolsConsole.Tab) throws {
+        let logger = logger(with: [("/alpha", 200, nil), ("/beta", nil, .timedOut)])
         let store = LogStore(configuration: .init(systemLogSubsystem: nil))
-        store.warning("careful", category: "test")
-        #expect(layOut(DevToolsConsole(networkLogger: logger, logStore: store, initialTab: tab)).width == 390)
-        #expect(layOut(DevToolsConsole(networkLogger: NetworkLogger(), logStore: LogStore(configuration: .init(systemLogSubsystem: nil)), initialTab: tab)).width == 390)
+        store.warning("careful message", category: "checkout")
+        let expected = tab == .network ? ["/alpha", "/beta", "200"] : ["careful message", "checkout"]
+        let text = try renderedText(of: DevToolsConsole(networkLogger: logger, logStore: store, initialTab: tab), expecting: expected)
+        for string in expected {
+            #expect(text.contains(string), "\(string) is not drawn in the \(tab) tab: \(text)")
+        }
+
+        let empty = DevToolsConsole(networkLogger: NetworkLogger(), logStore: LogStore(configuration: .init(systemLogSubsystem: nil)), initialTab: tab)
+        let emptyTitle = tab == .network ? "No Requests" : "No Messages"
+        let emptyText = try renderedText(of: empty, expecting: [emptyTitle])
+        #expect(emptyText.contains(emptyTitle), "The empty \(tab) tab draws: \(emptyText)")
+        #expect(!emptyText.contains("/alpha") && !emptyText.contains("careful message"))
     }
 
-    @Test("A request's detail view lays out every kind of body")
-    func detailLaysOut() throws {
+    @Test("The Device tab draws the device report")
+    func deviceDrawsContent() throws {
+        // Rendered outside the TabView: an offscreen render on the iOS simulator draws no rows of
+        // a long Form inside a selected tab, although the app shows them.
+        let expected = ["Model", "Thermal state", "Debugger"]
+        let text = try renderedText(of: NavigationStack { DeviceView() }, expecting: expected)
+        for string in expected {
+            #expect(text.contains(string), "\(string) is not drawn in the Device tab: \(text)")
+        }
+    }
+
+    @Test("A request's detail view draws its method, status and why a body was withheld")
+    func detailDrawsContent() throws {
         let logger = NetworkLogger(configuration: .init(maximumBodySize: 8))
         var request = URLRequest(url: URL(string: "https://api.example.com/upload?token=x")!)
         request.httpMethod = "POST"
@@ -153,8 +204,25 @@ struct ConsoleTests {
         let id = try #require(logger.record(request: request, response: response, body: Data([0, 1, 2]), startDate: Date()))
         let entry = try #require(logger.entry(id: id))
         #expect(entry.requestBody?.redaction == .withheld)
-        #expect(layOut(NavigationStack { NetworkEntryView(entry: entry) }).width == 390)
-        #expect(LogLevel.allCases.map(LogRow.symbol(for:)).count == 6)
+        let expected = ["POST", "201", "Withheld"]
+        let text = try renderedText(of: NavigationStack { NetworkEntryView(entry: entry) }, expecting: expected)
+        for string in expected {
+            #expect(text.contains(string), "\(string) is not drawn in the detail view: \(text)")
+        }
+        #expect(!text.contains("a-long-secret"))
+    }
+
+    @Test("Every log level has its own symbol, and the symbol exists")
+    func levelSymbols() {
+        let symbols = LogLevel.allCases.map(LogRow.symbol(for:))
+        #expect(Set(symbols).count == LogLevel.allCases.count)
+        for symbol in symbols {
+            #if canImport(UIKit)
+            #expect(UIImage(systemName: symbol) != nil, "\(symbol) is not an SF Symbol")
+            #else
+            #expect(NSImage(systemSymbolName: symbol, accessibilityDescription: nil) != nil, "\(symbol) is not an SF Symbol")
+            #endif
+        }
     }
 
     #if os(iOS)
