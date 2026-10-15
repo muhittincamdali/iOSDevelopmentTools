@@ -39,7 +39,7 @@ the side of hiding too much: a JSON key named `author` is hidden because it cont
   that hold JSON themselves (as GraphQL clients send `variables`), also when the content type
   does not say JSON, or says form, but the body starts with `{` or `[` (after white space or a
   UTF-8 byte order mark). Unicode escapes in keys are decoded
-  first, so `"password"` is caught.
+  first, so `"\u0070assword"` is caught.
 - **Form bodies** (`application/x-www-form-urlencoded`): sensitive fields. A body sent without
   a `Content-Type` is checked as a form too, because `URLSession` sends it as one.
 - **Multipart bodies:** sensitive fields by their `Content-Disposition` name (quoted names may

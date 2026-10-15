@@ -29,7 +29,8 @@ struct BodyRedactionTests {
 
     @Test("Unicode escapes in keys do not hide a sensitive name")
     func escapedKeys() throws {
-        let body = Data(#"{"password":"secret"}"#.utf8)
+        // In a raw string, \u0070 stays a JSON escape for "p".
+        let body = Data(#"{"\u0070assword":"secret"}"#.utf8)
         let (data, outcome) = policy.redact(body: body, contentType: "application/json")
         #expect(outcome == .redacted)
         #expect(try json(data)["password"] as? String == redacted)
