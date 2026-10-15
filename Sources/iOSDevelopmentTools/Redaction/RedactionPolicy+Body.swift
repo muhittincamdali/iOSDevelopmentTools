@@ -160,28 +160,37 @@ extension RedactionPolicy {
     // MARK: Multipart
 
     /// The `boundary` parameter of a multipart content type, without quotes; `nil` when there is
-    /// none, or more than one.
+    /// none, more than one, or the content type's parameters are malformed.
     ///
     /// Servers differ in which of two boundary parameters they use (Werkzeug, behind Flask, takes
     /// the last), and parts delimited by the other one would be read but not checked. An RFC 2231
     /// `boundary*` parameter counts as another one, because a server that reads it may prefer it.
+    /// The parameters are read as in a Content-Disposition (see ``parameters(in:)``): Werkzeug
+    /// reads `boundary=B1/x` as `B1`, and would find parts at `--B1` lines that sit inside the
+    /// parts checked here. The value must also consist of RFC 2046 boundary characters, which
+    /// leaves out the `%22` that Werkzeug turns into a quote.
     static func boundary(in contentType: String) -> String? {
-        var boundaries: [String] = []
-        for parameter in contentType.split(separator: ";").dropFirst() {
-            let parts = parameter.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
-            let name = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
-            guard name == "boundary" || name.hasPrefix("boundary*") else { continue }
-            guard name == "boundary", parts.count == 2 else { return nil }
-            var value = parts[1].trimmingCharacters(in: .whitespaces)
-            if value.count >= 2, value.hasPrefix("\""), value.hasSuffix("\"") {
-                value = String(value.dropFirst().dropLast())
-            }
-            boundaries.append(value)
-        }
-        // RFC 2046: 1 to 70 characters.
-        guard boundaries.count == 1, let value = boundaries.first, (1...70).contains(value.utf8.count) else { return nil }
-        return value
+        guard let boundaries = parameters(in: contentType)?.filter({ $0.name.hasPrefix("boundary") }),
+              boundaries.count == 1, let boundary = boundaries.first, boundary.name == "boundary"
+        else { return nil }
+        // RFC 2046: 1 to 70 characters, the last of which is not a space.
+        let value = boundary.value.utf8
+        guard (1...70).contains(value.count), value.last != UInt8(ascii: " "),
+              value.allSatisfy(isBoundaryByte) else { return nil }
+        return boundary.value
     }
+
+    /// RFC 2046 `bchars`: ASCII letters, digits, space and `'()+_,-./:=?`.
+    private static func isBoundaryByte(_ byte: UInt8) -> Bool {
+        switch byte {
+        case UInt8(ascii: "0")...UInt8(ascii: "9"), UInt8(ascii: "A")...UInt8(ascii: "Z"), UInt8(ascii: "a")...UInt8(ascii: "z"):
+            true
+        default:
+            boundarySymbols.contains(byte)
+        }
+    }
+
+    private static let boundarySymbols = Set(" '()+_,-./:=?".utf8)
 
     /// The multipart body with the content of sensitive fields replaced; `nil` when the body does
     /// not have the structure its content type promises.

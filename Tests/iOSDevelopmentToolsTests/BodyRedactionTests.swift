@@ -344,6 +344,33 @@ struct BodyRedactionTests {
         #expect(RedactionPolicy.boundary(in: contentType) == nil)
     }
 
+    // Werkzeug 3.1.9 reads an unquoted boundary only up to the first byte that is not a token
+    // character, so for each of these it splits the body at "--B1" and finds the password part
+    // that sits inside the note part here.
+    @Test("A boundary that is not a token or a quoted string withholds the body", arguments: [
+        ("multipart/form-data; boundary=B1/x", "B1/x"),
+        ("multipart/form-data; boundary=B1 x", "B1 x"),
+        ("multipart/form-data; boundary=B1\u{301}x", "B1\u{301}x"),
+    ])
+    func malformedBoundary(contentType: String, boundary: String) {
+        let inner = multipart([("Content-Disposition: form-data; name=\"password\"", "hunter2")], boundary: "B1")
+        let body = multipart([("Content-Disposition: form-data; name=\"note\"", String(decoding: inner, as: UTF8.self))], boundary: boundary)
+        #expect(policy.redact(body: body, contentType: contentType) == (Data(), .withheld))
+        #expect(RedactionPolicy.boundary(in: contentType) == nil)
+    }
+
+    @Test("A boundary is a token or a quoted string of RFC 2046 boundary characters")
+    func boundaryCharacters() {
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; boundary=\"B1/x y:z\"") == "B1/x y:z")
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; charset=utf-8; boundary=----WebKitFormBoundaryAbc123") == "----WebKitFormBoundaryAbc123")
+        // Werkzeug turns %22 into a quote in a quoted value, and RFC 2046 has no quote, percent
+        // sign or backslash in a boundary, nor a space at its end.
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; boundary=\"B1%22x\"") == nil)
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; boundary=\"B1\\\\x\"") == nil)
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; boundary=\"B1 \"") == nil)
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; boundary=\"\"") == nil)
+    }
+
     @Test("A part with two content types is withheld")
     func repeatedContentType() {
         let headers = "Content-Disposition: form-data; name=\"a\"\r\nContent-Type: text/plain\r\nContent-Type: application/json"
