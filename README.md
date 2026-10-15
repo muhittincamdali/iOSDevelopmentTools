@@ -1,589 +1,305 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Swift-6.0-FA7343?style=for-the-badge&logo=swift&logoColor=white" alt="Swift 6.0"/>
-  <img src="https://img.shields.io/badge/Platform-iOS%20|%20macOS%20|%20visionOS-007AFF?style=for-the-badge&logo=apple&logoColor=white" alt="Platform"/>
-  <img src="https://img.shields.io/badge/Standard-Unified%20Core-5856D6?style=for-the-badge" alt="Standard"/>
-</p>
+<!-- brand:start -->
 
----
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-light.svg" alt="iOSDevelopmentTools: Inspect your app's network requests, logs and device state in an in-app console, with secrets redacted."></picture></p>
 
-## 🚀 Killer Feature: Network Payload Interceptor UI
-Debug APIs without Proxyman or Charles. Shake your device to open the native, on-device Payload Interceptor to inspect, mock, and rewrite network traffic in real-time.
-> **🛡️ PART OF THE 2026 UNIFIED CORE**
-> This repository is a verified component of 'The Endless March' initiative. Purified for Swift 6, zero-dependency, and engineered for maximum hardware saturation.
-> 
-> *Flagship Engines:* [SwiftNetwork](https://github.com/muhittincamdali/SwiftNetwork) | [SwiftAI](https://github.com/muhittincamdali/SwiftAI) | [LiquidGlassKit](https://github.com/muhittincamdali/LiquidGlassKit)
-
----
-
-```
-    ___  ____  ____    ____                 __                                  __
-   /  _]/ __ \/ __/   / __ \___ _  _____   / /_____  ____  ___ ___  ___  ____  / /_
-  _/ / / /_/ /\ \    / / / / -_) |/ / -_) / __/ __ \/ __ \/ _ ` _ \/ -_)/ __ \/ __/
- /___/ \____/___/   /_/_/_/\__/|___/\__/  \__/\____/\____/_/\_,_,_/\__//_/ /_/\__/
-                   / /   / __ \/ __ \/ /  / ___/
-                  / /   / /_/ / /_/ / /___\__ \
-                 /_/    \____/\____/_____/___/
-```
+<!-- lang-selector:start -->
+<p align="center"><a href="README.md">English</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a> · <a href="README.es.md">Español</a> · <a href="README.de.md">Deutsch</a> · <a href="README.fr.md">Français</a> · <a href="README.pt-BR.md">Português (Brasil)</a> · <a href="README.ru.md">Русский</a></p>
+<!-- lang-selector:end -->
 
 <p align="center">
-  <strong>🛠️ Essential iOS Development Toolkit</strong>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml"><img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="Latest version: v2.0.0"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg" alt="Supported platforms: iOS 17+ · macOS 14+"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg" alt="Language version: Swift 6.2+"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg" alt="License: MIT"></picture></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml">
-    <img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="CI"/>
-  </a>
-  <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?style=for-the-badge&logo=swift&logoColor=white" alt="Swift 5.9+"></a>
-  <a href="https://developer.apple.com/ios/"><img src="https://img.shields.io/badge/iOS-15.0+-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS 15.0+"></a>
-  <a href="https://swift.org/package-manager/"><img src="https://img.shields.io/badge/SPM-Compatible-blue?style=for-the-badge&logo=swift&logoColor=white" alt="SPM Compatible"></a>
-  <a href="https://cocoapods.org/pods/iOSDevelopmentTools"><img src="https://img.shields.io/badge/CocoaPods-Compatible-EE3322?style=for-the-badge&logo=cocoapods&logoColor=white" alt="CocoaPods"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License"></a>
+<a href="#quick-start"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-start-en-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-start-en-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-start-en-light.svg" alt="Get started"></picture></a>
+<a href="https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-docs-en-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-docs-en-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-docs-en-light.svg" alt="Documentation"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/tree/master/Examples"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-examples-en-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-examples-en-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/button-examples-en-light.svg" alt="Examples"></picture></a>
 </p>
+
+<!-- brand:end -->
+
+A Swift package that puts a debugging console inside your iOS or macOS app. It records the
+requests your app makes with `URLSession`, keeps your log messages and collects a device report,
+and shows all three in a SwiftUI console that opens with a shake, a button or a window. Open a
+request to see its headers, bodies and timings, or share it as a cURL command or a HAR file for
+browser developer tools, Charles or Proxyman. Passwords, tokens, cookies and API keys are
+replaced before anything is stored, so they do not end up in the console, an exported file or a
+screenshot in a bug report. It is meant for debug and test builds, has no dependencies and is
+written for Swift 6 strict concurrency.
 
 <p align="center">
-  <a href="#installation">Installation</a> •
-  <a href="#tools-overview">Tools</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#documentation">Docs</a> •
-  <a href="#contributing">Contributing</a>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/network-dark.png"><img src="docs/images/network-light.png" width="300" alt="The Network tab listing seven real requests from the example app: a failed request to an unknown host, a 503, a 404 and four successful requests with their duration and size"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/request-dark.png"><img src="docs/images/request-light.png" width="300" alt="A sign-in request opened in the console: the Authorization header and the password in the JSON body show [REDACTED]"></picture>
 </p>
 
----
+## Highlights
 
-## 📋 Table of Contents
+- **One line to record** — `NetworkCapture.start()` records `URLSession.shared` and every
+  session created from the default or ephemeral configuration afterwards, including libraries
+  built on `URLSession`. Your app receives every response unchanged.
+- **Redaction before storage** — header, query, form, multipart and JSON values with sensitive
+  names are replaced, however the name is spelled (`X-API-Key`, `api_key`, `API%5FKEY`). A JSON
+  body that cannot be checked, for example because it was cut off, is withheld instead of stored
+  unchecked.
+- **Bounded storage** — at most 500 requests and 256 KiB of each body by default, log messages
+  in a ring buffer, and uploads over 4 MiB streamed instead of copied. Headers and URLs are
+  stored whole.
+- **Export** — any request as a shell-safe `curl` command, any list of requests as an HTTP
+  Archive (HAR 1.2).
+- **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
+  them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
+  footprint, thermal state and whether a debugger is attached.
+- **Tested** — 148 Swift Testing tests on macOS and 149 on an iOS simulator. Requests travel
+  from an app session through the capture to a stub server, and the tests check what the server
+  received, what the app received and what was stored.
 
-- [Why iOSDevelopmentTools?](#why-iosdevelopmenttools)
-- [Tools Overview](#tools-overview)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
-- [Star History](#-star-history)
+## Quick start
 
----
+**1. Add the package**
 
-## Why iOSDevelopmentTools?
+In Xcode, choose **File › Add Package Dependencies…** and enter the repository URL:
 
-Stop reinventing the wheel. This toolkit provides **battle-tested, production-ready** components that every iOS app needs:
-
-- ✅ **Type-safe networking** with async/await and Combine support
-- ✅ **Secure storage** with Keychain, UserDefaults, and encrypted file storage
-- ✅ **Structured logging** with multiple output destinations
-- ✅ **Analytics abstraction** supporting multiple providers
-- ✅ **Utility extensions** for everyday Swift development
-
----
-
-## Tools Overview
-
-| Tool | Description | Key Features |
-|------|-------------|--------------|
-| 🌐 **NetworkTools** | Modern HTTP client | Async/await, Combine, retry logic, interceptors |
-| 💾 **StorageTools** | Unified storage layer | Keychain, UserDefaults, file storage, encryption |
-| 🔍 **DebugTools** | Structured logging | Multi-level, file/console/remote output |
-| 📊 **AnalyticsTools** | Analytics abstraction | Multi-provider, event tracking, user properties |
-| 🧰 **UtilityTools** | Swift extensions | String, Date, Array, UIKit helpers |
-| ⚙️ **Core** | Framework lifecycle | Configuration, initialization, state management |
-
----
-
-## Architecture
-
-```mermaid
-graph TB
-    subgraph "iOSDevelopmentTools"
-        A[DevelopmentToolsManager] --> B[NetworkClient]
-        A --> C[StorageManager]
-        A --> D[Logger]
-        A --> E[AnalyticsManager]
-        
-        B --> F[URLSession]
-        B --> G[Combine Publishers]
-        
-        C --> H[Keychain]
-        C --> I[UserDefaults]
-        C --> J[FileManager]
-        
-        D --> K[Console]
-        D --> L[File Output]
-        D --> M[OSLog]
-        
-        E --> N[Firebase]
-        E --> O[Mixpanel]
-        E --> P[Custom Provider]
-    end
-    
-    style A fill:#007AFF,color:#fff
-    style B fill:#34C759,color:#fff
-    style C fill:#FF9500,color:#fff
-    style D fill:#AF52DE,color:#fff
-    style E fill:#FF3B30,color:#fff
+```text
+https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
----
+Paste it into the search field at the top right of the window. Leave **Dependency Rule** at
+**Up to Next Major Version** from `2.0.0`, then click **Add Package**. In the next window, choose
+your app target next to **iOSDevelopmentTools** and click **Add Package** again.
+
+**2. Import the module**
+
+```swift
+import iOSDevelopmentTools
+```
+
+Put this line at the top of the file that declares your `App`, below `import SwiftUI`.
+
+**3. Start recording and add the console**
+
+In your app's `App` file, start capture in `init` and add the console to the root view. The
+`#if DEBUG` lines keep both out of release builds:
+
+```swift
+@main
+struct MyApp: App {
+    init() {
+        #if DEBUG
+        NetworkCapture.start()
+        #endif
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                #if DEBUG
+                .devToolsConsoleOnShake()
+                #endif
+        }
+    }
+}
+```
+
+Run the app on an iPhone simulator, let it make a request, and choose **Device › Shake** in the
+Simulator menu. The console opens on the Network tab with the request in the list.
+
+`devToolsConsoleOnShake()` is available on iOS only. In an app that also builds for macOS,
+write `#if DEBUG && os(iOS)` around it instead, and give the console a window as shown in
+**Use it on macOS** below.
 
 ## Installation
 
 ### Swift Package Manager
 
-Add to your `Package.swift`:
+In Xcode, choose **File › Add Package Dependencies…** and enter the repository URL:
+
+```text
+https://github.com/muhittincamdali/iOSDevelopmentTools.git
+```
+
+Or add it to the `dependencies` in your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "1.0.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.0.0")
+],
+targets: [
+    .target(name: "YourApp", dependencies: [
+        .product(name: "iOSDevelopmentTools", package: "iOSDevelopmentTools")
+    ])
 ]
 ```
 
-Or in Xcode: **File → Add Package Dependencies** → paste the URL.
-
-### Import
-
-```swift
-import iOSDevelopmentTools
-```
-
----
-
 ## Usage
 
-### Quick Start
+The samples below are copied from
+[ReadmeSamples.swift](Examples/DevToolsDemo/DevToolsDemo/ReadmeSamples.swift), which the example
+app and the test suite compile.
+
+### Open the console from a button
 
 ```swift
-import iOSDevelopmentTools
-
-// Initialize on app launch
-iOSDevelopmentTools.configure(
-    networkBaseURL: "https://api.example.com",
-    analyticsEnabled: true,
-    loggingEnabled: true
-)
-```
-
----
-
-## 🌐 NetworkTools
-
-Modern, type-safe HTTP client with async/await support.
-
-### Basic Requests
-
-```swift
-let client = NetworkClient.shared
-
-// GET request
-let users: [User] = try await client.get("/users")
-
-// POST request
-let newUser: User = try await client.post("/users", body: [
-    "name": "John Doe",
-    "email": "john@example.com"
-])
-
-// PUT request
-let updated: User = try await client.put("/users/123", body: updatedData)
-
-// DELETE request
-let _: EmptyResponse = try await client.delete("/users/123")
-```
-
-### Advanced Configuration
-
-```swift
-let config = NetworkConfiguration(
-    baseURL: "https://api.example.com",
-    timeout: 30,
-    retryCount: 3,
-    headers: [
-        "Authorization": "Bearer \(token)",
-        "X-API-Version": "2.0"
-    ]
-)
-
-NetworkClient.shared.configure(with: config)
-```
-
-### Custom Request with Combine
-
-```swift
-struct APIRequest {
-    let path: String
-    let method: HTTPMethod
-    let headers: [String: String]?
-    let body: Encodable?
-}
-
-let request = APIRequest(
-    path: "/users/search",
-    method: .post,
-    headers: ["X-Custom": "value"],
-    body: SearchQuery(term: "swift")
-)
-
-let response: APIResponse<[User]> = try await client.perform(request)
-print("Found \(response.data.count) users")
-```
-
-### File Upload/Download
-
-```swift
-// Upload
-let imageData = UIImage(named: "avatar")!.jpegData(compressionQuality: 0.8)!
-let url: UploadResponse = try await client.upload(
-    "/upload/avatar",
-    data: imageData,
-    mimeType: "image/jpeg"
-)
-
-// Download
-let fileData = try await client.download("/files/document.pdf")
-```
-
----
-
-## 💾 StorageTools
-
-Unified storage layer supporting Keychain, UserDefaults, and file storage.
-
-### UserDefaults
-
-```swift
-let storage = StorageManager.shared
-
-// Save
-try storage.save("John Doe", forKey: "username")
-try storage.save(true, forKey: "onboarded")
-try storage.save(["swift", "ios"], forKey: "skills")
-
-// Retrieve
-let username: String? = try storage.retrieve(String.self, forKey: "username")
-let skills: [String]? = try storage.retrieve([String].self, forKey: "skills")
-
-// Check existence
-if storage.exists(forKey: "username") {
-    print("User exists")
-}
-
-// Remove
-try storage.remove(forKey: "username")
-```
-
-### Keychain (Secure Storage)
-
-```swift
-let keychain = StorageManager.shared.keychain
-
-// Store sensitive data
-try keychain.save("secret_token_123", forKey: "auth_token")
-try keychain.save("refresh_token_456", forKey: "refresh_token")
-
-// Retrieve
-let token: String? = try keychain.read(forKey: "auth_token")
-
-// Delete
-try keychain.delete(forKey: "auth_token")
-
-// Delete all
-try keychain.clear()
-```
-
-### Encrypted File Storage
-
-```swift
-let config = StorageConfiguration(
-    encryptionEnabled: true,
-    encryptionKey: "your-256-bit-key",
-    compressionEnabled: true
-)
-
-let secureStorage = StorageManager(configuration: config)
-
-// Store large objects securely
-let userData = UserProfile(name: "John", data: largeData)
-try secureStorage.save(userData, forKey: "user_profile")
-
-// Backup and restore
-let backup = try secureStorage.backup()
-try secureStorage.restore(from: backup)
-```
-
----
-
-## 🔍 DebugTools
-
-Structured logging with multiple output destinations.
-
-### Basic Logging
-
-```swift
-let logger = Logger.shared
-
-logger.debug("Fetching user data...")
-logger.info("User logged in successfully")
-logger.warning("Cache is getting full")
-logger.error("Failed to save file: \(error)")
-logger.critical("Database connection lost!")
-```
-
-### Output Example
-
-```
-🔍 [2025-01-28 14:23:45.123] [DEBUG] [ViewModel.swift:42] fetchData(): Fetching user data...
-ℹ️ [2025-01-28 14:23:45.456] [INFO] [AuthService.swift:78] login(): User logged in successfully
-⚠️ [2025-01-28 14:23:46.789] [WARNING] [CacheManager.swift:156] checkSize(): Cache is getting full
-❌ [2025-01-28 14:23:47.012] [ERROR] [FileService.swift:89] save(): Failed to save file
-🚨 [2025-01-28 14:23:47.345] [CRITICAL] [Database.swift:23] connect(): Database connection lost!
-```
-
-### Custom Logger Configuration
-
-```swift
-let customLogger = Logger(subsystem: "com.myapp.networking")
-
-// Log levels filter automatically based on build configuration
-#if DEBUG
-customLogger.minimumLevel = .debug
-#else
-customLogger.minimumLevel = .warning
-#endif
-```
-
----
-
-## 📊 AnalyticsTools
-
-Analytics abstraction layer supporting multiple providers.
-
-### Event Tracking
-
-```swift
-let analytics = AnalyticsManager.shared
-
-// Track simple event
-analytics.trackEvent("button_tapped", parameters: [
-    "button_name": "purchase",
-    "screen": "product_detail"
-])
-
-// Track screen view
-analytics.trackScreen("ProductDetail", parameters: [
-    "product_id": "12345",
-    "category": "electronics"
-])
-
-// Track errors
-analytics.trackError(error, parameters: [
-    "context": "checkout_flow",
-    "step": "payment"
-])
-```
-
-### User Properties
-
-```swift
-// Set user ID
-analytics.setUserId("user_12345")
-
-// Set user properties
-analytics.setUserProperty("premium", forKey: "subscription_tier")
-analytics.setUserProperty("ios", forKey: "platform")
-```
-
-### Multiple Providers
-
-```swift
-// Add Firebase provider
-analytics.addProvider(FirebaseAnalyticsProvider())
-
-// Add Mixpanel provider
-analytics.addProvider(MixpanelProvider(token: "your_token"))
-
-// Add custom provider
-class CustomAnalyticsProvider: AnalyticsProvider {
-    var id: String { "custom" }
-    
-    func trackEvent(_ event: AnalyticsEvent) {
-        // Send to your backend
+struct DebugMenuButton: View {
+    @State private var showsTools = false
+
+    var body: some View {
+        Button("Developer Tools") { showsTools = true }
+            .devToolsConsole(isPresented: $showsTools)
     }
 }
-analytics.addProvider(CustomAnalyticsProvider())
 ```
 
----
+### Record a session you create yourself
 
-## 🧰 UtilityTools
-
-Handy Swift extensions for everyday development.
-
-### String Extensions
+Sessions created after `NetworkCapture.start()` from `.default` or `.ephemeral` are recorded
+automatically. For a session created earlier, add recording to its configuration:
 
 ```swift
-// Validation
-"test@example.com".isValidEmail     // true
-"5551234567".isValidPhoneNumber     // true
-"abc123".isAlphanumeric             // true
-
-// Transformation
-"  hello world  ".trimmed           // "hello world"
-"hello".capitalizedFirst            // "Hello"
-
-// Truncation
-"Long text here".truncate(to: 8)    // "Long tex..."
-
-// Sanitization
-"hello@world!".removeSpecialCharacters()  // "helloworld"
+func makeAPISession() -> URLSession {
+    let configuration = URLSessionConfiguration.default
+    configuration.timeoutIntervalForRequest = 30
+    NetworkCapture.install(into: configuration)
+    return URLSession(configuration: configuration)
+}
 ```
 
-### Date Extensions
+### Choose what is kept
+
+Limits outside their ranges are clamped. Name fragments are matched against normalized names, so
+`"iban"` also catches `IBAN`, `iban_number` and `ibanNumber`:
 
 ```swift
-let date = Date()
-
-// Checks
-date.isToday           // true
-date.isYesterday       // false
-date.isTomorrow        // false
-
-// Components
-date.startOfDay        // Today at 00:00:00
-date.endOfDay          // Today at 23:59:59
-date.startOfWeek       // First day of current week
-date.startOfMonth      // First day of current month
+func configureNetworkLogger() {
+    NetworkLogger.shared.configuration = NetworkLogger.Configuration(
+        maximumEntries: 1_000,
+        maximumBodySize: 512 * 1024,
+        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        ignoredHosts: ["analytics.example.com"]
+    )
+}
 ```
 
-### Collection Extensions
+### Log messages
 
 ```swift
-let array = [1, 2, 3, 4, 5]
-
-// Safe subscript (no crash on out-of-bounds)
-array[safe: 10]        // nil
-
-// Unique elements
-[1, 2, 2, 3, 3].unique // [1, 2, 3]
-
-// Chunking
-array.chunked(into: 2) // [[1, 2], [3, 4], [5]]
+func logCheckout(orderID: String, error: (any Error)?) {
+    if let error {
+        LogStore.shared.error("Order \(orderID) failed: \(error.localizedDescription)", category: "checkout")
+    } else {
+        LogStore.shared.info("Order \(orderID) placed", category: "checkout")
+    }
+}
 ```
 
-### UIColor Extensions
+### Export requests and reports
 
 ```swift
-// From hex
-let color = UIColor(hex: "#FF5733")
-let color2 = UIColor(hex: "007AFF")
-
-// With alpha
-let transparentColor = UIColor(hex: "#FF5733", alpha: 0.5)
+func exportForBugReport() throws -> (har: Data, curl: [String], device: String) {
+    let entries = NetworkLogger.shared.entries
+    let har = try HTTPArchive(entries: entries).jsonData()
+    let curl = entries.map { $0.curlCommand() }
+    let device = DeviceSnapshot.current().report()
+    return (har, curl, device)
+}
 ```
 
-### UIView Extensions
+The console's share menus do the same for the user: **Export HAR** in the Network tab, **Share as
+cURL** in a request, **Share Report** in the Device tab.
+
+### Use it on macOS
+
+A Mac app has no shake. Give the console a window of its own and open it with a shortcut:
 
 ```swift
-// Corner radius
-view.roundCorners(radius: 12)
-
-// Shadow
-view.addShadow(
-    color: .black,
-    opacity: 0.2,
-    offset: CGSize(width: 0, height: 2),
-    radius: 8
-)
-
-// Border
-view.addBorder(color: .gray, width: 1)
+struct MacDebugScenes: Scene {
+    var body: some Scene {
+        Window("Developer Tools", id: "devtools") {
+            DevToolsConsole()
+        }
+        .keyboardShortcut("d", modifiers: [.command, .option])
+    }
+}
 ```
 
----
+## Demo
 
-## Project Structure
+<table>
+<tr>
+<td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/logs-dark.png"><img src="docs/images/logs-light.png" width="260" alt="The Logs tab with info, warning and error messages from the example app, each with its category, time and source line"></picture></td>
+<td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/device-dark.png"><img src="docs/images/device-light.png" width="260" alt="The Device tab showing app version, iOS version, simulated model, memory, app memory, thermal state, Low Power Mode and debugger status"></picture></td>
+</tr>
+</table>
 
-```
-iOSDevelopmentTools/
-├── Sources/
-│   ├── Core/
-│   │   └── MainFramework.swift
-│   ├── NetworkTools/
-│   │   └── NetworkClient.swift
-│   ├── StorageTools/
-│   │   └── StorageManager.swift
-│   ├── DebugTools/
-│   │   └── Logger.swift
-│   ├── AnalyticsTools/
-│   │   └── AnalyticsManager.swift
-│   └── UtilityTools/
-│       └── UtilityExtensions.swift
-├── Tests/
-│   ├── UnitTests/
-│   ├── IntegrationTests/
-│   └── PerformanceTests/
-├── Examples/
-│   ├── BasicExample.swift
-│   └── AdvancedExample.swift
-└── Documentation/
-```
-
----
-
-## Requirements
-
-| Requirement | Version |
-|-------------|---------|
-| iOS | 15.0+ |
-| macOS | 12.0+ |
-| Xcode | 15.0+ |
-| Swift | 5.9+ |
-
----
+The screenshots come from the [example app](Examples) on an iPhone 17 Pro simulator with iOS 27,
+captured by [`scripts/capture-screens.sh`](scripts/capture-screens.sh). The requests are real:
+the app sends them to `api.github.com` and `postman-echo.com`. To run it, open
+`Examples/DevToolsDemo/DevToolsDemo.xcodeproj`, choose an iPhone simulator or **My Mac**, run,
+and tap **Send All**.
 
 ## Documentation
 
-Full documentation is available in the [Documentation](Documentation/) folder:
+Reference documentation and articles:
 
-- [Getting Started Guide](Documentation/GettingStarted.md)
-- [API Reference](Documentation/APIReference.md)
-- [Migration Guide](Documentation/MigrationGuide.md)
-- [Best Practices](Documentation/BestPractices.md)
+- [API reference](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/)
+  — every public type with its parameters and limits.
 
----
+## Guides
+
+- [Getting started](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/gettingstarted)
+  — add the package, start capture, open the console, log messages.
+- [Capturing network traffic](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
+  — which sessions are recorded, how requests reach the server, memory limits, what is not
+  recorded.
+- [Redacting sensitive data](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
+  — how names are matched, what is replaced, why some bodies are withheld, and the limits.
+- [Keeping the tools out of release builds](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
+  — compilation conditions and a separate internal target.
+
+## Requirements
+
+| Platform | Minimum version |
+| ------------------- | ------------------ |
+| iOS | 17 |
+| macOS | 14 |
+| Toolchain | Swift 6.2 · Xcode 26+ |
+
+The shake gesture is iOS only; on macOS the console opens in a window or a sheet.
+
+## Architecture
+
+```text
+URLSession ──► CaptureProtocol ──► ForwardingSession ──► server
+ (your app)      │  redacts a copy        │
+                 ▼                        ▼  response, unchanged, back to your app
+            NetworkLogger ◄──────── status, body prefix, metrics
+                 │
+LogStore ────────┼──► DevToolsConsole (Network · Logs · Device tabs)
+DeviceSnapshot ──┘
+```
+
+- `NetworkCapture` registers `CaptureProtocol`, a `URLProtocol`, for `URLSession.shared` and adds
+  it to the default and ephemeral configurations. The protocol sends each request on through one
+  internal `URLSession` and calls the app's session back on the thread that started the load.
+- `RedactionPolicy` runs before a `NetworkEntry` is created, so stores and exports only ever see
+  redacted values.
+- `NetworkLogger` and `LogStore` are lock-protected ring buffers that publish changes through an
+  `AsyncStream`; the console's observable models read them at most about seven times a second.
+- Everything outside the console views is `Sendable` and callable from any thread.
+
+## Roadmap
+
+Planned, in no fixed order: keeping requests across launches, a `swift-log` backend for
+`LogStore`, tvOS and visionOS support for the console, and request mocking. Suggestions are
+welcome in [issues](https://github.com/muhittincamdali/iOSDevelopmentTools/issues).
 
 ## Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting PRs.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
+Contributions are welcome. Read the [contributing guide](https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/CONTRIBUTING.md) and the [code of conduct](https://github.com/muhittincamdali/.github/blob/main/CODE_OF_CONDUCT.md) before opening a pull request. Report security issues privately as described in the [security policy](https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/SECURITY.md).
 
 ## License
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-## Author
-
-**Muhittin Camdali** — [@muhittincamdali](https://github.com/muhittincamdali)
-
----
-
-<p align="center">
-  <sub>Built with ❤️ for the iOS community</sub>
-</p>
-
----
-
-## 📈 Star History
-
-<a href="https://star-history.com/#muhittincamdali/iOSDevelopmentTools&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=muhittincamdali/iOSDevelopmentTools&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=muhittincamdali/iOSDevelopmentTools&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=muhittincamdali/iOSDevelopmentTools&type=Date" />
- </picture>
-</a>
+Released under the MIT license. See [LICENSE](LICENSE).

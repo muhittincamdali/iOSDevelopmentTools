@@ -1,0 +1,628 @@
+import Foundation
+import Testing
+@testable import iOSDevelopmentTools
+
+@Suite("Redaction: bodies")
+struct BodyRedactionTests {
+    let policy = RedactionPolicy.default
+    let redacted = RedactionPolicy.replacement
+
+    private func json(_ data: Data) throws -> [String: Any] {
+        try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
+    @Test("JSON keys are redacted at every depth, in objects and arrays")
+    func nestedJSON() throws {
+        let body = Data(#"{"user":{"name":"Ada","password":"p","tokens":[{"refresh_token":"r"}]},"items":[{"api_key":1}],"page":2}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/json")
+        #expect(outcome == .redacted)
+        let object = try json(data)
+        let user = try #require(object["user"] as? [String: Any])
+        #expect(user["name"] as? String == "Ada")
+        #expect(user["password"] as? String == redacted)
+        // "tokens" itself is sensitive, so the whole array goes.
+        #expect(user["tokens"] as? String == redacted)
+        let items = try #require(object["items"] as? [[String: Any]])
+        #expect(items.first?["api_key"] as? String == redacted)
+        #expect(object["page"] as? Int == 2)
+    }
+
+    @Test("Unicode escapes in keys do not hide a sensitive name")
+    func escapedKeys() throws {
+        // In a raw string, \u0070 stays a JSON escape for "p".
+        let body = Data(#"{"\u0070assword":"secret"}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/json")
+        #expect(outcome == .redacted)
+        #expect(try json(data)["password"] as? String == redacted)
+        #expect(!String(decoding: data, as: UTF8.self).contains("secret"))
+    }
+
+    @Test("Full-width letters in keys do not hide a sensitive name")
+    func fullWidthKeys() throws {
+        let body = Data(#"{"ｐａｓｓｗｏｒｄ":"hunter2","ｔｉｔｌｅ":"x"}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/json")
+        #expect(outcome == .redacted)
+        let object = try json(data)
+        #expect(object["ｐａｓｓｗｏｒｄ"] as? String == redacted)
+        #expect(object["ｔｉｔｌｅ"] as? String == "x")
+    }
+
+    // JSONSerialization keeps one value of a repeated key; Python and JavaScript keep the last.
+    @Test("A repeated key withholds the body, at any depth", arguments: [
+        #"{"token":"a","token":"b"}"#,
+        #"{"a":1,"a":{"password":"hunter2"}}"#,
+        #"{"a":{"password":"hunter2"},"a":1}"#,
+        #"[{"a":{"token":"hunter2"},"a":0}]"#,
+        #"{"x":{"y":[1,{"a":1,"a":{"secret":"hunter2"}}]}}"#,
+        #"{"a":1,"a":{"password":"hunter2"}}"#,
+        #"{"😀":1,"😀":{"password":"hunter2"}}"#,
+        "{\"\u{E9}\":1,\"e\u{301}\":{\"password\":\"hunter2\"}}",
+        #"{"variables":"{\"a\":1,\"a\":{\"password\":\"hunter2\"}}"}"#,
+    ])
+    func duplicateKeys(body: String) {
+        #expect(policy.redact(body: Data(body.utf8), contentType: "application/json") == (Data(), .withheld))
+        // The same bytes sent as UTF-16 are read the same way.
+        let wide = body.data(using: .utf16LittleEndian)!
+        #expect(policy.redact(body: wide, contentType: "application/json") == (Data(), .withheld))
+    }
+
+    @Test("Equal keys in different objects are not repeats", arguments: [
+        #"{"a":{"x":1},"b":{"x":2}}"#,
+        #"[{"a":1},{"a":2}]"#,
+        #"{"a":"a","b":["a","a"],"c":{"a":{"a":1}}}"#,
+        #"{"a\"b":1,"a\\b":2,"ab":3}"#,
+    ])
+    func keysInSeparateObjects(body: String) {
+        let data = Data(body.utf8)
+        #expect(policy.redact(body: data, contentType: "application/json") == (data, .unchanged))
+        // JSONSerialization reads UTF-16 and UTF-32 without a byte order mark; so does the key scan.
+        // Not every platform's JSONSerialization reads all four, and a body it cannot read is withheld.
+        for encoding in [String.Encoding.utf16LittleEndian, .utf16BigEndian, .utf32LittleEndian, .utf32BigEndian] {
+            let wide = body.data(using: encoding)!
+            let isReadable = (try? JSONSerialization.jsonObject(with: wide)) != nil
+            let expected = isReadable ? (wide, RedactionOutcome.unchanged) : (Data(), .withheld)
+            #expect(policy.redact(body: wide, contentType: "application/json") == expected)
+        }
+    }
+
+    @Test("JSON sent with a non-JSON content type is still checked")
+    func mislabeledJSON() throws {
+        let body = Data("  \n{\"secret\":\"s\"}".utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "text/plain")
+        #expect(outcome == .redacted)
+        #expect(try json(data)["secret"] as? String == redacted)
+    }
+
+    @Test("JSON inside a JSON string is checked too, as in GraphQL variables")
+    func jsonInString() throws {
+        let body = Data(#"{"query":"{ me }","variables":"{\"input\":{\"password\":\"hunter2\",\"name\":\"ada\"}}","note":"[not json"}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/json")
+        #expect(outcome == .redacted)
+        let object = try json(data)
+        #expect(object["query"] as? String == "{ me }")
+        #expect(object["note"] as? String == "[not json")
+        let variables = try #require((object["variables"] as? String).map { Data($0.utf8) })
+        let input = try #require(try json(variables)["input"] as? [String: Any])
+        #expect(input["password"] as? String == redacted)
+        #expect(input["name"] as? String == "ada")
+    }
+
+    @Test("JSON after a byte order mark is still recognized and checked")
+    func byteOrderMark() throws {
+        let body = Data([0xEF, 0xBB, 0xBF]) + Data(#" {"password":"hunter2"}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "text/plain")
+        #expect(outcome == .redacted)
+        #expect(try json(data)["password"] as? String == redacted)
+    }
+
+    @Test("UTF-16 and UTF-32 JSON after a byte order mark is checked whatever the content type says", arguments: [
+        String.Encoding.utf16LittleEndian, .utf16BigEndian, .utf32LittleEndian, .utf32BigEndian,
+    ], [
+        "text/plain", nil,
+    ])
+    func wideByteOrderMark(encoding: String.Encoding, contentType: String?) throws {
+        // The explicit-endian encodings write no byte order mark of their own, so U+FEFF becomes it.
+        let body = try #require("\u{FEFF} {\"password\":\"hunter2\"}".data(using: encoding))
+        let (data, outcome) = policy.redact(body: body, contentType: contentType)
+        // JSONSerialization cannot parse UTF-32 little-endian on every platform; a body it cannot
+        // parse is withheld rather than stored. UTF-16, the common case, has to be redacted.
+        let isUTF16 = encoding == .utf16LittleEndian || encoding == .utf16BigEndian
+        #expect(isUTF16 ? outcome == .redacted : outcome != .unchanged)
+        if outcome == .redacted {
+            #expect(try json(data)["password"] as? String == redacted)
+        }
+    }
+
+    @Test("UTF-16 and UTF-32 JSON without a byte order mark is checked whatever the content type says", arguments: [
+        String.Encoding.utf16LittleEndian, .utf16BigEndian, .utf32LittleEndian, .utf32BigEndian,
+    ], [
+        "text/plain", nil,
+    ])
+    func wideWithoutByteOrderMark(encoding: String.Encoding, contentType: String?) throws {
+        // Python's json.loads reads all four from the zero bytes; big-endian text starts with one.
+        let body = try #require(" {\"password\":\"hunter2\"}".data(using: encoding))
+        let (data, outcome) = policy.redact(body: body, contentType: contentType)
+        // As above, a body that this platform's JSONSerialization cannot parse is withheld.
+        let isUTF16 = encoding == .utf16LittleEndian || encoding == .utf16BigEndian
+        #expect(isUTF16 ? outcome == .redacted : outcome != .unchanged)
+        if outcome == .redacted {
+            #expect(try json(data)["password"] as? String == redacted)
+        }
+    }
+
+    @Test("JSON without sensitive keys keeps its exact bytes")
+    func unchangedJSON() {
+        let body = Data(#"{"b": 1.50, "a": [true, null]}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/json")
+        #expect(outcome == .unchanged)
+        #expect(data == body)
+    }
+
+    @Test("Truncated, malformed or too deeply nested JSON is withheld", arguments: [
+        (#"{"password":"abc"#, false),
+        (#"{"password": }"#, true),
+        (String(repeating: "[", count: 200) + "1" + String(repeating: "]", count: 200), true),
+    ])
+    func uncheckedJSON(text: String, isComplete: Bool) {
+        let (data, outcome) = policy.redact(body: Data(text.utf8), contentType: "application/json", isComplete: isComplete)
+        #expect(outcome == .withheld)
+        #expect(data.isEmpty)
+    }
+
+    @Test("A number outside Double's range makes the body unchecked, not a crash")
+    func hugeNumbers() {
+        let body = Data(#"{"password":"x","n":1e400,"m":-1e400}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/json")
+        // JSONSerialization rejects numbers outside Double's range, so the body cannot be checked.
+        #expect(outcome == .withheld)
+        #expect(data.isEmpty)
+    }
+
+    @Test("Without withholding, unchecked bodies are stored as they were")
+    func withholdingOff() {
+        let lenient = RedactionPolicy(withholdsUncheckedBodies: false)
+        let body = Data(#"{"password":"#.utf8)
+        let (data, outcome) = lenient.redact(body: body, contentType: "application/json")
+        #expect(outcome == .unchanged)
+        #expect(data == body)
+    }
+
+    @Test("Form fields are redacted, including encoded names")
+    func formBody() {
+        let body = Data("user=ada&pass%77ord=s3cret&remember=1".utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded; charset=utf-8")
+        #expect(outcome == .redacted)
+        #expect(String(decoding: data, as: UTF8.self) == "user=ada&pass%77ord=\(redacted)&remember=1")
+    }
+
+    @Test("A form field whose name holds a semicolon is checked as one field too", arguments: [
+        "application/x-www-form-urlencoded", nil,
+    ])
+    func semicolonInFormName(contentType: String?) {
+        // Python's parse_qsl splits only on "&" and reads a field "token;x" with the value.
+        let body = Data("a=1&token;x=hunter2&pass;word=hunter2".utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: contentType)
+        #expect(outcome == .redacted)
+        #expect(String(decoding: data, as: UTF8.self) == "a=1&token;x=\(redacted)&pass;word=\(redacted)")
+    }
+
+    @Test("A form part whose field name holds a semicolon is redacted")
+    func semicolonInFormPart() {
+        let headers = "Content-Disposition: form-data; name=\"note\"\r\nContent-Type: application/x-www-form-urlencoded"
+        let body = multipart([(headers, "token;x=hunter2")])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        #expect(data == multipart([(headers, "token;x=\(redacted)")]))
+    }
+
+    @Test("A combining mark after a form delimiter does not hide a field", arguments: [
+        ("password=\u{301}hunter2", "password=\(RedactionPolicy.replacement)"),
+        ("user=ada&\u{301}password=hunter2", "user=ada&\u{301}password=\(RedactionPolicy.replacement)"),
+        ("user=ada;\u{301}token=t", "user=ada;\u{301}token=\(RedactionPolicy.replacement)"),
+    ])
+    func combiningMarkInForm(body: String, expected: String) {
+        // Werkzeug 3.1.9 reads the first body as {"password": "\u{301}hunter2"}.
+        for contentType in ["application/x-www-form-urlencoded", nil] {
+            let (data, outcome) = policy.redact(body: Data(body.utf8), contentType: contentType)
+            #expect(outcome == .redacted)
+            #expect(data == Data(expected.utf8))
+        }
+    }
+
+    @Test("A combining mark in a content type does not hide what kind it is")
+    func combiningMarkInContentType() {
+        let form = policy.redact(body: Data("password=hunter2".utf8), contentType: "application/x-www-form-urlencoded\u{301}")
+        #expect(form == (Data("password=\(redacted)".utf8), .redacted))
+        let body = multipart([("Content-Disposition: form-data; name=\"password\"", "hunter2")])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/\u{301}form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        #expect(data == multipart([("Content-Disposition: form-data; name=\"password\"", redacted)]))
+    }
+
+    @Test("JSON sent with a form content type is checked as JSON")
+    func jsonWithFormContentType() throws {
+        let body = Data(#"{"user":"ada","password":"hunter2"}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded")
+        #expect(outcome == .redacted)
+        let object = try json(data)
+        #expect(object["password"] as? String == redacted)
+        #expect(object["user"] as? String == "ada")
+        // Cut off, it cannot be checked as JSON, so it is withheld rather than read as a form.
+        let cutOff = policy.redact(body: body.prefix(30), contentType: "application/x-www-form-urlencoded", isComplete: false)
+        #expect(cutOff == (Data(), .withheld))
+    }
+
+    @Test("JSON that a server reads as a form is checked as a form too", arguments: [
+        (#"{"x":"1&password=hunter2"}"#, "application/x-www-form-urlencoded"),
+        (#"{"x":"1&password=hunter2"}"#, nil),
+        (#"["&password=hunter2"]"#, "application/x-www-form-urlencoded"),
+    ] as [(String, String?)])
+    func jsonReadAsForm(body: String, contentType: String?) {
+        // Werkzeug reads password=hunter2"} (or hunter2"]) from these bodies.
+        let (data, outcome) = policy.redact(body: Data(body.utf8), contentType: contentType)
+        #expect(outcome == .redacted)
+        let text = String(decoding: data, as: UTF8.self)
+        #expect(text.hasSuffix("&password=\(redacted)"))
+        #expect(!text.contains("hunter2"))
+    }
+
+    @Test("JSON with secrets in both its JSON and its form reading is withheld")
+    func jsonAndFormSecrets() {
+        // As a form, the field is {"token":"abc with the value ="} ; as JSON, token is "abc==".
+        let body = Data(#"{"token":"abc==","n":1}"#.utf8)
+        #expect(policy.redact(body: body, contentType: "application/x-www-form-urlencoded") == (Data(), .withheld))
+        #expect(policy.redact(body: body, contentType: nil) == (Data(), .withheld))
+        // Sent as JSON, it is read only as JSON.
+        let json = Data(#"{"x":"1&password=hunter2"}"#.utf8)
+        #expect(policy.redact(body: json, contentType: "application/json") == (json, .unchanged))
+    }
+
+    @Test("JSON in a form field is checked once decoded")
+    func jsonInFormField() throws {
+        let body = Data("user=ada&data=%7B%22password%22%3A%22hunter2%22%7D&json=+%7B%22a%22:+1%7D".utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded")
+        #expect(outcome == .redacted)
+        let text = String(decoding: data, as: UTF8.self)
+        #expect(text == "user=ada&data=%7B%22password%22:%22%5BREDACTED%5D%22%7D&json=+%7B%22a%22:+1%7D")
+        let value = try #require(text.split(separator: "&")[1].dropFirst("data=".count).removingPercentEncoding)
+        #expect(try json(Data(value.utf8))["password"] as? String == redacted)
+    }
+
+    @Test("A cut-off form body is still redacted up to where it ends")
+    func truncatedForm() {
+        let body = Data("user=ada&password=s3".utf8)
+        let (data, _) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded", isComplete: false)
+        #expect(String(decoding: data, as: UTF8.self) == "user=ada&password=\(redacted)")
+    }
+
+    @Test("A body without a content type is checked as a form, as URLSession sends it")
+    func formWithoutContentType() {
+        let body = Data("user=ada&password=hunter2".utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: nil)
+        #expect(outcome == .redacted)
+        #expect(String(decoding: data, as: UTF8.self) == "user=ada&password=\(redacted)")
+        // JSON without a content type is still read as JSON, and other text keeps its bytes.
+        #expect(policy.redact(body: Data(#"{"token":"t"}"#.utf8), contentType: nil).outcome == .redacted)
+        let binary = Data([0x00, 0xFF, 0x3D, 0x01])
+        #expect(policy.redact(body: binary, contentType: nil) == (binary, .unchanged))
+    }
+
+    @Test("Plain text and binary bodies are not checked")
+    func otherBodies() {
+        let text = Data("password=hunter2 in a log line".utf8)
+        #expect(policy.redact(body: text, contentType: "text/plain").outcome == .unchanged)
+        let binary = Data([0x89, 0x50, 0x4E, 0x47, 0x00, 0xFF])
+        #expect(policy.redact(body: binary, contentType: "image/png") == (binary, .unchanged))
+        #expect(policy.redact(body: Data(), contentType: "application/json") == (Data(), .unchanged))
+    }
+
+    // MARK: Multipart
+
+    private func multipart(_ parts: [(headers: String, content: String)], boundary: String = "XyZ") -> Data {
+        var text = ""
+        for part in parts {
+            text += "--\(boundary)\r\n\(part.headers)\r\n\r\n\(part.content)\r\n"
+        }
+        text += "--\(boundary)--\r\n"
+        return Data(text.utf8)
+    }
+
+    @Test("Multipart fields are redacted by name, other parts keep their bytes")
+    func multipartFields() {
+        let body = multipart([
+            ("Content-Disposition: form-data; name=\"user\"", "ada"),
+            ("Content-Disposition: form-data; name=\"password\"", "s3cret"),
+            ("Content-Disposition: form-data; name=\"avatar\"; filename=\"a.png\"\r\nContent-Type: image/png", "PNGDATA"),
+        ])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        let expected = multipart([
+            ("Content-Disposition: form-data; name=\"user\"", "ada"),
+            ("Content-Disposition: form-data; name=\"password\"", redacted),
+            ("Content-Disposition: form-data; name=\"avatar\"; filename=\"a.png\"\r\nContent-Type: image/png", "PNGDATA"),
+        ])
+        #expect(data == expected)
+    }
+
+    @Test("A form part that holds JSON is checked as a form too")
+    func jsonInFormPart() {
+        let headers = "Content-Disposition: form-data; name=\"note\"\r\nContent-Type: application/x-www-form-urlencoded"
+        let body = multipart([(headers, #"{"x":"1&password=hunter2"}"#)])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        #expect(data == multipart([(headers, #"{"x":"1&password=\#(redacted)"#)]))
+    }
+
+    @Test("A quoted name with a semicolon is read as one name")
+    func quotedSemicolon() {
+        let body = multipart([("Content-Disposition: form-data; name=\"a;password\"", "s3cret")])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=\"XyZ\"")
+        #expect(outcome == .redacted)
+        #expect(!String(decoding: data, as: UTF8.self).contains("s3cret"))
+    }
+
+    @Test("Parameter parsing handles escapes, extended names and token values")
+    func parameterParsing() {
+        #expect(RedactionPolicy.fieldNames(in: #"form-data; name="a\"b"; filename="x""#) == [#"a"b"#])
+        #expect(RedactionPolicy.fieldNames(in: "form-data; name*=utf-8''pass%77ord") == ["utf-8''pass%77ord"])
+        #expect(RedactionPolicy.fieldNames(in: "form-data;; filename=x ;\tname=token ") == ["token"])
+        #expect(RedactionPolicy.fieldNames(in: "form-data") == [])
+        #expect(RedactionPolicy.fieldNames(in: #"form-data; name="a"; NAME=b"#) == ["a", "b"])
+    }
+
+    @Test("A malformed disposition parameter makes the names unreadable", arguments: [
+        "form-data; name = token",
+        "form-data; name= token",
+        "form-data; ;; =; name",
+        "form-data; name",
+        "form-data; name=",
+        "form-data; name=a b",
+        #"form-data; name="a"b"#,
+        #"form-data; name="unclosed"#,
+        #"form-data; x="a\"; name=password"#,
+        "form-data; n\u{301}ame=a",
+        "form-data; name=a;\u{301} name=password",
+        "form-data; x=\"\u{301}; name=password",
+    ])
+    func malformedParameter(disposition: String) {
+        #expect(RedactionPolicy.fieldNames(in: disposition) == nil)
+    }
+
+    // Werkzeug 3.1.9 reads each of these as {"password": "hunter2"}: it skips a malformed
+    // parameter up to the next ";", even one inside the quotes that follow it, and a combining
+    // mark after a closing quote does not join it.
+    @Test("A disposition that a server reads differently withholds the body", arguments: [
+        #"form-data; x ="; name=password""#,
+        #"form-data; name="note"; x ="; name=password""#,
+        #"form-data; a@b="; name=password""#,
+        "form-data; name=\"a\"\u{301}; name=\"password\"",
+    ])
+    func dispositionDifferential(disposition: String) {
+        let body = multipart([("Content-Disposition: \(disposition)", "hunter2")])
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
+    }
+
+    @Test("Every Content-Disposition name of a part is checked", arguments: [
+        "Content-Disposition: form-data; name=\"note\"\r\nContent-Disposition: form-data; name=\"password\"",
+        "Content-Disposition: form-data; name=\"note\"; name=\"password\"",
+        "Content-Disposition: form-data; name=\"note\"; name*=utf-8''password",
+    ])
+    func repeatedNames(headers: String) {
+        let body = multipart([(headers, "hunter2")])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        #expect(data == multipart([(headers, redacted)]))
+    }
+
+    @Test("A folded part header line withholds the body", arguments: [
+        "Content-Disposition: form-data;\r\n name=\"password\"",
+        "Content-Disposition: form-data;\r\n\tname=\"password\"",
+    ])
+    func foldedHeaderLine(headers: String) {
+        let body = multipart([(headers, "hunter2")])
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
+    }
+
+    @Test("A combining mark after a header's colon does not hide the header")
+    func combiningMarkAfterColon() {
+        // Werkzeug 3.1.9 reads this part as {"password": "hunter2"}.
+        let headers = "Content-Disposition:\u{301} form-data; name=password"
+        let body = multipart([(headers, "hunter2")])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ")
+        #expect(outcome == .redacted)
+        #expect(data == multipart([(headers, redacted)]))
+    }
+
+    @Test("A part header name that is not a token withholds the body", arguments: [
+        "Content-Disposition\u{0C}: form-data; name=password",
+        "Content-Disposition\u{301}: form-data; name=password",
+        "Content Disposition: form-data; name=password",
+    ])
+    func malformedHeaderName(headers: String) {
+        let body = multipart([(headers, "hunter2")])
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
+    }
+
+    @Test("A name split over RFC 2231 continuations withholds the body", arguments: [
+        "Content-Disposition: form-data; name*0=\"pass\"; name*1=\"word\"",
+        "Content-Disposition: form-data; NAME*0*=utf-8''pass; name*1*=word",
+    ])
+    func nameContinuations(headers: String) {
+        let body = multipart([(headers, "hunter2")])
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
+    }
+
+    @Test("A content type with more than one boundary parameter withholds the body", arguments: [
+        "multipart/form-data; boundary=X; boundary=Y",
+        "multipart/form-data; boundary=X; Boundary=Y",
+        "multipart/form-data; boundary=X; boundary*=utf-8''Y",
+        "multipart/form-data; boundary*=utf-8''Y",
+    ])
+    func repeatedBoundary(contentType: String) {
+        // Parts delimited by Y sit inside an X part; Werkzeug (Flask) reads them with the last boundary.
+        let inner = multipart([("Content-Disposition: form-data; name=\"password\"", "hunter2")], boundary: "Y")
+        let body = multipart([("Content-Disposition: form-data; name=\"note\"", String(decoding: inner, as: UTF8.self))], boundary: "X")
+        #expect(policy.redact(body: body, contentType: contentType) == (Data(), .withheld))
+        #expect(RedactionPolicy.boundary(in: contentType) == nil)
+    }
+
+    // Werkzeug 3.1.9 reads an unquoted boundary only up to the first byte that is not a token
+    // character, so for each of these it splits the body at "--B1" and finds the password part
+    // that sits inside the note part here.
+    @Test("A boundary that is not a token or a quoted string withholds the body", arguments: [
+        ("multipart/form-data; boundary=B1/x", "B1/x"),
+        ("multipart/form-data; boundary=B1 x", "B1 x"),
+        ("multipart/form-data; boundary=B1\u{301}x", "B1\u{301}x"),
+    ])
+    func malformedBoundary(contentType: String, boundary: String) {
+        let inner = multipart([("Content-Disposition: form-data; name=\"password\"", "hunter2")], boundary: "B1")
+        let body = multipart([("Content-Disposition: form-data; name=\"note\"", String(decoding: inner, as: UTF8.self))], boundary: boundary)
+        #expect(policy.redact(body: body, contentType: contentType) == (Data(), .withheld))
+        #expect(RedactionPolicy.boundary(in: contentType) == nil)
+    }
+
+    @Test("A boundary is a token or a quoted string of RFC 2046 boundary characters")
+    func boundaryCharacters() {
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; boundary=\"B1/x y:z\"") == "B1/x y:z")
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; charset=utf-8; boundary=----WebKitFormBoundaryAbc123") == "----WebKitFormBoundaryAbc123")
+        // Werkzeug turns %22 into a quote in a quoted value, and RFC 2046 has no quote, percent
+        // sign or backslash in a boundary, nor a space at its end.
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; boundary=\"B1%22x\"") == nil)
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; boundary=\"B1\\\\x\"") == nil)
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; boundary=\"B1 \"") == nil)
+        #expect(RedactionPolicy.boundary(in: "multipart/form-data; boundary=\"\"") == nil)
+    }
+
+    @Test("A part with two content types is withheld")
+    func repeatedContentType() {
+        let headers = "Content-Disposition: form-data; name=\"a\"\r\nContent-Type: text/plain\r\nContent-Type: application/json"
+        let body = multipart([(headers, #"{"token":"t"}"#)])
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
+    }
+
+    @Test("A JSON part is checked by its own content type")
+    func jsonPart() {
+        let body = multipart([("Content-Disposition: form-data; name=\"metadata\"\r\nContent-Type: application/json", #"{"token":"t","title":"x"}"#)])
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/related; boundary=XyZ")
+        #expect(outcome == .redacted)
+        let text = String(decoding: data, as: UTF8.self)
+        #expect(text.contains("\"title\":\"x\"") && !text.contains("\"t\""))
+    }
+
+    @Test("Multipart bodies that cannot be checked are withheld", arguments: [
+        ("multipart/form-data; boundary=XyZ", "no delimiter here", true),
+        ("multipart/form-data; boundary=XyZ", "--XyZ\r\nContent-Disposition: form-data; name=\"a\"", true),
+        ("multipart/form-data; boundary=XyZ", "--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n", true),
+        ("multipart/form-data", "--XyZ\r\n\r\nv\r\n--XyZ--", true),
+        ("multipart/form-data; boundary=" + String(repeating: "b", count: 71), "x", true),
+        ("multipart/form-data; boundary=XyZ", "--XyZ\r\n\r\nv\r\n--XyZ--", false),
+    ])
+    func uncheckedMultipart(contentType: String, text: String, isComplete: Bool) {
+        let (data, outcome) = policy.redact(body: Data(text.utf8), contentType: contentType, isComplete: isComplete)
+        #expect(outcome == .withheld)
+        #expect(data.isEmpty)
+    }
+
+    @Test("A boundary inside a line is content, so it cannot end the body early")
+    func boundaryInsideLine() throws {
+        let body = Data((
+            "--B\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nhello--B--\r\n"
+            + "--B\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\nhunter2\r\n--B--\r\n"
+        ).utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=B")
+        #expect(outcome == .redacted)
+        let text = String(decoding: data, as: UTF8.self)
+        #expect(!text.contains("hunter2"))
+        #expect(text.contains("hello--B--\r\n--B\r\n"))
+        #expect(text.contains("name=\"password\"\r\n\r\n\(redacted)\r\n--B--"))
+    }
+
+    @Test("A boundary or a header line break after a bare CR or LF withholds the body", arguments: [
+        // Werkzeug reads a password part here, after the LF that ends "hi".
+        "--B\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nhi\n--B\n"
+            + "Content-Disposition: form-data; name=\"password\"\n\nhunter2\r\n--B--",
+        "--B\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nhi\r--B\r\n"
+            + "Content-Disposition: form-data; name=\"password\"\r\n\r\nhunter2\r\n--B--",
+        "\n--B\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--B--",
+        // Headers that end at "\n\n" put hunter2 in the content for such a server.
+        "--B\r\nContent-Disposition: form-data; name=\"password\"\n\nhunter2\r\n\r\nv\r\n--B--",
+    ])
+    func bareLineBreaks(text: String) {
+        #expect(policy.redact(body: Data(text.utf8), contentType: "multipart/form-data; boundary=B") == (Data(), .withheld))
+    }
+
+    @Test("A line that starts with the boundary but goes on withholds the body", arguments: [
+        // A server that matches "--B" by prefix ends the password part at "abc".
+        "--B\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\nabc\r\n--BX\r\n\r\nhunter2\r\n--B--",
+        "--B\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--B",
+        "--B \r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--B x\r\n\r\nw\r\n--B--",
+    ])
+    func boundaryPrefix(text: String) {
+        #expect(policy.redact(body: Data(text.utf8), contentType: "multipart/form-data; boundary=B") == (Data(), .withheld))
+    }
+
+    @Test("Spaces and tabs between a delimiter and its line break are allowed")
+    func transportPadding() {
+        let body = Data("--B \t\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\nhunter2\r\n--B--\r\n".utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=B")
+        #expect(outcome == .redacted)
+        #expect(String(decoding: data, as: UTF8.self) == "--B \t\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\n\(redacted)\r\n--B--\r\n")
+    }
+
+    @Test("Text before the first or after the closing delimiter withholds the body", arguments: [
+        "preamble\r\n--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\n",
+        "--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\nepilogue",
+        // A second body after the closing delimiter, as a hostile client could append.
+        "--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\n"
+            + "--XyZ\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\nhunter2\r\n--XyZ--\r\n",
+    ])
+    func preambleAndEpilogue(text: String) {
+        #expect(policy.redact(body: Data(text.utf8), contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
+    }
+
+    @Test("Line breaks around the delimiters keep the body as it was")
+    func surroundingLineBreaks() {
+        let body = Data("\r\n--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\n\r\n".utf8)
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (body, .unchanged))
+    }
+
+    @Test("A multipart body with too many parts is withheld instead of tracked part by part")
+    func tooManyParts() {
+        let limit = RedactionPolicy.maximumMultipartParts
+        let allowed = multipart(Array(repeating: ("Content-Disposition: form-data; name=\"a\"", "v"), count: limit))
+        #expect(policy.redact(body: allowed, contentType: "multipart/form-data; boundary=XyZ").outcome == .unchanged)
+        let excessive = multipart(Array(repeating: ("Content-Disposition: form-data; name=\"a\"", "v"), count: limit + 1))
+        #expect(policy.redact(body: excessive, contentType: "multipart/form-data; boundary=XyZ").outcome == .withheld)
+        // Nothing but delimiters, as a hostile server could send.
+        let delimiters = Data(String(repeating: "--b", count: 100_000).utf8)
+        #expect(policy.redact(body: delimiters, contentType: "multipart/form-data; boundary=b").outcome == .withheld)
+    }
+
+    @Test("A captured body records its size, truncation and outcome")
+    func capturedBody() {
+        let body = CapturedBody.capture(prefix: Data(#"{"tok"#.utf8), byteCount: 100, contentType: "application/json", policy: policy)
+        #expect(body.isTruncated)
+        #expect(body.byteCount == 100)
+        #expect(body.redaction == .withheld)
+        #expect(body.data.isEmpty)
+    }
+
+    @Test("Text of a truncated body drops a character split by the limit")
+    func splitCharacter() {
+        let full = Data("ab€".utf8) // € is three bytes
+        let body = CapturedBody(data: full.prefix(4), byteCount: full.count, isTruncated: true, redaction: .unchanged)
+        #expect(body.text == "ab")
+        let invalid = CapturedBody(data: Data([0xFF, 0xFE]), byteCount: 2, isTruncated: false, redaction: .unchanged)
+        #expect(invalid.text == nil)
+    }
+
+    @Test("Pretty-printed JSON only for complete JSON")
+    func prettyJSON() {
+        let complete = CapturedBody(data: Data(#"{"b":1,"a":2}"#.utf8), byteCount: 13, isTruncated: false, redaction: .unchanged)
+        #expect(complete.prettyPrintedJSON == "{\n  \"a\" : 2,\n  \"b\" : 1\n}")
+        let cut = CapturedBody(data: Data(#"{"b":1"#.utf8), byteCount: 13, isTruncated: true, redaction: .unchanged)
+        #expect(cut.prettyPrintedJSON == nil)
+        let fragment = CapturedBody(data: Data("42".utf8), byteCount: 2, isTruncated: false, redaction: .unchanged)
+        #expect(fragment.prettyPrintedJSON == nil)
+    }
+}
