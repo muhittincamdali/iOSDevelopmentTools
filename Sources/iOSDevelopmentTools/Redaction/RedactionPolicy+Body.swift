@@ -144,19 +144,28 @@ extension RedactionPolicy {
 
     // MARK: Multipart
 
-    /// The `boundary` parameter of a multipart content type, without quotes.
+    /// The `boundary` parameter of a multipart content type, without quotes; `nil` when there is
+    /// none, or more than one.
+    ///
+    /// Servers differ in which of two boundary parameters they use (Werkzeug, behind Flask, takes
+    /// the last), and parts delimited by the other one would be read but not checked. An RFC 2231
+    /// `boundary*` parameter counts as another one, because a server that reads it may prefer it.
     static func boundary(in contentType: String) -> String? {
+        var boundaries: [String] = []
         for parameter in contentType.split(separator: ";").dropFirst() {
-            let parts = parameter.split(separator: "=", maxSplits: 1)
-            guard parts.count == 2, parts[0].trimmingCharacters(in: .whitespaces).lowercased() == "boundary" else { continue }
+            let parts = parameter.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            let name = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
+            guard name == "boundary" || name.hasPrefix("boundary*") else { continue }
+            guard name == "boundary", parts.count == 2 else { return nil }
             var value = parts[1].trimmingCharacters(in: .whitespaces)
             if value.count >= 2, value.hasPrefix("\""), value.hasSuffix("\"") {
                 value = String(value.dropFirst().dropLast())
             }
-            // RFC 2046: 1 to 70 characters.
-            return (1...70).contains(value.utf8.count) ? value : nil
+            boundaries.append(value)
         }
-        return nil
+        // RFC 2046: 1 to 70 characters.
+        guard boundaries.count == 1, let value = boundaries.first, (1...70).contains(value.utf8.count) else { return nil }
+        return value
     }
 
     /// The multipart body with the content of sensitive fields replaced; `nil` when the body does

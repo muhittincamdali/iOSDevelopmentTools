@@ -237,6 +237,20 @@ struct BodyRedactionTests {
         #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
     }
 
+    @Test("A content type with more than one boundary parameter withholds the body", arguments: [
+        "multipart/form-data; boundary=X; boundary=Y",
+        "multipart/form-data; boundary=X; Boundary=Y",
+        "multipart/form-data; boundary=X; boundary*=utf-8''Y",
+        "multipart/form-data; boundary*=utf-8''Y",
+    ])
+    func repeatedBoundary(contentType: String) {
+        // Parts delimited by Y sit inside an X part; Werkzeug (Flask) reads them with the last boundary.
+        let inner = multipart([("Content-Disposition: form-data; name=\"password\"", "hunter2")], boundary: "Y")
+        let body = multipart([("Content-Disposition: form-data; name=\"note\"", String(decoding: inner, as: UTF8.self))], boundary: "X")
+        #expect(policy.redact(body: body, contentType: contentType) == (Data(), .withheld))
+        #expect(RedactionPolicy.boundary(in: contentType) == nil)
+    }
+
     @Test("A part with two content types is withheld")
     func repeatedContentType() {
         let headers = "Content-Disposition: form-data; name=\"a\"\r\nContent-Type: text/plain\r\nContent-Type: application/json"
