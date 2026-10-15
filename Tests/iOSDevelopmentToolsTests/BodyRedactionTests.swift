@@ -52,6 +52,20 @@ struct BodyRedactionTests {
         #expect(try json(data)["secret"] as? String == redacted)
     }
 
+    @Test("JSON inside a JSON string is checked too, as in GraphQL variables")
+    func jsonInString() throws {
+        let body = Data(#"{"query":"{ me }","variables":"{\"input\":{\"password\":\"hunter2\",\"name\":\"ada\"}}","note":"[not json"}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "application/json")
+        #expect(outcome == .redacted)
+        let object = try json(data)
+        #expect(object["query"] as? String == "{ me }")
+        #expect(object["note"] as? String == "[not json")
+        let variables = try #require((object["variables"] as? String).map { Data($0.utf8) })
+        let input = try #require(try json(variables)["input"] as? [String: Any])
+        #expect(input["password"] as? String == redacted)
+        #expect(input["name"] as? String == "ada")
+    }
+
     @Test("JSON after a byte order mark is still recognized and checked")
     func byteOrderMark() throws {
         let body = Data([0xEF, 0xBB, 0xBF]) + Data(#" {"password":"hunter2"}"#.utf8)

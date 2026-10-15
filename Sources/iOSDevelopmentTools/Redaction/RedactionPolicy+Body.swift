@@ -118,7 +118,26 @@ extension RedactionPolicy {
             }
             return (result, changed)
         }
+        if let string = jsonValue as? String {
+            return redact(embeddedJSON: string, depth: depth)
+        }
         return (jsonValue, false)
+    }
+
+    /// A string value that holds JSON itself, as GraphQL clients often send `variables`, with
+    /// sensitive keys replaced inside it. Other strings are returned as they are.
+    private func redact(embeddedJSON string: String, depth: Int) -> (Any, Bool)? {
+        let data = Data(string.utf8)
+        guard Self.looksLikeJSON(data),
+              let object = try? JSONSerialization.jsonObject(with: data),
+              object is [String: Any] || object is [Any]
+        else { return (string, false) }
+        guard let (redacted, changed) = redact(jsonValue: object, depth: depth + 1) else { return nil }
+        guard changed else { return (string, false) }
+        guard JSONSerialization.isValidJSONObject(redacted),
+              let encoded = try? JSONSerialization.data(withJSONObject: redacted, options: [.sortedKeys, .withoutEscapingSlashes])
+        else { return nil }
+        return (String(decoding: encoded, as: UTF8.self), true)
     }
 
     // MARK: Multipart

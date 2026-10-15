@@ -34,7 +34,8 @@ the side of hiding too much: a JSON key named `author` is hidden because it cont
 - **Headers:** headers with a sensitive name (`Authorization`, `Cookie`, `Set-Cookie`,
   `X-API-Key`, …) and headers whose value starts with an authentication scheme (`Bearer …`,
   `Basic …`) whatever their name.
-- **JSON bodies:** the value of every sensitive key at any depth, also when the content type
+- **JSON bodies:** the value of every sensitive key at any depth, including inside string values
+  that hold JSON themselves (as GraphQL clients send `variables`), also when the content type
   does not say JSON but the body starts with `{` or `[` (after white space or a UTF-8 byte order
   mark). Unicode escapes in keys are decoded
   first, so `"password"` is caught.
