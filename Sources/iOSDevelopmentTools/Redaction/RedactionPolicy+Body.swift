@@ -65,9 +65,10 @@ extension RedactionPolicy {
     }
 
     private static func looksLikeJSON(_ body: Data) -> Bool {
-        guard let first = body.first(where: { !($0 == 0x20 || $0 == 0x09 || $0 == 0x0A || $0 == 0x0D) }) else {
-            return false
-        }
+        // A UTF-8 byte order mark may come first; JSONSerialization reads past it.
+        let byteOrderMark: [UInt8] = [0xEF, 0xBB, 0xBF]
+        let text = body.starts(with: byteOrderMark) ? body.dropFirst(byteOrderMark.count) : body[...]
+        guard let first = text.first(where: { !isLinearWhitespace($0) }) else { return false }
         return first == UInt8(ascii: "{") || first == UInt8(ascii: "[")
     }
 

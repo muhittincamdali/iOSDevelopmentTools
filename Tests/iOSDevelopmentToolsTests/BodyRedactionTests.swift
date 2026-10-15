@@ -52,6 +52,14 @@ struct BodyRedactionTests {
         #expect(try json(data)["secret"] as? String == redacted)
     }
 
+    @Test("JSON after a byte order mark is still recognized and checked")
+    func byteOrderMark() throws {
+        let body = Data([0xEF, 0xBB, 0xBF]) + Data(#" {"password":"hunter2"}"#.utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "text/plain")
+        #expect(outcome == .redacted)
+        #expect(try json(data)["password"] as? String == redacted)
+    }
+
     @Test("JSON without sensitive keys keeps its exact bytes")
     func unchangedJSON() {
         let body = Data(#"{"b": 1.50, "a": [true, null]}"#.utf8)
