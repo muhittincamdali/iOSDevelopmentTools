@@ -24,7 +24,8 @@ new major version.
   session created from the default or ephemeral configuration after `start(logger:)`;
   `install(into:)` adds recording to any other configuration. Requests are sent on unchanged and
   responses reach the app unchanged; redirects, cancellations, errors and
-  `URLSessionTaskMetrics` timings are recorded.
+  `URLSessionTaskMetrics` timings are recorded. A redirect that the app's session refuses
+  returns the redirect response, half a second after it arrives.
 - `NetworkLogger` stores the requests in a ring buffer with clamped limits (1–10,000 entries,
   0–16 MiB per body), can ignore hosts and their subdomains, accepts manual records for traffic
   capture cannot see, and publishes changes through an `AsyncStream`.

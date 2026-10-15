@@ -25,7 +25,9 @@ Libraries built on `URLSession`, such as Alamofire, are recorded the same way.
    `URLSessionTaskMetrics`.
 
 Redirects are reported to the app's session, which sends the next request itself, so each hop is
-its own entry. Cancelling a task records a cancellation.
+its own entry. When the session's delegate refuses a redirect, the session gives no signal, so the
+redirect response and its body reach the app half a second later, once capture has waited for the
+session to follow it. Cancelling a task records a cancellation.
 
 ### Memory use
 

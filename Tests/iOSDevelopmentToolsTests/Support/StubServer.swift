@@ -9,7 +9,8 @@ import Foundation
 /// - `/login`: 200 with a JSON token and a `Set-Cookie` header.
 /// - `/status/<code>`: that status with an empty body.
 /// - `/bytes/<count>`: 200 with `count` bytes of `x`.
-/// - `/redirect`: 302 to `/final`; `/final`: 200 with `done`.
+/// - `/redirect`: 302 to `/final` with the body `moved`, which a client that refuses the redirect
+///   receives, as from an HTTP server; `/final`: 200 with `done`.
 /// - `/offline`: fails with `URLError(.notConnectedToInternet)`.
 /// - `/hang`: never answers.
 final class StubServer: URLProtocol, @unchecked Sendable {
@@ -47,6 +48,10 @@ final class StubServer: URLProtocol, @unchecked Sendable {
             var next = URLRequest(url: target)
             next.httpMethod = "GET"
             client.urlProtocol(self, wasRedirectedTo: next, redirectResponse: response)
+            // URLSession holds these back until its delegate decides, and drops them when the
+            // redirect is followed.
+            client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client.urlProtocol(self, didLoad: Data("moved".utf8))
             client.urlProtocolDidFinishLoading(self)
         case "final":
             respond(200, headers: ["Content-Type": "text/plain"], body: Data("done".utf8))

@@ -150,6 +150,30 @@ final class NetworkCaptureTests {
         #expect(final.statusCode == 200)
     }
 
+    @Test("Redirects reach the target every time, not a cancellation error")
+    func repeatedRedirects() async throws {
+        // Failing the load right after reporting the redirect, as Apple's CustomHTTPProtocol
+        // sample does, ended about one load in two thousand in CocoaError(.userCancelled).
+        for attempt in 0..<2_000 {
+            let (data, response) = try await session.data(from: url("/redirect?attempt=\(attempt)"))
+            #expect(String(decoding: data, as: UTF8.self) == "done")
+            #expect((response as? HTTPURLResponse)?.statusCode == 200)
+        }
+    }
+
+    @Test("A redirect the app's session refuses returns the redirect response")
+    func refusedRedirect() async throws {
+        let (data, response) = try await session.data(from: url("/redirect"), delegate: RedirectRefuser())
+        let http = try #require(response as? HTTPURLResponse)
+        #expect(http.statusCode == 302)
+        #expect(http.value(forHTTPHeaderField: "Location") == url("/final").absoluteString)
+        #expect(String(decoding: data, as: UTF8.self) == "moved")
+        let entry = try await finishedEntry("/redirect")
+        #expect(entry.statusCode == 302)
+        #expect(entry.redirectURL == url("/final").absoluteString)
+        #expect(!logger.entries.contains { $0.url.hasSuffix("/final") })
+    }
+
     @Test("Network errors reach the app and the entry")
     func failures() async throws {
         let session = session
@@ -232,5 +256,15 @@ final class NetworkCaptureTests {
         let handled = NSMutableURLRequest(url: url("/final"))
         URLProtocol.setProperty(true, forKey: CaptureProtocol.handledKey, in: handled)
         #expect(!CaptureProtocol.canInit(with: handled as URLRequest))
+    }
+}
+
+/// A task delegate that refuses every redirect, as an app does that reads the `Location` itself.
+private final class RedirectRefuser: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest
+    ) async -> URLRequest? {
+        nil
     }
 }

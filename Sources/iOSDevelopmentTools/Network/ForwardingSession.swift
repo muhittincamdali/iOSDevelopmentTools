@@ -3,7 +3,9 @@ import os
 
 /// Receives the delegate callbacks of a forwarded request.
 protocol ForwardedTaskHandler: AnyObject, Sendable {
-    func forwardedTask(didReceive response: URLResponse) -> URLSession.ResponseDisposition
+    func forwardedTask(
+        didReceive response: URLResponse,
+        completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void)
     func forwardedTask(didReceive data: Data)
     func forwardedTask(willRedirectWith response: HTTPURLResponse, to request: URLRequest) -> URLRequest?
     func forwardedTask(didFinishCollecting metrics: URLSessionTaskMetrics)
@@ -66,7 +68,8 @@ final class ForwardingSession: NSObject, URLSessionDataDelegate, @unchecked Send
         _ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
         completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void
     ) {
-        completionHandler(handler(for: dataTask)?.forwardedTask(didReceive: response) ?? .cancel)
+        guard let handler = handler(for: dataTask) else { return completionHandler(.cancel) }
+        handler.forwardedTask(didReceive: response, completionHandler: completionHandler)
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
