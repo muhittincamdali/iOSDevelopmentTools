@@ -67,11 +67,26 @@ extension RedactionPolicy {
     }
 
     private static func looksLikeJSON(_ body: Data) -> Bool {
+        // JSONSerialization also reads UTF-16 and UTF-32 after their byte order marks, so such a
+        // body is decoded before its first character is looked at.
+        if let encoding = wideEncoding(of: body) {
+            guard let text = String(data: body, encoding: encoding) else { return false }
+            let first = text.unicodeScalars.first { $0 != "\u{FEFF}" && !$0.properties.isWhitespace }
+            return first == "{" || first == "["
+        }
         // A UTF-8 byte order mark may come first; JSONSerialization reads past it.
         let byteOrderMark: [UInt8] = [0xEF, 0xBB, 0xBF]
         let text = body.starts(with: byteOrderMark) ? body.dropFirst(byteOrderMark.count) : body[...]
         guard let first = text.first(where: { !isLinearWhitespace($0) }) else { return false }
         return first == UInt8(ascii: "{") || first == UInt8(ascii: "[")
+    }
+
+    /// UTF-16 or UTF-32 when the body starts with one of their byte order marks. The UTF-32
+    /// little-endian mark starts like the UTF-16 one, so it is tested first.
+    private static func wideEncoding(of body: Data) -> String.Encoding? {
+        if body.starts(with: [0xFF, 0xFE, 0x00, 0x00]) || body.starts(with: [0x00, 0x00, 0xFE, 0xFF]) { return .utf32 }
+        if body.starts(with: [0xFF, 0xFE]) || body.starts(with: [0xFE, 0xFF]) { return .utf16 }
+        return nil
     }
 
     // MARK: JSON

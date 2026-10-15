@@ -85,6 +85,24 @@ struct BodyRedactionTests {
         #expect(try json(data)["password"] as? String == redacted)
     }
 
+    @Test("UTF-16 and UTF-32 JSON after a byte order mark is checked whatever the content type says", arguments: [
+        String.Encoding.utf16LittleEndian, .utf16BigEndian, .utf32LittleEndian, .utf32BigEndian,
+    ], [
+        "text/plain", nil,
+    ])
+    func wideByteOrderMark(encoding: String.Encoding, contentType: String?) throws {
+        // The explicit-endian encodings write no byte order mark of their own, so U+FEFF becomes it.
+        let body = try #require("\u{FEFF} {\"password\":\"hunter2\"}".data(using: encoding))
+        let (data, outcome) = policy.redact(body: body, contentType: contentType)
+        // JSONSerialization cannot parse UTF-32 little-endian on every platform; a body it cannot
+        // parse is withheld rather than stored. UTF-16, the common case, has to be redacted.
+        let isUTF16 = encoding == .utf16LittleEndian || encoding == .utf16BigEndian
+        #expect(isUTF16 ? outcome == .redacted : outcome != .unchanged)
+        if outcome == .redacted {
+            #expect(try json(data)["password"] as? String == redacted)
+        }
+    }
+
     @Test("JSON without sensitive keys keeps its exact bytes")
     func unchangedJSON() {
         let body = Data(#"{"b": 1.50, "a": [true, null]}"#.utf8)
