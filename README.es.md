@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@01dd77a0926629ab0f9374f09fa4adf5b2dc3be2 status=reviewed -->
+<!-- i18n-source: README.md@dd998a85cd45a27c07339f8f96541bd18d68a8b1 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -111,6 +111,10 @@ struct MyApp: App {
 
 Ejecuta la app en un simulador de iPhone, haz que envíe una solicitud y elige **Device › Shake** en el
 menú de Simulator. La consola se abre en la pestaña Network con la solicitud en la lista.
+
+`devToolsConsoleOnShake()` solo existe en iOS. Si tu app también se compila para macOS, rodéalo
+con `#if DEBUG && os(iOS)` y abre la consola en una ventana, como se muestra más abajo en
+**Usarlo en macOS**.
 
 ## Instalación
 

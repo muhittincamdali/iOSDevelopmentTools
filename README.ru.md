@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@01dd77a0926629ab0f9374f09fa4adf5b2dc3be2 status=reviewed -->
+<!-- i18n-source: README.md@dd998a85cd45a27c07339f8f96541bd18d68a8b1 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -110,6 +110,10 @@ struct MyApp: App {
 
 Запустите приложение в симуляторе iPhone, дождитесь любого запроса и выберите **Device › Shake** в
 меню Simulator. Консоль откроется на вкладке Network, и запрос будет в списке.
+
+`devToolsConsoleOnShake()` доступен только в iOS. Если приложение собирается и для macOS,
+оберните его в `#if DEBUG && os(iOS)` и откройте консоль в отдельном окне, как показано ниже в
+разделе **Использование на macOS**.
 
 ## Установка
 

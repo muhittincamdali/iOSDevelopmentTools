@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@01dd77a0926629ab0f9374f09fa4adf5b2dc3be2 status=reviewed -->
+<!-- i18n-source: README.md@dd998a85cd45a27c07339f8f96541bd18d68a8b1 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -109,6 +109,10 @@ struct MyApp: App {
 
 Starte die App in einem iPhone-Simulator, lass sie eine Anfrage senden und wähle im Simulator-Menü
 **Device › Shake**. Die Konsole öffnet sich im Network-Tab, die Anfrage steht in der Liste.
+
+`devToolsConsoleOnShake()` gibt es nur unter iOS. Wenn deine App auch für macOS gebaut wird,
+schließe es stattdessen in `#if DEBUG && os(iOS)` ein und gib der Konsole ein eigenes Fenster, wie
+unten unter **Auf macOS verwenden** gezeigt.
 
 ## Installation
 

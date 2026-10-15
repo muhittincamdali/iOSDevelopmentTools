@@ -106,6 +106,10 @@ struct MyApp: App {
 Run the app on an iPhone simulator, let it make a request, and choose **Device › Shake** in the
 Simulator menu. The console opens on the Network tab with the request in the list.
 
+`devToolsConsoleOnShake()` is available on iOS only. In an app that also builds for macOS,
+write `#if DEBUG && os(iOS)` around it instead, and give the console a window as shown in
+**Use it on macOS** below.
+
 ## Installation
 
 ### Swift Package Manager

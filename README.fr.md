@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@01dd77a0926629ab0f9374f09fa4adf5b2dc3be2 status=reviewed -->
+<!-- i18n-source: README.md@dd998a85cd45a27c07339f8f96541bd18d68a8b1 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -113,6 +113,10 @@ struct MyApp: App {
 Lancez l'app dans un simulateur d'iPhone, faites-lui envoyer une requête, puis choisissez
 **Device › Shake** dans le menu de Simulator. La console s'ouvre sur l'onglet Network avec la requête
 dans la liste.
+
+`devToolsConsoleOnShake()` n'existe que sur iOS. Si votre app est aussi compilée pour macOS,
+entourez-le plutôt de `#if DEBUG && os(iOS)` et ouvrez la console dans une fenêtre, comme dans
+**L'utiliser sur macOS** plus bas.
 
 ## Installation
 

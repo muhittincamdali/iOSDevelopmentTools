@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@01dd77a0926629ab0f9374f09fa4adf5b2dc3be2 status=reviewed -->
+<!-- i18n-source: README.md@dd998a85cd45a27c07339f8f96541bd18d68a8b1 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -108,6 +108,9 @@ struct MyApp: App {
 
 iPhone シミュレーターでアプリを実行してリクエストを 1 つ送らせ、Simulator メニューの
 **Device › Shake** を選びます。コンソールが Network タブで開き、リストにそのリクエストが表示されます。
+
+`devToolsConsoleOnShake()` は iOS 専用です。macOS 向けにもビルドするアプリでは、代わりに
+`#if DEBUG && os(iOS)` で囲み、後述の **macOS で使う** のようにコンソール用のウインドウを用意してください。
 
 ## インストール
 

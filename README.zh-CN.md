@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@01dd77a0926629ab0f9374f09fa4adf5b2dc3be2 status=reviewed -->
+<!-- i18n-source: README.md@dd998a85cd45a27c07339f8f96541bd18d68a8b1 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -103,6 +103,9 @@ struct MyApp: App {
 
 在 iPhone 模拟器上运行应用，让它发出一个请求，然后在 Simulator 菜单中选择 **Device › Shake**。
 控制台会打开到 Network 标签页，列表中可以看到这个请求。
+
+`devToolsConsoleOnShake()` 仅在 iOS 上可用。如果你的应用也为 macOS 构建，请改用 `#if DEBUG && os(iOS)`
+包裹它，并按照下文 **在 macOS 上使用** 中的方式为控制台提供一个窗口。
 
 ## 安装
 
