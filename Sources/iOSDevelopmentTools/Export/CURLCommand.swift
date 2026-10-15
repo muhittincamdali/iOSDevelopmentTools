@@ -49,7 +49,21 @@ extension NetworkEntry {
     }
 
     /// The text in single quotes, with each `'` written as `'\''`.
+    ///
+    /// Quotes are found as Unicode scalars. `replacingOccurrences(of:with:)` compares Characters
+    /// and skips a `'` that a combining mark after it joins into one Character, but the shell
+    /// still reads that `'` as the end of the quoted text.
     static func shellQuoted(_ text: String) -> String {
-        "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        var quoted = String.UnicodeScalarView()
+        quoted.append("'")
+        for scalar in text.unicodeScalars {
+            if scalar == "'" {
+                quoted.append(contentsOf: #"'\''"#.unicodeScalars)
+            } else {
+                quoted.append(scalar)
+            }
+        }
+        quoted.append("'")
+        return String(quoted)
     }
 }

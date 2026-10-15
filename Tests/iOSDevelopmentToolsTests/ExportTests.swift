@@ -66,10 +66,17 @@ struct ExportTests {
 
     @Test("Shell quoting survives quotes, newlines and command characters")
     func shellQuoting() throws {
-        let samples = ["plain", "it's", "''", "a\nb", "$(rm -rf /) `x` ; | & > <", "\\'\\", "🙂 ü", ""]
+        let samples = [
+            "plain", "it's", "''", "a\nb", "$(rm -rf /) `x` ; | & > <", "\\'\\", "🙂 ü", "",
+            // A combining mark joins the quote before it into one Character.
+            "it'\u{301}s; echo injected; '\u{301}",
+        ]
         for sample in samples {
             let quoted = NetworkEntry.shellQuoted(sample)
             #expect(quoted.hasPrefix("'") && quoted.hasSuffix("'"))
+            // Each quote in the text becomes '\'' (three quotes), between the two outer ones.
+            let quotes = { (text: String) in text.unicodeScalars.filter { $0 == "'" }.count }
+            #expect(quotes(quoted) == 2 + 3 * quotes(sample))
             #if os(macOS)
             // Let a real shell read the argument back.
             let process = Process()
