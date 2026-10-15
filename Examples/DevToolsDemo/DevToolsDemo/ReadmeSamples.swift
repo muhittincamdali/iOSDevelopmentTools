@@ -8,20 +8,29 @@ import SwiftUI
 // MARK: Quick start
 
 #if os(iOS)
-/// README › Quick start, step 3. (The demo app has its own `@main`; add `@main` in yours.)
-struct QuickStartApp: App {
-    init() {
-        #if DEBUG
-        NetworkCapture.start()
-        #endif
+enum QuickStart {
+    /// Stands in for the `ContentView` of a new Xcode project.
+    struct ContentView: View {
+        var body: some View {
+            Text("Hello, world!")
+        }
     }
 
-    var body: some Scene {
-        WindowGroup {
-            Text("Shake the device to open the console.")
-                #if DEBUG
-                .devToolsConsoleOnShake()
-                #endif
+    /// README › Quick start, step 3. The README version has `@main`; the demo app has its own.
+    struct MyApp: App {
+        init() {
+            #if DEBUG
+            NetworkCapture.start()
+            #endif
+        }
+
+        var body: some Scene {
+            WindowGroup {
+                ContentView()
+                    #if DEBUG
+                    .devToolsConsoleOnShake()
+                    #endif
+            }
         }
     }
 }
