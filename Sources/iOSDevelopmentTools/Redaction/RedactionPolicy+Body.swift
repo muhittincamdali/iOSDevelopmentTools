@@ -214,6 +214,7 @@ extension RedactionPolicy {
                   !Self.containsBareLineBreak(part[part.startIndex..<headersRange.lowerBound])
             else { return nil }
             let headerText = String(decoding: part[part.startIndex..<headersRange.lowerBound], as: UTF8.self)
+            guard !Self.hasFoldedHeaderLine(headerText) else { return nil }
             let headers = Self.partHeaders(headerText)
             // Servers differ in which of several Content-Disposition headers, or of several name
             // parameters, they read, so every one is checked.
@@ -297,6 +298,14 @@ extension RedactionPolicy {
 
     private static let carriageReturn: UInt8 = 0x0D
     private static let lineFeed: UInt8 = 0x0A
+
+    /// Whether a header line of a part starts with a space or tab. Such a line continues the one
+    /// before it (obsolete line folding, RFC 5322); Werkzeug (Flask) joins the two, so a name on
+    /// the folded line would be read by the server but missed here. The text starts with the rest
+    /// of the delimiter line, where spaces and tabs are transport padding, so that line is skipped.
+    private static func hasFoldedHeaderLine(_ headerText: String) -> Bool {
+        headerText.components(separatedBy: "\r\n").dropFirst().contains { $0.hasPrefix(" ") || $0.hasPrefix("\t") }
+    }
 
     /// A part's headers by lowercased name, with every value of a repeated header in order.
     static func partHeaders(_ text: String) -> [String: [String]] {

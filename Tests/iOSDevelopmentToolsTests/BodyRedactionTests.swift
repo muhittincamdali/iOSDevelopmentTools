@@ -219,6 +219,15 @@ struct BodyRedactionTests {
         #expect(data == multipart([(headers, redacted)]))
     }
 
+    @Test("A folded part header line withholds the body", arguments: [
+        "Content-Disposition: form-data;\r\n name=\"password\"",
+        "Content-Disposition: form-data;\r\n\tname=\"password\"",
+    ])
+    func foldedHeaderLine(headers: String) {
+        let body = multipart([(headers, "hunter2")])
+        #expect(policy.redact(body: body, contentType: "multipart/form-data; boundary=XyZ") == (Data(), .withheld))
+    }
+
     @Test("A part with two content types is withheld")
     func repeatedContentType() {
         let headers = "Content-Disposition: form-data; name=\"a\"\r\nContent-Type: text/plain\r\nContent-Type: application/json"
