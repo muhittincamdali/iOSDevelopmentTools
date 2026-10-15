@@ -23,6 +23,7 @@ final class CaptureProtocol: URLProtocol, ForwardedTaskHandler, @unchecked Senda
         var responseBody = Data()
         var responseByteCount = 0
         var timings: NetworkEntry.Timings?
+        var networkProtocol: String?
         var isStopped = false
         var isRedirected = false
         var isCompleted = false
@@ -169,7 +170,11 @@ final class CaptureProtocol: URLProtocol, ForwardedTaskHandler, @unchecked Senda
 
     func forwardedTask(didFinishCollecting metrics: URLSessionTaskMetrics) {
         let timings = NetworkEntry.Timings(metrics: metrics)
-        state.withLockUnchecked { $0.timings = timings }
+        let networkProtocol = metrics.transactionMetrics.last?.networkProtocolName
+        state.withLockUnchecked { state in
+            state.timings = timings
+            state.networkProtocol = networkProtocol
+        }
     }
 
     func forwardedTask(didCompleteWithError error: (any Error)?) {
@@ -187,7 +192,7 @@ final class CaptureProtocol: URLProtocol, ForwardedTaskHandler, @unchecked Senda
             }
             logger.finish(
                 entryID, bodyPrefix: snapshot.responseBody, bodyByteCount: snapshot.responseByteCount,
-                error: error, timings: snapshot.timings)
+                error: error, timings: snapshot.timings, networkProtocol: snapshot.networkProtocol)
         }
         deliver { protocolInstance, client in
             if let error {

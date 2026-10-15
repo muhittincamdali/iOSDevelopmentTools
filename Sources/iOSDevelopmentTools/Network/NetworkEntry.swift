@@ -152,6 +152,8 @@ public struct NetworkEntry: Sendable, Identifiable, Hashable {
     public internal(set) var redirectURL: String?
     /// Phase timings, when the system reported them.
     public internal(set) var timings: Timings?
+    /// The protocol the response came over, such as `h2` or `http/1.1`, when the system reported it.
+    public internal(set) var networkProtocol: String?
 
     /// Creates an entry for a request that was just sent.
     init(id: UUID = UUID(), startDate: Date, request: URLRequest, body: CapturedBody?, policy: RedactionPolicy) {

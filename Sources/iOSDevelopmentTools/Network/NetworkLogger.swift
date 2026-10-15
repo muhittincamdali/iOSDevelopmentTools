@@ -209,6 +209,7 @@ public final class NetworkLogger: Sendable {
         bodyByteCount: Int,
         error: (any Error)?,
         timings: NetworkEntry.Timings? = nil,
+        networkProtocol: String? = nil,
         endDate: Date = Date()
     ) {
         let policy = configuration.redaction
@@ -219,6 +220,7 @@ public final class NetworkLogger: Sendable {
             }
             entry.error = error.map(NetworkError.init)
             entry.timings = timings ?? entry.timings
+            entry.networkProtocol = networkProtocol ?? entry.networkProtocol
             entry.endDate = endDate
         }
     }
