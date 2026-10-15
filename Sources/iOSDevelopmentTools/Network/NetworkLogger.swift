@@ -76,7 +76,7 @@ public final class NetworkLogger: Sendable {
 
     private struct State: Sendable {
         var configuration: Configuration
-        var entries: [NetworkEntry] = []
+        var entries: BoundedBuffer<NetworkEntry>
         var observers: [UUID: AsyncStream<Void>.Continuation] = [:]
     }
 
@@ -87,7 +87,8 @@ public final class NetworkLogger: Sendable {
 
     /// Creates an empty logger.
     public init(configuration: Configuration = Configuration()) {
-        state = OSAllocatedUnfairLock(initialState: State(configuration: configuration))
+        state = OSAllocatedUnfairLock(initialState: State(
+            configuration: configuration, entries: BoundedBuffer(capacity: configuration.maximumEntries)))
     }
 
     /// What the logger records. Lowering ``Configuration/maximumEntries`` drops the oldest entries.
@@ -96,7 +97,7 @@ public final class NetworkLogger: Sendable {
         set {
             mutate { state in
                 state.configuration = newValue
-                Self.trim(&state)
+                state.entries.setCapacity(newValue.maximumEntries)
                 return true
             }
         }
@@ -104,12 +105,12 @@ public final class NetworkLogger: Sendable {
 
     /// The recorded entries, oldest first.
     public var entries: [NetworkEntry] {
-        state.withLock { $0.entries }
+        state.withLock { $0.entries.elements }
     }
 
     /// The entry with this identifier, if it is still kept.
     public func entry(id: NetworkEntry.ID) -> NetworkEntry? {
-        state.withLock { state in state.entries.last { $0.id == id } }
+        state.withLock { state in state.entries.first { $0.id == id } }
     }
 
     /// Removes every entry.
@@ -178,7 +179,6 @@ public final class NetworkLogger: Sendable {
         let entry = NetworkEntry(startDate: startDate, request: request, body: body, policy: configuration.redaction)
         mutate { state in
             state.entries.append(entry)
-            Self.trim(&state)
             return true
         }
         return entry.id
@@ -247,9 +247,7 @@ public final class NetworkLogger: Sendable {
 
     private func update(_ id: NetworkEntry.ID, _ change: (inout NetworkEntry) -> Void) {
         mutate { state in
-            guard let index = state.entries.lastIndex(where: { $0.id == id }) else { return false }
-            change(&state.entries[index])
-            return true
+            state.entries.modifyFirst(where: { $0.id == id }, change)
         }
     }
 
@@ -259,10 +257,5 @@ public final class NetworkLogger: Sendable {
             change(&state) ? Array(state.observers.values) : []
         }
         observers.forEach { $0.yield() }
-    }
-
-    private static func trim(_ state: inout State) {
-        let excess = state.entries.count - state.configuration.maximumEntries
-        if excess > 0 { state.entries.removeFirst(excess) }
     }
 }
