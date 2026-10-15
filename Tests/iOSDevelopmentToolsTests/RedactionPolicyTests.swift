@@ -15,6 +15,11 @@ struct RedactionPolicyTests {
         ("pass%2577ord", "password"),
         ("pass\u{200B}word", "password"),
         ("Pass+Word", "password"),
+        // Each %-sequence is decoded on its own, so an invalid one does not stop the others.
+        ("pass%77ord%ZZ", "passwordzz"),
+        ("%ZZpass%2577ord", "zzpassword"),
+        ("pass%7", "pass7"),
+        ("pass%FFword", "password"),
         ("", ""),
     ])
     func normalization(name: String, expected: String) {
@@ -79,6 +84,12 @@ struct RedactionPolicyTests {
     func encodedNames() {
         let url = URL(string: "https://example.com/?API%5FKEY=1&token=a&token=b&pass%2577ord=c")!
         #expect(policy.redact(url: url) == "https://example.com/?API%5FKEY=\(redacted)&token=\(redacted)&token=\(redacted)&pass%2577ord=\(redacted)")
+    }
+
+    @Test("An invalid percent sequence does not hide a sensitive name")
+    func invalidPercentSequence() {
+        #expect(policy.redact(urlString: "https://e.com/?pass%77ord%ZZ=secret&api_key%=k&page=2")
+            == "https://e.com/?pass%77ord%ZZ=\(redacted)&api_key%=\(redacted)&page=2")
     }
 
     @Test("Semicolons separate parameters as well")

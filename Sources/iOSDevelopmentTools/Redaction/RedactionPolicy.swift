@@ -67,7 +67,9 @@ public struct RedactionPolicy: Sendable, Hashable {
     static func normalized(_ name: String) -> String {
         var decoded = name.replacingOccurrences(of: "+", with: " ")
         for _ in 0..<4 {
-            guard decoded.contains("%"), let next = decoded.removingPercentEncoding, next != decoded else { break }
+            guard decoded.contains("%") else { break }
+            let next = percentDecoded(decoded)
+            guard next != decoded else { break }
             decoded = next
         }
         var result = String.UnicodeScalarView()
@@ -79,5 +81,37 @@ public struct RedactionPolicy: Sendable, Hashable {
             }
         }
         return String(result)
+    }
+
+    /// The text with every valid `%XX` sequence decoded and everything else kept.
+    ///
+    /// Each sequence is decoded on its own, unlike `removingPercentEncoding`, which gives up on the
+    /// whole string when one sequence is invalid: `pass%77ord%ZZ` becomes `password%ZZ`. Bytes that
+    /// do not form UTF-8 are replaced, which cannot hide a name because only ASCII is kept.
+    static func percentDecoded(_ text: String) -> String {
+        let bytes = Array(text.utf8)
+        var decoded: [UInt8] = []
+        decoded.reserveCapacity(bytes.count)
+        var index = 0
+        while index < bytes.count {
+            if bytes[index] == UInt8(ascii: "%"), index + 2 < bytes.count,
+               let high = hexValue(bytes[index + 1]), let low = hexValue(bytes[index + 2]) {
+                decoded.append(high << 4 | low)
+                index += 3
+            } else {
+                decoded.append(bytes[index])
+                index += 1
+            }
+        }
+        return String(decoding: decoded, as: UTF8.self)
+    }
+
+    private static func hexValue(_ byte: UInt8) -> UInt8? {
+        switch byte {
+        case 0x30...0x39: byte - 0x30
+        case 0x41...0x46: byte - 0x41 + 10
+        case 0x61...0x66: byte - 0x61 + 10
+        default: nil
+        }
     }
 }
