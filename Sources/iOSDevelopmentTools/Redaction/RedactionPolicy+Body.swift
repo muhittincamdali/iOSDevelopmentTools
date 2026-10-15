@@ -180,6 +180,9 @@ extension RedactionPolicy {
             case .lineStart:
                 break
             }
+            // "--boundaryX" is not a delimiter in RFC 2046, but a server that compares only the
+            // prefix would start a part there, so such a line cannot be kept as content either.
+            guard Self.endsDelimiter(at: found.upperBound, in: body) else { return nil }
             // The closing delimiter is one more than the parts.
             guard delimiters.count <= Self.maximumMultipartParts else { return nil }
             delimiters.append(found)
@@ -236,6 +239,14 @@ extension RedactionPolicy {
     /// Space, tab, CR or LF.
     private static func isLinearWhitespace(_ byte: UInt8) -> Bool {
         byte == 0x20 || byte == 0x09 || byte == 0x0D || byte == 0x0A
+    }
+
+    /// Whether the bytes after a delimiter are `--`, which closes the body, or optional spaces and
+    /// tabs followed by a CRLF, the only two endings RFC 2046 allows.
+    private static func endsDelimiter(at index: Data.Index, in body: Data) -> Bool {
+        let rest = body[index...]
+        if rest.starts(with: Data("--".utf8)) { return true }
+        return rest.drop(while: { $0 == 0x20 || $0 == 0x09 }).starts(with: Data("\r\n".utf8))
     }
 
     private enum LinePosition {

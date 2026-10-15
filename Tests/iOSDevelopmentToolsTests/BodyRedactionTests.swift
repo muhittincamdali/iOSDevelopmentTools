@@ -243,6 +243,24 @@ struct BodyRedactionTests {
         #expect(policy.redact(body: Data(text.utf8), contentType: "multipart/form-data; boundary=B") == (Data(), .withheld))
     }
 
+    @Test("A line that starts with the boundary but goes on withholds the body", arguments: [
+        // A server that matches "--B" by prefix ends the password part at "abc".
+        "--B\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\nabc\r\n--BX\r\n\r\nhunter2\r\n--B--",
+        "--B\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--B",
+        "--B \r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--B x\r\n\r\nw\r\n--B--",
+    ])
+    func boundaryPrefix(text: String) {
+        #expect(policy.redact(body: Data(text.utf8), contentType: "multipart/form-data; boundary=B") == (Data(), .withheld))
+    }
+
+    @Test("Spaces and tabs between a delimiter and its line break are allowed")
+    func transportPadding() {
+        let body = Data("--B \t\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\nhunter2\r\n--B--\r\n".utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: "multipart/form-data; boundary=B")
+        #expect(outcome == .redacted)
+        #expect(String(decoding: data, as: UTF8.self) == "--B \t\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\n\(redacted)\r\n--B--\r\n")
+    }
+
     @Test("Text before the first or after the closing delimiter withholds the body", arguments: [
         "preamble\r\n--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\n",
         "--XyZ\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv\r\n--XyZ--\r\nepilogue",
