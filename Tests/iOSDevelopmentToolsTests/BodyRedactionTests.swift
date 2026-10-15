@@ -75,6 +75,14 @@ struct BodyRedactionTests {
     func keysInSeparateObjects(body: String) {
         let data = Data(body.utf8)
         #expect(policy.redact(body: data, contentType: "application/json") == (data, .unchanged))
+        // JSONSerialization reads UTF-16 and UTF-32 without a byte order mark; so does the key scan.
+        // Not every platform's JSONSerialization reads all four, and a body it cannot read is withheld.
+        for encoding in [String.Encoding.utf16LittleEndian, .utf16BigEndian, .utf32LittleEndian, .utf32BigEndian] {
+            let wide = body.data(using: encoding)!
+            let isReadable = (try? JSONSerialization.jsonObject(with: wide)) != nil
+            let expected = isReadable ? (wide, RedactionOutcome.unchanged) : (Data(), .withheld)
+            #expect(policy.redact(body: wide, contentType: "application/json") == expected)
+        }
     }
 
     @Test("JSON sent with a non-JSON content type is still checked")
