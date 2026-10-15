@@ -181,6 +181,18 @@ struct BodyRedactionTests {
         #expect(data.isEmpty)
     }
 
+    @Test("A multipart body with too many parts is withheld instead of tracked part by part")
+    func tooManyParts() {
+        let limit = RedactionPolicy.maximumMultipartParts
+        let allowed = multipart(Array(repeating: ("Content-Disposition: form-data; name=\"a\"", "v"), count: limit))
+        #expect(policy.redact(body: allowed, contentType: "multipart/form-data; boundary=XyZ").outcome == .unchanged)
+        let excessive = multipart(Array(repeating: ("Content-Disposition: form-data; name=\"a\"", "v"), count: limit + 1))
+        #expect(policy.redact(body: excessive, contentType: "multipart/form-data; boundary=XyZ").outcome == .withheld)
+        // Nothing but delimiters, as a hostile server could send.
+        let delimiters = Data(String(repeating: "--b", count: 100_000).utf8)
+        #expect(policy.redact(body: delimiters, contentType: "multipart/form-data; boundary=b").outcome == .withheld)
+    }
+
     @Test("A captured body records its size, truncation and outcome")
     func capturedBody() {
         let body = CapturedBody.capture(prefix: Data(#"{"tok"#.utf8), byteCount: 100, contentType: "application/json", policy: policy)

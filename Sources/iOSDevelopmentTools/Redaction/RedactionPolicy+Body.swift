@@ -13,6 +13,9 @@ public enum RedactionOutcome: String, Sendable, Hashable, Codable {
 extension RedactionPolicy {
     /// Nested JSON deeper than this is withheld instead of walked.
     static let maximumJSONDepth = 64
+    /// A multipart body with more parts than this is withheld; the parts are tracked in memory,
+    /// and a body of nothing but delimiters would otherwise need millions of them.
+    static let maximumMultipartParts = 1_000
 
     /// The body with sensitive values replaced.
     ///
@@ -135,6 +138,8 @@ extension RedactionPolicy {
         var delimiters: [Range<Data.Index>] = []
         var searchStart = body.startIndex
         while let found = body.range(of: delimiter, in: searchStart..<body.endIndex) {
+            // The closing delimiter is one more than the parts.
+            guard delimiters.count <= Self.maximumMultipartParts else { return nil }
             delimiters.append(found)
             searchStart = found.upperBound
         }
