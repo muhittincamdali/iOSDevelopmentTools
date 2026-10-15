@@ -50,6 +50,11 @@ the side of hiding too much: a JSON key named `author` is hidden because it cont
   headers is withheld, because servers differ in which one they read. As in RFC 2046, a boundary
   counts only at the start of a line, so `--boundary` inside a value cannot end a part early.
 
+Separators (`?`, `#`, `&`, `;`, `=`, `@`, `/`, `:` and quotes) are found in the UTF-8 bytes, as
+servers find them, not in Swift `Character`s: a combining mark such as U+0301 right after a
+separator joins it into one `Character`, which would hide the separator from the check while the
+server still sees it.
+
 ### Bodies that cannot be checked are withheld
 
 A structured body that cannot be parsed cannot be checked: a JSON body cut off at the capture
@@ -62,8 +67,14 @@ prefix start a part there). Multipart bodies are also withheld when the content 
 than one `boundary` parameter (or a `boundary*` one), when a part header line starts with a space
 or tab and so continues the line before it, and when a `name` is split into RFC 2231 pieces
 (`name*0`, `name*1`): Werkzeug, behind Flask, uses the last boundary, joins folded lines and joins
-the pieces, so the field it reads could differ from the one checked. Storing such a body unchecked could store a secret, so the policy withholds it: the
-entry keeps the body's size and marks it ``RedactionOutcome/withheld``, without its bytes. Raise
+the pieces, so the field it reads could differ from the one checked. For the same reason, a
+multipart body is withheld when a `Content-Disposition` or content type parameter is not
+`token=token` or `token="quoted string"` (Werkzeug skips such a parameter up to the next `;`, even
+one inside the quotes that follow, so `x ="; name=password"` reads as `name=password`), when a
+part header name is not a token, and when the boundary has characters outside RFC 2046 (Werkzeug
+reads `boundary=B1/x` as `B1`). Storing such a body unchecked could store a secret, so the policy
+withholds it: the entry keeps the body's size and marks it ``RedactionOutcome/withheld``, without
+its bytes. Raise
 ``NetworkLogger/Configuration/maximumBodySize`` to keep larger JSON bodies, or create a policy
 with `withholdsUncheckedBodies: false` to store them unchecked.
 
