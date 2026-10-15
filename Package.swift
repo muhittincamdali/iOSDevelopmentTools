@@ -1,32 +1,20 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "iOSDevelopmentTools",
     platforms: [
-        .iOS(.v15),
-        .macOS(.v12),
-        .watchOS(.v8),
-        .tvOS(.v15)
+        .iOS(.v17),
+        .macOS(.v14)
     ],
     products: [
-        .library(name: "iOSDevelopmentTools", targets: ["iOSDevelopmentTools"]),
+        .library(name: "iOSDevelopmentTools", targets: ["iOSDevelopmentTools"])
     ],
-    dependencies: [],
     targets: [
-        .target(
-            name: "iOSDevelopmentTools",
-            dependencies: [],
-            path: "Sources/iOSDevelopmentTools",
-            swiftSettings: [
-                .enableExperimentalFeature("StrictConcurrency"),
-                .define("SWIFT_PACKAGE")
-            ]
-        ),
+        .target(name: "iOSDevelopmentTools"),
         .testTarget(
             name: "iOSDevelopmentToolsTests",
-            dependencies: ["iOSDevelopmentTools"],
-            path: "Tests"
+            dependencies: ["iOSDevelopmentTools"]
         )
     ]
 )
