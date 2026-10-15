@@ -54,7 +54,12 @@ struct LogStoreTests {
     @Test("Long messages and categories are cut off", arguments: [
         ("abcdef", 3, "abc…", true),
         ("abc", 3, "abc", false),
-        ("👩‍👩‍👧‍👦👍🏽x", 2, "👩‍👩‍👧‍👦👍🏽…", true),
+        // The family is seven scalars and the thumb two: cuts fall between Characters.
+        ("👩‍👩‍👧‍👦👍🏽x", 9, "👩‍👩‍👧‍👦👍🏽…", true),
+        ("👩‍👩‍👧‍👦👍🏽x", 8, "👩‍👩‍👧‍👦…", true),
+        ("👩‍👩‍👧‍👦👍🏽x", 10, "👩‍👩‍👧‍👦👍🏽x", false),
+        // Only a first Character longer than the limit is cut between scalars.
+        ("👩‍👩‍👧‍👦👍🏽x", 3, "👩\u{200D}👩…", true),
         ("", 1, "", false),
     ])
     func truncation(message: String, limit: Int, expected: String, isTruncated: Bool) throws {
@@ -72,6 +77,19 @@ struct LogStoreTests {
         let entry = try #require(logs.entries.first)
         #expect(entry.message.count == 11)
         #expect(entry.category.count == LogStore.maximumCategoryLength + 1)
+    }
+
+    @Test("Combining marks cannot stretch a message or category past the limit")
+    func combiningMarks() throws {
+        // One Character of a letter and a million combining marks is 2 MB of UTF-8.
+        let logs = store(.init(maximumMessageLength: 16, systemLogSubsystem: nil))
+        logs.info("a" + String(repeating: "\u{301}", count: 1_000_000), category: "c" + String(repeating: "\u{301}", count: 500_000))
+        let entry = try #require(logs.entries.first)
+        #expect(entry.isTruncated)
+        #expect(entry.message.unicodeScalars.count == 16 + 1)
+        #expect(entry.message.utf8.count <= 16 * 4 + 3)
+        #expect(entry.category.unicodeScalars.count == LogStore.maximumCategoryLength + 1)
+        #expect(entry.category.utf8.count <= LogStore.maximumCategoryLength * 4 + 3)
     }
 
     @Test("Limits are clamped", arguments: [(Int.min, Int.min, 1, 1), (Int.max, Int.max, 100_000, 65_536), (10, 20, 10, 20)])

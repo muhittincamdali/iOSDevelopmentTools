@@ -55,7 +55,7 @@ public struct LogEntry: Sendable, Identifiable, Hashable {
     public let level: LogLevel
     /// The category it was logged under, such as `network` or `checkout`.
     public let category: String
-    /// The message, cut off at ``LogStore/Configuration/maximumMessageLength`` characters.
+    /// The message, cut off at ``LogStore/Configuration/maximumMessageLength`` Unicode scalars.
     public let message: String
     /// Whether the message was longer than the limit and was cut off.
     public let isTruncated: Bool

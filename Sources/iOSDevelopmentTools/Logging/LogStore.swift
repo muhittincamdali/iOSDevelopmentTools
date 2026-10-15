@@ -10,7 +10,8 @@ import os
 /// ```
 ///
 /// The store keeps at most ``Configuration/maximumEntries`` messages of at most
-/// ``Configuration/maximumMessageLength`` characters, so its memory use has a fixed upper bound.
+/// ``Configuration/maximumMessageLength`` Unicode scalars, so its memory use has a fixed upper
+/// bound.
 /// All methods can be called from any thread.
 public final class LogStore: Sendable {
     /// What a store keeps.
@@ -30,7 +31,11 @@ public final class LogStore: Sendable {
             set { storedMaximumEntries = min(max(newValue, 1), Self.entryLimit) }
         }
 
-        /// How many characters of a message are kept. Kept between 1 and ``messageLengthLimit``.
+        /// How many Unicode scalars (code points) of a message are kept, at most four UTF-8 bytes
+        /// each. Kept between 1 and ``messageLengthLimit``.
+        ///
+        /// The limit counts scalars, not `Character`s: one `Character` can hold any number of
+        /// combining marks, so a limit in `Character`s would not bound the memory a message uses.
         public var maximumMessageLength: Int {
             get { storedMaximumMessageLength }
             set { storedMaximumMessageLength = min(max(newValue, 1), Self.messageLengthLimit) }
@@ -57,7 +62,7 @@ public final class LogStore: Sendable {
         }
     }
 
-    /// The longest category name that is kept; longer names are cut off.
+    /// The longest category name, in Unicode scalars, that is kept; longer names are cut off.
     static let maximumCategoryLength = 64
     /// How many `os.Logger` instances are cached, one per category.
     static let systemLoggerCacheLimit = 64
@@ -185,11 +190,23 @@ public final class LogStore: Sendable {
 
     // MARK: Internals
 
-    /// The text cut off after `limit` characters, with `…` appended when it was cut.
+    /// The text cut off after at most `limit` Unicode scalars, with `…` appended when it was cut.
+    ///
+    /// The cut falls between `Character`s, so an emoji or a letter keeps its modifiers and
+    /// accents, unless the first `Character` alone is longer than the limit: then it is cut
+    /// between scalars.
     static func truncated(_ text: String, to limit: Int) -> (text: String, isTruncated: Bool) {
-        guard let end = text.index(text.startIndex, offsetBy: max(limit, 0), limitedBy: text.endIndex), end < text.endIndex else {
-            return (text, false)
+        let limit = max(limit, 0)
+        var end = text.startIndex
+        var keptScalars = 0
+        while end < text.endIndex {
+            let next = text.index(after: end)
+            keptScalars += text.unicodeScalars[end..<next].count
+            guard keptScalars <= limit else { break }
+            end = next
         }
+        guard end < text.endIndex else { return (text, false) }
+        guard end > text.startIndex else { return (String(text.unicodeScalars.prefix(limit)) + "…", true) }
         return (String(text[..<end]) + "…", true)
     }
 
