@@ -88,6 +88,22 @@ final class NetworkCaptureTests {
         #expect(sent.text?.contains("ada@example.com") == true)
     }
 
+    @Test("A form body sent without a Content-Type is redacted in the entry")
+    func formBodyWithoutContentType() async throws {
+        var request = URLRequest(url: url("/echo?form"))
+        request.httpMethod = "POST"
+        let body = Data("user=ada&password=hunter2".utf8)
+        request.httpBody = body
+
+        let (echoed, _) = try await session.data(for: request)
+        #expect(echoed == body)
+
+        let entry = try await finishedEntry("/echo?form")
+        let sent = try #require(entry.requestBody)
+        #expect(sent.redaction == .redacted)
+        #expect(sent.text == "user=ada&password=\(RedactionPolicy.replacement)")
+    }
+
     @Test("Bodies over the capture limit are sent whole but stored cut off")
     func largeBodies() async throws {
         let (data, _) = try await session.data(from: url("/bytes/5000"))

@@ -104,6 +104,18 @@ struct BodyRedactionTests {
         #expect(String(decoding: data, as: UTF8.self) == "user=ada&password=\(redacted)")
     }
 
+    @Test("A body without a content type is checked as a form, as URLSession sends it")
+    func formWithoutContentType() {
+        let body = Data("user=ada&password=hunter2".utf8)
+        let (data, outcome) = policy.redact(body: body, contentType: nil)
+        #expect(outcome == .redacted)
+        #expect(String(decoding: data, as: UTF8.self) == "user=ada&password=\(redacted)")
+        // JSON without a content type is still read as JSON, and other text keeps its bytes.
+        #expect(policy.redact(body: Data(#"{"token":"t"}"#.utf8), contentType: nil).outcome == .redacted)
+        let binary = Data([0x00, 0xFF, 0x3D, 0x01])
+        #expect(policy.redact(body: binary, contentType: nil) == (binary, .unchanged))
+    }
+
     @Test("Plain text and binary bodies are not checked")
     func otherBodies() {
         let text = Data("password=hunter2 in a log line".utf8)

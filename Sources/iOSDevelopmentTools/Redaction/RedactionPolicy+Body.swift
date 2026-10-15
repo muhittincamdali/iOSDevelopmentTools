@@ -21,8 +21,9 @@ extension RedactionPolicy {
     ///
     /// JSON bodies (by content type, or because they start with `{` or `[`) have the values of
     /// sensitive keys replaced at any depth. Form bodies (`application/x-www-form-urlencoded`) and
-    /// multipart bodies (`multipart/form-data`) have the values of sensitive fields replaced. Other
-    /// bodies are returned unchanged.
+    /// multipart bodies (`multipart/form-data`) have the values of sensitive fields replaced. A
+    /// body without a content type is checked as a form, because `URLSession` sends it as one.
+    /// Other bodies are returned unchanged.
     ///
     /// - Parameters:
     ///   - body: The bytes to check.
@@ -52,6 +53,13 @@ extension RedactionPolicy {
         if mediaType.contains("json") || Self.looksLikeJSON(body) {
             guard isComplete, let result = redact(json: body) else { return unchecked }
             return result
+        }
+        if contentType == nil {
+            // URLSession sends a body without a Content-Type as application/x-www-form-urlencoded.
+            // Bytes that are not UTF-8 cannot hide a field name, so they are decoded leniently.
+            let text = String(decoding: body, as: UTF8.self)
+            let redacted = redact(parameters: Substring(text))
+            return redacted == text ? (body, .unchanged) : (Data(redacted.utf8), .redacted)
         }
         return (body, .unchanged)
     }
@@ -183,7 +191,9 @@ extension RedactionPolicy {
                 changed = true
             } else {
                 // A part that is not sensitive by name may still be JSON, a form or multipart.
-                let (checked, outcome) = redact(body: content, contentType: headers["content-type"], isComplete: true, nesting: nesting + 1)
+                // A part without a Content-Type is text/plain (RFC 7578), not a form.
+                let partType = headers["content-type"] ?? "text/plain"
+                let (checked, outcome) = redact(body: content, contentType: partType, isComplete: true, nesting: nesting + 1)
                 if outcome == .withheld { return nil }
                 output.append(checked)
                 changed = changed || outcome == .redacted
