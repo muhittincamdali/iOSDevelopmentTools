@@ -52,7 +52,9 @@ extension RedactionPolicy {
     /// The body parsed as its media type with secrets hidden, and whether anything was hidden;
     /// `nil` when it cannot be parsed or the media type is not one that is parsed.
     func redact(body: Data, as mediaType: MediaType, contentType: String) -> (Data, Bool)? {
-        if mediaType.isJSON { return redact(jsonBody: body) }
+        // A server could read malformed parameters, or another charset, differently.
+        guard mediaType.isWellFormed else { return nil }
+        if mediaType.isJSON { return mediaType.isUnicode ? redact(jsonBody: body) : nil }
         if mediaType.isMultipart {
             guard let boundary = MultipartParser.boundary(in: contentType) else { return nil }
             return redact(multipart: body, boundary: boundary)
@@ -143,5 +145,11 @@ struct MediaType: CustomStringConvertible {
     var isMultipart: Bool { type == "multipart" }
     var isPlainText: Bool { type == "text" && subtype == "plain" }
     /// Whether the text is UTF-8: no `charset`, or `utf-8` or `us-ascii`.
-    var isUTF8: Bool { isWellFormed && (charset == nil || ["utf-8", "utf8", "us-ascii"].contains(charset)) }
+    var isUTF8: Bool { charset.map(Self.utf8Charsets.contains) ?? true }
+    /// Whether the text is in an encoding `JSONSerialization` detects by itself: UTF-8, UTF-16 or
+    /// UTF-32. A body in another charset would be read differently by the server, so it is omitted.
+    var isUnicode: Bool { charset.map { Self.utf8Charsets.contains($0) || Self.wideCharsets.contains($0) } ?? true }
+
+    private static let utf8Charsets: Set<String> = ["utf-8", "utf8", "us-ascii"]
+    private static let wideCharsets: Set<String> = ["utf-16", "utf-16le", "utf-16be", "utf-32", "utf-32le", "utf-32be"]
 }

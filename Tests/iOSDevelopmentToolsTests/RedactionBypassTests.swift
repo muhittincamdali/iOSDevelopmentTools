@@ -181,4 +181,13 @@ struct RedactionBypassTests {
         let url = try #require(URL(string: "https://e.com/p?token=a&token=hunter2&Token=hunter2&a=1&a=2"))
         #expect(!RedactionPolicy(allowedQueryParameters: ["a", "token"]).redact(url: url).contains(Self.secret))
     }
+
+    @Test("JSON in a charset that JSONSerialization does not detect is omitted", arguments: [
+        "application/json; charset=iso-8859-1", "application/json; charset=windows-1252", "application/json; charset=\"utf-8",
+    ])
+    func jsonCharset(contentType: String) {
+        let (data, outcome) = policy.redact(body: Data(#"{"note":"hunter2"}"#.utf8), contentType: contentType)
+        #expect(outcome == .omitted)
+        #expect(!String(decoding: data, as: UTF8.self).contains(Self.secret))
+    }
 }
