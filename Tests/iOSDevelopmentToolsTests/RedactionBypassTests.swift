@@ -122,6 +122,14 @@ struct RedactionBypassTests {
         #expect(result.hasPrefix(text.hasPrefix("ok") ? "ok" : "password="))
     }
 
+    @Test("A key and its = or : on either side of a line break", arguments: [
+        "password\u{2028}=hunter2", "token\u{2029}: hunter2", "secret\u{85}=hunter2", "password\r\n=hunter2",
+        "\"password\"\n:\"hunter2\"", "my password\n\n  = hunter2", "password\n=\nhunter2", "pass\u{301}word\u{0B}=hunter2",
+    ])
+    func keyBeforeLineBreak(text: String) {
+        #expect(!policy.redact(text: text).contains(Self.secret))
+    }
+
     @Test("URLs: user info, fragments, path tokens and encoded parameter names", arguments: [
         "https://alice:hunter2@example.com/a", "https://hunter2@example.com/a", "https://e.com/cb#access_token=hunter2&state=x",
         "https://e.com/cb#hunter2", "https://e.com/reset/hunter2abcdef0123", "https://e.com/p?API%5FKEY=hunter2",

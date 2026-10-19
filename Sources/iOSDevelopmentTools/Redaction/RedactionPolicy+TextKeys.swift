@@ -146,6 +146,20 @@ extension RedactionPolicy {
         return (output, false)
     }
 
+    /// Whether the last word of the line, the scalars after its last white space, key boundary,
+    /// `=` or `:`, is a key whose value is hidden.
+    func endsWithHiddenKey(_ line: [Unicode.Scalar]) -> Bool {
+        var end = line.count
+        while end > 0, line[end - 1].properties.isWhitespace { end -= 1 }
+        var start = end
+        while start > 0, !Self.endsWord(line[start - 1]) { start -= 1 }
+        return start < end && hidesValue(ofTextKey: line[start..<end])
+    }
+
+    private static func endsWord(_ scalar: Unicode.Scalar) -> Bool {
+        scalar.properties.isWhitespace || scalar == "=" || scalar == ":" || keyBoundaries.contains(scalar)
+    }
+
     /// The length of an HTML character reference (`&#119;`, `&#x77;`) at `index`, which is part of
     /// a key rather than a boundary; 0 when there is none.
     private static func characterReferenceLength(in line: [Unicode.Scalar], at index: Int) -> Int {

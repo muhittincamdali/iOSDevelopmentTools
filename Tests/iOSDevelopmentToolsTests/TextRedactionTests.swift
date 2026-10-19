@@ -40,6 +40,8 @@ struct TextRedactionTests {
     func valueOnNextLine() {
         #expect(policy.redact(text: "password:\n\n  hunter2\nnext") == "password:\n\n  \(redacted)\nnext")
         #expect(policy.redact(text: "note:\nhello") == "note:\nhello")
+        #expect(policy.redact(text: "password\n= hunter2\nnext") == "password\n= \(redacted)\nnext")
+        #expect(policy.redact(text: "Status:\n=====\nTotal: 3") == "Status:\n=====\nTotal: 3")
     }
 
     @Test("U+2028, U+2029, U+0085, VT and FF are folded to LF; CR and CRLF end a line and are kept")

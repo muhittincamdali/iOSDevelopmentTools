@@ -7,7 +7,8 @@ extension RedactionPolicy {
     /// - `key=value`, `key: value` and `"key":"value"` are matched with the key rule: when the key
     ///   is a secret name or not plain ASCII, a quoted value is replaced up to its closing quote,
     ///   and an unquoted value with the rest of the line, because where it ends is unknown. When
-    ///   nothing follows the `=` or `:` on the line, the next line with text is replaced.
+    ///   nothing follows the `=` or `:` on the line, the next line with text is replaced; when a
+    ///   line starts with `=` or `:`, the last word of the line before is its key.
     /// - A secret name that no `=` or `:` follows, as in `token abc123`, makes the rest of the
     ///   line after it ambiguous, so the rest of the line is replaced.
     /// - JWTs, bearer tokens, long hex or Base64 strings, card numbers, IBANs and email addresses
@@ -20,19 +21,35 @@ extension RedactionPolicy {
         guard isEnabled, !text.isEmpty else { return text }
         var output = String.UnicodeScalarView()
         var hidesLine = false
+        var previousLine: [Unicode.Scalar] = []
         for line in Self.lines(of: text) {
-            if hidesLine, line.content.contains(where: { !$0.properties.isWhitespace }) {
+            let hasText = line.content.contains { !$0.properties.isWhitespace }
+            if hidesLine, hasText {
                 output.append(contentsOf: line.content.prefix { $0.properties.isWhitespace })
                 output.append(contentsOf: Self.replacement.unicodeScalars)
                 hidesLine = false
+            } else if let delimiter = Self.leadingDelimiter(in: line.content), endsWithHiddenKey(previousLine) {
+                // The key is on the line before, as in `password\n= value`.
+                let spaces = line.content[(delimiter + 1)...].prefix(while: Self.isSpaceOrTab)
+                output.append(contentsOf: line.content[..<spaces.endIndex])
+                let hasValue = line.content[spaces.endIndex...].contains { !$0.properties.isWhitespace }
+                if hasValue { output.append(contentsOf: Self.replacement.unicodeScalars) }
+                hidesLine = !hasValue
             } else {
                 let (keyed, valueContinues) = redactKeyedValues(in: line.content)
                 output.append(contentsOf: ValueDetectors.redacting(keyed).scalars)
                 hidesLine = hidesLine || valueContinues
             }
+            if hasText { previousLine = line.content }
             output.append(contentsOf: Self.foldedLineSeparators.contains(line.terminator) ? ["\n"] : line.terminator)
         }
         return String(output)
+    }
+
+    /// The index of the `=` or `:` that starts the line after optional spaces and tabs.
+    private static func leadingDelimiter(in line: [Unicode.Scalar]) -> Int? {
+        guard let index = line.firstIndex(where: { !isSpaceOrTab($0) }), line[index] == "=" || line[index] == ":" else { return nil }
+        return index
     }
 
     /// The line separators that are written as LF.
