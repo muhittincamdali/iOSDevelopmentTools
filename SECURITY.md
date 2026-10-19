@@ -1,14 +1,15 @@
 # Security policy
 
-iOSDevelopmentTools records network traffic and promises that sensitive values are replaced
-before anything is stored. A way around that promise is a vulnerability.
+iOSDevelopmentTools records network traffic and log messages and replaces sensitive values
+before anything is stored. Redaction is a safety net, not a guarantee, but a way around its
+documented rules is a vulnerability.
 
 ## In scope
 
 - A password, token, cookie, API key or other value under a sensitive name that reaches a
   `NetworkEntry`, an exported HAR file, a cURL command or the console unredacted, for example
   through an unusual spelling or encoding of the name, a body format the policy claims to
-  handle, or a body that should have been withheld.
+  handle, or a body that should have been omitted.
 - Input that makes the package crash, hang or use memory without bound (a request or response
   body, a header, a URL, a log message).
 - A `curl` command from `curlCommand()` that runs something other than `curl` when pasted into
@@ -16,9 +17,9 @@ before anything is stored. A way around that promise is a vulnerability.
 - A change to what the app sends or receives (the forwarded request or the response differs
   from the original).
 
-Values that the documentation says are not checked (plain-text and XML bodies, path segments,
-names that contain none of the configured fragments, log messages) are known limits, not
-vulnerabilities; see
+Values that the documentation lists as limits (a secret under a plain ASCII name that is not a
+secret name, a short secret in a path segment, a look-alike secret word without `=` or `:` in
+free text) are known limits, not vulnerabilities; see
 [Redacting sensitive data](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata).
 
 ## Supported versions

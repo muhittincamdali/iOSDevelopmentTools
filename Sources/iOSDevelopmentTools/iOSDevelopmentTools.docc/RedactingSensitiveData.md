@@ -1,123 +1,132 @@
 # Redacting sensitive data
 
-Understand what is replaced before a request is stored, and how to change it.
+Understand what is recorded, what is never recorded, and how to change it.
 
 ## Overview
 
-Every value that reaches a ``NetworkLogger`` goes through its ``RedactionPolicy`` first. The
-console, ``HTTPArchive`` files, ``NetworkEntry/curlCommand()`` and screenshots of the console
-therefore never contain the original values. Your app still receives everything unchanged.
+Every request that reaches a ``NetworkLogger`` and every message logged to a ``LogStore`` goes
+through a ``RedactionPolicy`` first. The console, ``HTTPArchive`` files,
+``NetworkEntry/curlCommand()`` and screenshots of the console only ever see the redacted copy.
+Your app still sends and receives everything unchanged.
 
-### How names are matched
+The policy follows one rule: what it does not fully understand is hidden, never shown. Bodies are
+parsed with real parsers, a key that is not plain ASCII is hidden, and a body that cannot be
+parsed is left out.
 
-A name is sensitive when its normalized form contains one of the policy's
-``RedactionPolicy/nameFragments``. Normalizing lowercases the name, removes percent-encoding (up
-to four times, so doubly encoded names are caught), applies Unicode compatibility normalization
-(NFKC, which turns full-width and similar forms into the letters they stand for) and drops
-everything that is not an ASCII letter or digit:
+Redaction is a safety net, not a guarantee. It cannot know every name your app or your server
+uses for a secret. Keep secrets out of requests you record and out of log messages in the first
+place.
 
-| Name in the request | Normalized | Matches |
+### What is recorded and what is never recorded
+
+| Part | Recorded | Never recorded |
 | --- | --- | --- |
-| `Authorization` | `authorization` | `auth` |
-| `X-API-Key` | `xapikey` | `apikey` |
-| `refresh_token` | `refreshtoken` | `token` |
-| `API%5FKEY` | `apikey` | `apikey` |
-| `pass%2577ord` | `password` | `password` |
-| `ｐａｓｓｗｏｒｄ` | `password` | `password` |
+| URL | Scheme, host, port, path, query parameter names | User info (`user:password@`), the fragment (`#…`), query values (unless allowlisted), path segments that look like identifiers or secrets (shown as `:id`) |
+| Headers | Names; values of the allowlisted headers | Values of every other header, and always the values of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key` and any header whose name contains `token`, `secret`, `key`, `auth`, `session` or `signature` |
+| JSON, form and multipart bodies | Keys and values, after redaction | Values of secret keys and of keys that are not plain ASCII; file parts of multipart bodies |
+| Other bodies | `text/plain` after the free-text rule; a note for everything else | Bodies with an unknown or missing content type, bodies that do not parse, and bodies that were cut off or are larger than 1 MiB |
+| Log messages | The message after the free-text rule | Values after a secret key, and detected secrets |
 
-The default fragments are listed in ``RedactionPolicy/defaultNameFragments``. Matching errs on
-the side of hiding too much: a JSON key named `author` is hidden because it contains `auth`.
+### How keys are matched
 
-### What is redacted
+JSON field names, query and form names, multipart field names and header names are folded before
+they are compared: percent, `\u` and `&#` escapes are decoded (up to four rounds), then NFKC is
+applied, the key is case-folded, and `_`, `-`, `.` and spaces are removed.
 
-- **URLs:** the values of sensitive query parameters (split on `&` and `;`), of sensitive
-  parameters in the fragment (as in `#access_token=` of OAuth redirects), of `;name=value`
-  parameters in path segments (`;jsessionid=`), and the whole user info (`user:password@`). A
-  parameter value that decodes to JSON, as `q=%7B%22password%22%3A%22…%22%7D`, has its
-  sensitive keys replaced and is encoded again.
-- **Headers:** headers with a sensitive name (`Authorization`, `Cookie`, `Set-Cookie`,
-  `X-API-Key`, …) and headers whose value starts with an authentication scheme (`Bearer …`,
-  `Basic …`, `Token …`, `AWS4-HMAC-SHA256 …` and the other schemes listed in
-  ``RedactionPolicy/redact(headers:)``) whatever their name.
-- **JSON bodies:** the value of every sensitive key at any depth, including inside string values
-  that hold JSON themselves (as GraphQL clients send `variables`), also when the content type
-  does not say JSON, or says form, but the body starts with `{` or `[` (after white space or a
-  UTF-8, UTF-16 or UTF-32 byte order mark, and also in UTF-16 or UTF-32 without a mark, which
-  JSON parsers recognize by its zero bytes). Unicode escapes in keys are decoded
-  first, so `"\u0070assword"` is caught. JSON sent with a form content type, or without one,
-  is also checked as the form a server reads from the same bytes: Werkzeug splits
-  `{"x":"1&password=hunter2"}` at `&` and `=` and finds a `password` field, which is replaced.
-- **Form bodies** (`application/x-www-form-urlencoded`): sensitive fields, and sensitive keys in
-  field values that decode to JSON. A body sent without a `Content-Type` is checked as a form
-  too, because `URLSession` sends it as one.
-- **Multipart bodies:** sensitive fields by their `Content-Disposition` name (quoted names may
-  contain `;`, and when a part repeats the header or the `name` parameter, every name is
-  checked), and JSON or form parts by their own content type. A part with two `Content-Type`
-  headers is withheld, because servers differ in which one they read. As in RFC 2046, a boundary
-  counts only at the start of a line, so `--boundary` inside a value cannot end a part early.
+Only a key that is then plain ASCII letters and digits is compared with
+``RedactionPolicy/secretNames``. Any other key has its value hidden, whatever it says. That covers
+look-alike letters from other scripts (`pаssword` with a Cyrillic `а`), zero-width and other
+format characters (`pass\u{200D}word`), combining marks, other separators (`user[password]`,
+`pass;word`) and keys in any language that is not written in ASCII. There is no look-alike table
+to keep up to date.
 
-Separators (`?`, `#`, `&`, `;`, `=`, `@`, `/`, `:` and quotes) are found in the UTF-8 bytes, as
-servers find them, not in Swift `Character`s: a combining mark such as U+0301 right after a
-separator joins it into one `Character`, which would hide the separator from the check while the
-server still sees it.
+| Key in the request | Folded | Value |
+| --- | --- | --- |
+| `X-API-Key` | `xapikey` | hidden (`apikey`) |
+| `refresh_token` | `refreshtoken` | hidden (`token`) |
+| `pass%2577ord` | `password` | hidden |
+| `ｐａｓｓｗｏｒｄ` | `password` | hidden |
+| `pаssword` (Cyrillic `а`) | not plain ASCII | hidden |
+| `şifre` | not plain ASCII | hidden |
+| `created_at` | `createdat` | kept |
 
-Query, fragment and form parameters are read the two ways servers split them. Python's
-`parse_qsl` and `URLSearchParams` split only on `&` and read `token;x=hunter2` as one field named
-`token;x`, which is sensitive; other servers also split on `;` and read `token` and `x=hunter2`.
-Both readings are checked, and when both find a sensitive value, everything after the first `=`
-of that field is replaced.
+A secret name of five or more letters matches anywhere in a folded key (`newPassword`). A shorter
+one (`key`, `pin`, `sid`, `otp`) matches when it is one of the key's words or its end
+(`api-key`, `userPin`), so `keyboard` and `spinner` keep their values. The default names are in
+``RedactionPolicy/defaultSecretNames``; names you add cannot remove them.
 
-### Bodies that cannot be checked are withheld
+### Values
 
-A structured body that cannot be parsed cannot be checked: a JSON body cut off at the capture limit,
-malformed JSON, JSON nested deeper than 64 levels, JSON in which an object repeats a key
-(JSONSerialization keeps one value, Python and JavaScript keep the last, so the value a server reads
-may not be the one checked; keys are compared after escapes are decoded), or a multipart body
-without its closing boundary, with more than 1,000 parts, with text before the first boundary or
-after the closing one (servers ignore that text, so it is not checked as a field), with a boundary
-or a part header line after a bare CR or LF (servers such as Werkzeug take that for a line break),
-or with a line that starts with the boundary and goes on, as `--boundaryX` (servers that compare
-only the prefix start a part there). Multipart bodies are also withheld when the content type has
-more than one `boundary` parameter (or a `boundary*` one), when a part header line starts with a
-space or tab and so continues the line before it, and when a `name` is split into RFC 2231 pieces
-(`name*0`, `name*1`): Werkzeug, behind Flask, uses the last boundary, joins folded lines and joins
-the pieces, so the field it reads could differ from the one checked. For the same reason, a
-multipart body is withheld when a `Content-Disposition` or content type parameter is not
-`token=token` or `token="quoted string"` (Werkzeug skips such a parameter up to the next `;`, even
-one inside the quotes that follow, so `x ="; name=password"` reads as `name=password`), when a part
-header name is not a token, and when the boundary has characters outside RFC 2046 (Werkzeug reads
-`boundary=B1/x` as `B1`). Storing such a body unchecked could store a secret, so the policy
-withholds it: the entry keeps the body's size and marks it ``RedactionOutcome/withheld``, without
-its bytes. Raise ``NetworkLogger/Configuration/maximumBodySize`` to keep larger JSON bodies, or
-create a policy with `withholdsUncheckedBodies: false` to store them unchecked.
+When a key matches, its whole value is hidden: a string, a number, an array or an object. Values
+of other keys, header values that are kept and free text are scanned for JWTs, `Bearer`
+credentials, hex or Base64 strings of 32 or more characters, card numbers that pass the Luhn
+check, IBANs that pass the mod-97 check, and email addresses.
 
-JSON sent as a form, or without a content type, whose JSON reading and form reading both hold a
-sensitive value is withheld under that setting too: it was checked, and neither redaction hides
-the value the other reading finds.
+A string value that holds JSON, as GraphQL clients send `variables`, is parsed and redacted too,
+and so is JSON in a form value or an allowlisted query value. Other values, such as a form value
+that holds `a=1&token=x`, go through the free-text rule below.
+
+### Bodies
+
+- **JSON** (`application/json` and `+json` types) is parsed with `JSONSerialization`, redacted on
+  the parsed tree and serialized again, with sorted keys. When an object repeats a key, the parse
+  keeps one value and the other is not stored at all.
+- **Forms** (`application/x-www-form-urlencoded`) are split on `&` and `=` and decoded with the
+  platform API. A field that does not decode makes the whole body unparsed.
+- **Multipart** bodies are split on their boundary as strictly as RFC 2046 reads them. File parts
+  (with a `filename`) are always replaced by a note, other part headers follow the header rule,
+  and each field is parsed by its own content type.
+- **`text/plain`** goes through the free-text rule.
+
+Any other content type, a missing content type, a body that does not parse or is nested deeper
+than 64 levels, a body that was cut off at ``NetworkLogger/Configuration/maximumBodySize`` and a
+body larger than ``RedactionPolicy/maximumCheckedBodySize`` are not stored. A note takes their
+place, such as `[body omitted: 512 bytes, application/xml]`, and the body is marked
+``RedactionOutcome/omitted``. Malformed multipart (a second boundary parameter, folded or repeated
+part headers, a malformed parameter, text outside the boundaries, a line that starts with the
+boundary and goes on) is omitted too, because servers read it in different ways.
+
+### Free text
+
+Log messages, error descriptions and kept header values are read line by line. U+2028, U+2029,
+U+0085, vertical tab and form feed are folded to line feeds first.
+
+- In `key=value`, `key: value` and `"key":"value"`, the key follows the key rule above. A quoted
+  value is hidden up to its closing quote; an unquoted value is hidden with the rest of the line,
+  because where it ends is unknown. A key at the end of a line hides the next line with text, and
+  a line that starts with `=` or `:` takes the last word of the line before as its key.
+- A secret word that no `=` or `:` follows, as in `token abc123`, makes the line ambiguous, so the
+  rest of the line is hidden.
+- The value detectors run on every line.
 
 ### Change the policy
 
-Add fragments for your own names:
+Add your own secret names and allow the query parameters and headers you want to read:
 
 ```swift
 NetworkLogger.shared.configuration.redaction = RedactionPolicy(
-    nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]
+    additionalSecretNames: ["license_number"],
+    allowedHeaders: RedactionPolicy.defaultAllowedHeaders + ["X-Request-ID"],
+    allowedQueryParameters: ["page", "sort"]
 )
 ```
+
+A secret name stays hidden when it is on an allowlist. Use `urlDetail: .hostOnly` to record only
+the scheme, host and port of each URL. The same policy type is used by
+``LogStore/Configuration/redaction``.
 
 Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
 
 ### Limits
 
-- Values in plain text, XML and other unstructured bodies are not checked, and neither are
-  multipart parts of such types, including uploaded files.
-- Path segments are not checked, apart from `;name=value` parameters. A secret in the path
-  itself (`/reset/8f2c…`) is stored.
-- Big-endian UTF-16 or UTF-32 JSON without a byte order mark is recognized only when the
-  content type says JSON.
-- A secret under a name that contains none of the fragments is stored. Add the name's
-  distinctive part to the fragments.
-- Log messages in ``LogStore`` are stored as you write them. Do not log secrets.
+- A secret under a key that is plain ASCII but not a secret name, such as `creds` or `pass`, is
+  stored unless the detectors find it. Add the name with `additionalSecretNames`.
+- Short secrets in a path segment, such as `/reset/abc123`, are stored; only identifiers and
+  tokens of the shapes listed above become `:id`.
+- In free text, a secret word written with look-alike letters and followed by a space instead of
+  `=` or `:` is not recognized.
+- Header names, and query parameter names in which the detectors find nothing, are stored as
+  they were sent.
 
 ## See Also
 
