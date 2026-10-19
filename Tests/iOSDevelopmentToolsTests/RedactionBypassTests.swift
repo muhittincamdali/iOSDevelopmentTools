@@ -182,6 +182,14 @@ struct RedactionBypassTests {
         #expect(!RedactionPolicy(allowedQueryParameters: ["a", "token"]).redact(url: url).contains(Self.secret))
     }
 
+    @Test("A secret word with format characters, combining marks or compatibility forms still ends the line", arguments: [
+        "to\u{200D}ken hunter2", "pass\u{200C}word hunter2", "se\u{AD}cret hunter2", "pa\u{301}ssword hunter2", "ｔｏｋｅｎ hunter2",
+        "𝐩𝐚𝐬𝐬𝐰𝐨𝐫𝐝 hunter2", "ⓣⓞⓚⓔⓝ hunter2", "my to\u{200B}ken is hunter2",
+    ])
+    func secretWordsInText(text: String) {
+        #expect(!policy.redact(text: text).contains(Self.secret))
+    }
+
     @Test("JSON in a charset that JSONSerialization does not detect is omitted", arguments: [
         "application/json; charset=iso-8859-1", "application/json; charset=windows-1252", "application/json; charset=\"utf-8",
     ])

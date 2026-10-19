@@ -209,15 +209,16 @@ extension RedactionPolicy {
     /// and returns `true`; returns `false` when the run holds no secret word or no letter or digit
     /// follows the word on the line.
     ///
-    /// For a run with characters outside ASCII, the words are read after NFKC (so `ｔｏｋｅｎ` is
-    /// `token`), and the run itself is replaced too, because its words cannot be mapped back. The
-    /// same holds for a secret word in mixed case, such as `tOkEn`, which is found only once the
-    /// run is lowercased.
+    /// For a run with characters outside ASCII, the words are read after NFKD without format
+    /// characters and combining marks (so `ｔｏｋｅｎ`, `to\u{200D}ken` and `to\u{301}ken` are `token`),
+    /// and the run itself is replaced too, because its words cannot be mapped back. The same holds
+    /// for a secret word in mixed case, such as `tOkEn`, which is found only once the run is
+    /// lowercased.
     private func hidesRest(after run: Run, in line: [Unicode.Scalar], output: inout [Unicode.Scalar]) -> Bool {
         let scalars = line[run.start..<run.end]
         let isASCII = scalars.allSatisfy(\.isASCII)
         let text = String(String.UnicodeScalarView(scalars))
-        let normalized = isASCII ? text : text.precomposedStringWithCompatibilityMapping
+        let normalized = isASCII ? text : Self.visibleLetters(of: text)
         let words = FoldedKey.words(in: normalized)
         var cut = run.start
         if let secretIndex = words.firstIndex(where: secretNameMatcher.isName) {
@@ -238,6 +239,19 @@ extension RedactionPolicy {
         if cut > run.start, cut < line.count, Self.isSpaceOrTab(line[cut]) { output.append(" ") }
         output += Self.replacement.unicodeScalars
         return true
+    }
+
+    /// The text after NFKD without format characters (ZWJ, ZWNJ, soft hyphen) and combining
+    /// marks: the letters a reader sees.
+    private static func visibleLetters(of text: String) -> String {
+        var scalars = String.UnicodeScalarView()
+        for scalar in text.decomposedStringWithCompatibilityMapping.unicodeScalars {
+            switch scalar.properties.generalCategory {
+            case .format, .nonspacingMark, .spacingMark, .enclosingMark: continue
+            default: scalars.append(scalar)
+            }
+        }
+        return String(scalars)
     }
 
     /// The index after the `wordIndex`-th word of an ASCII run, counting words as
