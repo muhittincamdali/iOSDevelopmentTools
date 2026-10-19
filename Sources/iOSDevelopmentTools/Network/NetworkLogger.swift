@@ -221,7 +221,7 @@ public final class NetworkLogger: Sendable {
                     prefix: bodyPrefix, byteCount: bodyByteCount, contentType: entry.receivedContentType, policy: policy)
             }
             entry.receivedContentType = nil
-            entry.error = error.map(NetworkError.init)
+            entry.error = error.map { NetworkError($0, policy: policy) }
             entry.timings = timings ?? entry.timings
             entry.networkProtocol = networkProtocol ?? entry.networkProtocol
             entry.endDate = endDate

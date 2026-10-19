@@ -9,6 +9,9 @@ import os
 /// LogStore.shared.error("Payment failed: \(error)", category: "checkout")
 /// ```
 ///
+/// Messages go through ``Configuration/redaction`` (see ``RedactionPolicy/redact(text:)``) before
+/// they are kept or passed on. That is a safety net: do not log secrets in the first place.
+///
 /// The store keeps at most ``Configuration/maximumEntries`` messages of at most
 /// ``Configuration/maximumMessageLength`` Unicode scalars, so its memory use has a fixed upper
 /// bound.
@@ -44,6 +47,9 @@ public final class LogStore: Sendable {
         /// Messages below this level are dropped.
         public var minimumLevel: LogLevel
 
+        /// What is replaced in a message before it is kept or passed to unified logging.
+        public var redaction: RedactionPolicy
+
         /// The subsystem for the unified logging system, or `nil` to keep messages in the store only.
         /// Messages are logged with private visibility, as unified logging does by default.
         public var systemLogSubsystem: String?
@@ -53,12 +59,14 @@ public final class LogStore: Sendable {
             maximumEntries: Int = 2_000,
             maximumMessageLength: Int = 4_096,
             minimumLevel: LogLevel = .debug,
-            systemLogSubsystem: String? = Bundle.main.bundleIdentifier ?? "iOSDevelopmentTools"
+            systemLogSubsystem: String? = Bundle.main.bundleIdentifier ?? "iOSDevelopmentTools",
+            redaction: RedactionPolicy = .default
         ) {
             storedMaximumEntries = min(max(maximumEntries, 1), Self.entryLimit)
             storedMaximumMessageLength = min(max(maximumMessageLength, 1), Self.messageLengthLimit)
             self.minimumLevel = minimumLevel
             self.systemLogSubsystem = systemLogSubsystem
+            self.redaction = redaction
         }
     }
 
@@ -129,7 +137,8 @@ public final class LogStore: Sendable {
         return stream
     }
 
-    /// Logs a message. The message is built only when its level is kept.
+    /// Logs a message. The message is built only when its level is kept, then redacted, then cut
+    /// off at the length limit.
     public func log(
         _ level: LogLevel,
         _ message: @autoclosure () -> String,
@@ -140,7 +149,8 @@ public final class LogStore: Sendable {
     ) {
         let configuration = configuration
         guard level >= configuration.minimumLevel else { return }
-        let (text, isTruncated) = Self.truncated(message(), to: configuration.maximumMessageLength)
+        // Redacted before it is cut, so a cut cannot shorten a secret below what a detector finds.
+        let (text, isTruncated) = Self.truncated(configuration.redaction.redact(text: message()), to: configuration.maximumMessageLength)
         let categoryName = Self.truncated(category, to: Self.maximumCategoryLength).text
         let entry = LogEntry(
             date: Date(), level: level, category: categoryName, message: text, isTruncated: isTruncated,

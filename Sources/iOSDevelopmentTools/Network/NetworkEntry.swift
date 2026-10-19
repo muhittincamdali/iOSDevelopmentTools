@@ -214,9 +214,10 @@ public struct NetworkError: Sendable, Hashable, Codable {
         self.message = message
     }
 
-    init(_ error: any Error) {
+    /// The error with its description redacted as free text, since it can quote a URL or a value.
+    init(_ error: any Error, policy: RedactionPolicy) {
         let nsError = error as NSError
-        self.init(domain: nsError.domain, code: nsError.code, message: nsError.localizedDescription)
+        self.init(domain: nsError.domain, code: nsError.code, message: policy.redact(text: nsError.localizedDescription))
     }
 
     /// Whether the request was cancelled rather than failing on the network.

@@ -91,4 +91,15 @@ struct TextRedactionTests {
         let ats = String(repeating: "a@", count: 20_000)
         #expect(policy.redact(text: ats) == ats)
     }
+
+    @Test("Log messages are redacted before they are kept and passed on")
+    func logStore() {
+        let store = LogStore(configuration: .init(maximumMessageLength: 40, systemLogSubsystem: nil))
+        store.info("login password=hunter2 for ada")
+        store.info("Order E621E1F8-C36C-495A-93FC-0C247A3E6E5F placed")
+        #expect(store.entries.map(\.message) == ["login password=\(redacted)", "Order E621E1F8-C36C-495A-93FC-0C247A3E6E…"])
+        let raw = LogStore(configuration: .init(systemLogSubsystem: nil, redaction: .disabled))
+        raw.info("password=hunter2")
+        #expect(raw.entries.first?.message == "password=hunter2")
+    }
 }

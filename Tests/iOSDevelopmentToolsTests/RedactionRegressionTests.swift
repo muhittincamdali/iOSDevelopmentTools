@@ -206,4 +206,24 @@ struct RedactionRegressionTests {
         let lenient = RedactionPolicy(allowedHeaders: ["X-Upstream"])
         #expect(lenient.redact(headers: [HTTPHeader(name: "X-Upstream", value: value)]).first?.value.contains(Self.secret) == false)
     }
+
+    @Test("Log messages", arguments: [
+        "password=hunter2", "login PASSWORD: hunter2", "token hunter2", "tOkEn hunter2", "{\"pass_word\":\"hunter2\"}",
+        "ok\u{2028}password=hunter2", "Authorization: Bearer hunter2", "kEy_name=hunter2",
+    ])
+    func logMessages(message: String) {
+        let store = LogStore(configuration: .init(systemLogSubsystem: nil))
+        store.info(message)
+        #expect(store.entries.first?.message.contains(Self.secret) == false)
+    }
+
+    @Test("A long message of combining marks is redacted and cut off quickly")
+    func combiningMarkMessage() {
+        let store = LogStore(configuration: .init(systemLogSubsystem: nil))
+        let start = Date()
+        store.info("a" + String(repeating: "\u{301}", count: 1_000_000) + " password=hunter2", category: "c" + String(repeating: "\u{301}", count: 500_000))
+        #expect(Date().timeIntervalSince(start) < 10)
+        #expect(store.entries.first?.message.contains(Self.secret) == false)
+        #expect(store.entries.first?.isTruncated == true)
+    }
 }
