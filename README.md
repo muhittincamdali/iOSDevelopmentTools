@@ -41,10 +41,11 @@ written for Swift 6 strict concurrency.
 - **One line to record** — `NetworkCapture.start()` records `URLSession.shared` and every
   session created from the default or ephemeral configuration afterwards, including libraries
   built on `URLSession`. Your app receives every response unchanged.
-- **Redaction before storage** — header, query, form, multipart and JSON values with sensitive
-  names are replaced, however the name is spelled (`X-API-Key`, `api_key`, `API%5FKEY`). A JSON
-  body that cannot be checked, for example because it was cut off, is withheld instead of stored
-  unchecked.
+- **Redaction before storage** — values under secret names (`password`, `token`, `api_key`,
+  however they are spelled or escaped) and under keys that are not plain ASCII are replaced, and
+  only allowlisted headers and query parameters keep their values. JSON, form and multipart
+  bodies are parsed; a body that cannot be parsed is replaced by a note instead of being stored.
+  Log messages are redacted too.
 - **Bounded storage** — at most 500 requests and 256 KiB of each body by default, log messages
   in a ring buffer, and uploads over 4 MiB streamed instead of copied. Headers and URLs are
   stored whole.
@@ -53,7 +54,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 148 Swift Testing tests on macOS and 149 on an iOS simulator. Requests travel
+- **Tested** — 158 Swift Testing tests on macOS and 159 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -169,19 +170,40 @@ func makeAPISession() -> URLSession {
 
 ### Choose what is kept
 
-Limits outside their ranges are clamped. Name fragments are matched against normalized names, so
-`"iban"` also catches `IBAN`, `iban_number` and `ibanNumber`:
+Limits outside their ranges are clamped. Secret names are folded like the keys they are compared
+with, so `"license_number"` also catches `licenseNumber` and `LICENSE-NUMBER`, and only the
+listed query parameters keep their values:
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### What is recorded
+
+- **Recorded:** method, status, timings, header names, the values of allowlisted headers (by
+  default `Accept`, `Accept-Encoding`, `Accept-Language`, `Cache-Control`, `Content-Encoding`,
+  `Content-Length`, `Content-Type`, `ETag` and `User-Agent`), the URL's scheme, host, path and
+  query parameter names, and JSON, form, multipart and `text/plain` bodies after redaction.
+- **Never recorded:** URL user info and fragments, query values that are not allowlisted, the
+  values of all other headers (`Authorization`, `Cookie` and `Set-Cookie` even when allowlisted),
+  values under secret names such as `password`, `token` or `api_key`, path segments that look
+  like identifiers (shown as `:id`), and file parts of multipart bodies.
+- **Keys that are not plain ASCII** once escapes are decoded, NFKC is applied and case is folded
+  (`pаssword` with a Cyrillic `а`, `pass\u200Dword`, `şifre`) have their values hidden by default.
+- **Bodies that cannot be parsed** (an unknown or missing content type, malformed JSON or
+  multipart, a body cut off at the size limit) are replaced by a note such as
+  `[body omitted: 512 bytes, application/xml]`.
+- **Log messages** go through the same rules before `LogStore` keeps them.
+
+Redaction is a safety net, not a guarantee. Keep secrets out of the requests you record and out of
+log messages in the first place.
 
 ### Log messages
 
@@ -255,7 +277,8 @@ Reference documentation and articles:
   — which sessions are recorded, how requests reach the server, memory limits, what is not
   recorded.
 - [Redacting sensitive data](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — how names are matched, what is replaced, why some bodies are withheld, and the limits.
+  — what is recorded and what is never recorded, how keys are matched, why some bodies are
+  omitted, and the limits.
 - [Keeping the tools out of release builds](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — compilation conditions and a separate internal target.
 

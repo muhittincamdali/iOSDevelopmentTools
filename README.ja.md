@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@fbf2dd5bb72dde66bfdd8caa9db66f9061072989 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -44,9 +44,10 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **1 行で記録開始** — `NetworkCapture.start()` は `URLSession.shared` と、その後に default または
   ephemeral の構成から作られるすべてのセッションを記録します。`URLSession` を基盤にしたライブラリも
   対象です。アプリはすべてのレスポンスを変更されないまま受け取ります。
-- **保存前にマスキング** — 機密性の高い名前を持つヘッダー、クエリ、フォーム、multipart、JSON の値は、
-  名前の綴りにかかわらず (`X-API-Key`、`api_key`、`API%5FKEY`) 置き換えられます。たとえば途中で切れた
-  ためなど、検査できない JSON ボディは、未検査のまま保存されるのではなく保留されます。
+- **保存前にマスキング** — 秘密の名前 (`password`、`token`、`api_key`。綴りやエスケープの仕方は問いません)
+  と、プレーンな ASCII ではないキーの値を置き換え、値を残すのは許可リストにあるヘッダーとクエリ
+  パラメーターだけです。JSON、フォーム、multipart のボディは解析され、解析できないボディは保存せずに
+  注記に置き換えます。ログメッセージもマスキングされます。
 - **保存量に上限** — デフォルトでは最大 500 件のリクエスト、各ボディは 256 KiB までです。
   ログメッセージはリングバッファに保持され、4 MiB を超えるアップロードはコピーせずにストリーミング
   されます。ヘッダーと URL は切り詰めずに保存されます。
@@ -55,7 +56,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 148 件、iOS シミュレーターで 149 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 158 件、iOS シミュレーターで 159 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -170,19 +171,40 @@ func makeAPISession() -> URLSession {
 
 ### 保持する内容を選ぶ
 
-範囲外の上限値は範囲内に丸められます。名前の断片は正規化した名前と照合されるため、`"iban"` は
-`IBAN`、`iban_number`、`ibanNumber` にも一致します。
+範囲外の上限値は範囲内に丸められます。秘密の名前は比較対象のキーと同じように正規化されるため、
+`"license_number"` は `licenseNumber` や `LICENSE-NUMBER` にも一致します。値を残すのは列挙した
+クエリパラメーターだけです。
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### 記録される内容
+
+- **記録されるもの:** メソッド、ステータス、所要時間、ヘッダー名、許可リストにあるヘッダーの値
+  (デフォルトは `Accept`、`Accept-Encoding`、`Accept-Language`、`Cache-Control`、
+  `Content-Encoding`、`Content-Length`、`Content-Type`、`ETag`、`User-Agent`)、URL のスキーム、
+  ホスト、パス、クエリパラメーター名、そしてマスキング後の JSON、フォーム、multipart、`text/plain`
+  のボディ。
+- **決して記録されないもの:** URL のユーザー情報とフラグメント、許可リストにないクエリの値、その他
+  すべてのヘッダーの値 (`Authorization`、`Cookie`、`Set-Cookie` は許可リストにあっても記録されません)、
+  `password`、`token`、`api_key` などの秘密の名前の値、識別子に見えるパスセグメント (`:id` と表示)、
+  multipart ボディのファイルパート。
+- **プレーンな ASCII ではないキー** (エスケープのデコード、NFKC、大文字小文字の統一の後。キリル文字の
+  `а` を含む `pаssword`、`pass\u200Dword`、`şifre` など) の値は、デフォルトで隠されます。
+- **解析できないボディ** (不明または欠落した Content-Type、不正な JSON や multipart、サイズ上限で
+  切れたボディ) は `[body omitted: 512 bytes, application/xml]` のような注記に置き換えられます。
+- **ログメッセージ**も、`LogStore` が保持する前に同じルールを通ります。
+
+マスキングはセーフティネットであり、保証ではありません。そもそも記録するリクエストやログメッセージに
+秘密情報を含めないでください。
 
 ### メッセージをログに記録する
 
@@ -255,7 +277,7 @@ API リファレンスと解説記事：
 - [ネットワーク通信のキャプチャ](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — 記録されるセッション、リクエストがサーバーに届く仕組み、メモリの上限、記録されないもの。
 - [機密データのマスキング](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — 名前の照合方法、置き換えられるもの、一部のボディが保留される理由、そして制限。
+  — 記録されるものと決して記録されないもの、キーの照合方法、一部のボディが省かれる理由、そして制限。
 - [ツールをリリースビルドに含めない](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — コンパイル条件と、独立した内部用ターゲット。
 

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@fbf2dd5bb72dde66bfdd8caa9db66f9061072989 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -41,9 +41,9 @@
 
 - **一行代码开始记录** — `NetworkCapture.start()` 会记录 `URLSession.shared`，以及之后用默认或
   ephemeral 配置创建的每个会话，包括基于 `URLSession` 构建的库。你的应用收到的每个响应都保持原样。
-- **存储前先脱敏** — 名称敏感的请求头、查询参数、表单、multipart 和 JSON 值都会被替换，无论名称
-  怎么拼写（`X-API-Key`、`api_key`、`API%5FKEY`）。无法检查的 JSON 消息体，例如被截断的，
-  会被扣留，而不是未经检查就存储。
+- **存储前先脱敏** — 秘密名称（`password`、`token`、`api_key`，无论怎么拼写或转义）下的值，以及
+  不是纯 ASCII 的键下的值都会被替换，只有允许列表中的请求头和查询参数会保留值。JSON、表单和
+  multipart 消息体会被解析；无法解析的消息体不会被存储，而是替换为一条说明。日志消息同样会脱敏。
 - **存储有上限** — 默认最多保留 500 个请求，每个消息体最多 256 KiB；日志消息保存在环形缓冲区中，
   超过 4 MiB 的上传以流的方式处理，而不是复制。头部和 URL 会完整保存，不会截断。
 - **导出** — 任何请求都可以导出为可安全用于 shell 的 `curl` 命令，任何请求列表都可以导出为
@@ -51,7 +51,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 148 个 Swift Testing 测试，iOS 模拟器上有 149 个。请求从应用的会话
+- **经过测试** — macOS 上有 158 个 Swift Testing 测试，iOS 模拟器上有 159 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -165,19 +165,36 @@ func makeAPISession() -> URLSession {
 
 ### 选择保留的内容
 
-超出范围的限制值会被限定到范围内。名称片段与规范化后的名称进行匹配，因此 `"iban"` 也能匹配
-`IBAN`、`iban_number` 和 `ibanNumber`：
+超出范围的限制值会被限定到范围内。秘密名称与所比较的键以相同方式规范化，因此
+`"license_number"` 也能匹配 `licenseNumber` 和 `LICENSE-NUMBER`，并且只有列出的查询参数会保留值：
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### 记录哪些内容
+
+- **会记录：** 方法、状态码、耗时、请求头名称、允许列表中请求头的值（默认是 `Accept`、
+  `Accept-Encoding`、`Accept-Language`、`Cache-Control`、`Content-Encoding`、`Content-Length`、
+  `Content-Type`、`ETag` 和 `User-Agent`）、URL 的协议、主机、路径和查询参数名称，以及脱敏后的
+  JSON、表单、multipart 和 `text/plain` 消息体。
+- **绝不记录：** URL 中的用户信息和片段、不在允许列表中的查询值、其他所有请求头的值（`Authorization`、
+  `Cookie` 和 `Set-Cookie` 即使在允许列表中也不记录）、`password`、`token`、`api_key` 等秘密名称下的
+  值、看起来像标识符的路径段（显示为 `:id`），以及 multipart 消息体中的文件部分。
+- **不是纯 ASCII 的键**（在解码转义、应用 NFKC 并统一大小写之后，例如含西里尔字母 `а` 的
+  `pаssword`、`pass\u200Dword`、`şifre`）的值默认会被隐藏。
+- **无法解析的消息体**（未知或缺失的内容类型、格式错误的 JSON 或 multipart、在大小上限处被截断的
+  消息体）会被替换为 `[body omitted: 512 bytes, application/xml]` 这样的说明。
+- **日志消息**在 `LogStore` 保存之前也会经过同样的规则。
+
+脱敏只是一道安全网，而不是保证。从一开始就不要让秘密进入你记录的请求和日志消息。
 
 ### 记录日志消息
 
@@ -250,7 +267,7 @@ API 参考文档与文章：
 - [捕获网络流量](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — 哪些会话会被记录、请求如何到达服务器、内存限制，以及哪些内容不会被记录。
 - [对敏感数据脱敏](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — 名称如何匹配、哪些内容会被替换、为什么有些消息体会被扣留，以及相关限制。
+  — 哪些内容会记录、哪些绝不记录，键如何匹配，为什么有些消息体会被省略，以及相关限制。
 - [让这些工具不进入 release 构建](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — 编译条件和一个单独的内部 target。
 

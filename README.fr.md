@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@fbf2dd5bb72dde66bfdd8caa9db66f9061072989 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -45,10 +45,12 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
 - **Une ligne pour enregistrer** — `NetworkCapture.start()` enregistre `URLSession.shared` ainsi que
   toutes les sessions créées ensuite à partir de la configuration default ou ephemeral, y compris celles
   des bibliothèques construites sur `URLSession`. Votre app reçoit chaque réponse sans modification.
-- **Masquage avant stockage** — les valeurs des en-têtes, de la query, des formulaires, du multipart et
-  du JSON dont le nom est sensible sont remplacées, quelle que soit l'écriture du nom (`X-API-Key`,
-  `api_key`, `API%5FKEY`). Un corps JSON impossible à vérifier, par exemple parce qu'il a été tronqué,
-  est retenu au lieu d'être stocké sans contrôle.
+- **Masquage avant stockage** — les valeurs placées sous des noms secrets (`password`, `token`,
+  `api_key`, quelle que soit leur écriture ou leur encodage) et sous des clés qui ne sont pas en
+  ASCII simple sont remplacées, et seuls les en-têtes et paramètres de query de la liste autorisée
+  gardent leur valeur. Les corps JSON, de formulaire et multipart sont analysés ; un corps
+  impossible à analyser est remplacé par une note au lieu d'être stocké. Les messages de journal
+  sont masqués eux aussi.
 - **Stockage borné** — par défaut, au plus 500 requêtes et 256 KiB par corps ; les messages de journal
   sont conservés dans un tampon circulaire, et les envois de plus de 4 MiB sont transmis en flux au lieu
   d'être copiés. Les en-têtes et les URL sont stockés en entier.
@@ -58,7 +60,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 148 tests Swift Testing sur macOS et 149 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 158 tests Swift Testing sur macOS et 159 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -176,19 +178,43 @@ func makeAPISession() -> URLSession {
 
 ### Choisir ce qui est conservé
 
-Les limites hors plage sont ramenées dans la plage. Les fragments de nom sont comparés à des noms
-normalisés : `"iban"` détecte donc aussi `IBAN`, `iban_number` et `ibanNumber` :
+Les limites hors plage sont ramenées dans la plage. Les noms secrets sont normalisés comme les clés
+auxquelles ils sont comparés : `"license_number"` détecte donc aussi `licenseNumber` et
+`LICENSE-NUMBER`, et seuls les paramètres de query indiqués gardent leur valeur :
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### Ce qui est enregistré
+
+- **Enregistré :** la méthode, le statut, les durées, les noms des en-têtes, les valeurs des
+  en-têtes de la liste autorisée (par défaut `Accept`, `Accept-Encoding`, `Accept-Language`,
+  `Cache-Control`, `Content-Encoding`, `Content-Length`, `Content-Type`, `ETag` et `User-Agent`),
+  le schéma, l'hôte, le chemin et les noms des paramètres de query de l'URL, ainsi que les corps
+  JSON, de formulaire, multipart et `text/plain` après masquage.
+- **Jamais enregistré :** les informations utilisateur et le fragment de l'URL, les valeurs de
+  query hors de la liste autorisée, les valeurs de tous les autres en-têtes (`Authorization`,
+  `Cookie` et `Set-Cookie` même s'ils sont dans la liste), les valeurs placées sous des noms
+  secrets comme `password`, `token` ou `api_key`, les segments de chemin qui ressemblent à des
+  identifiants (affichés `:id`) et les parties fichier des corps multipart.
+- **Les clés qui ne sont pas en ASCII simple** une fois les échappements décodés, NFKC appliqué et
+  la casse normalisée (`pаssword` avec un `а` cyrillique, `pass\u200Dword`, `şifre`) ont leur
+  valeur masquée par défaut.
+- **Les corps impossibles à analyser** (un type de contenu inconnu ou absent, du JSON ou du
+  multipart mal formé, un corps coupé à la limite de taille) sont remplacés par une note comme
+  `[body omitted: 512 bytes, application/xml]`.
+- **Les messages de journal** passent par les mêmes règles avant que `LogStore` les conserve.
+
+Le masquage est un filet de sécurité, pas une garantie. Gardez les secrets hors des requêtes que
+vous enregistrez et des messages de journal dès le départ.
 
 ### Journaliser des messages
 
@@ -262,7 +288,7 @@ Référence de l’API et articles :
 - [Capturer le trafic réseau](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — quelles sessions sont enregistrées, comment les requêtes atteignent le serveur, limites de mémoire et ce qui n'est pas enregistré.
 - [Masquer les données sensibles](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — comment les noms sont comparés, ce qui est remplacé, pourquoi certains corps sont retenus, et les limites.
+  — ce qui est enregistré et ce qui ne l'est jamais, comment les clés sont comparées, pourquoi certains corps sont omis, et les limites.
 - [Garder les outils hors des builds de release](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — conditions de compilation et un target interne distinct.
 

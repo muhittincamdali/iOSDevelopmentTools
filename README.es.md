@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@fbf2dd5bb72dde66bfdd8caa9db66f9061072989 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -45,10 +45,11 @@ escrito para la strict concurrency de Swift 6.
 - **Una línea para registrar** — `NetworkCapture.start()` registra `URLSession.shared` y todas las
   sesiones que se creen después con la configuración default o ephemeral, incluidas las bibliotecas
   basadas en `URLSession`. Tu app recibe cada respuesta sin cambios.
-- **Ocultación antes de guardar** — los valores de cabeceras, query, formularios, multipart y JSON con
-  nombres sensibles se sustituyen, sea cual sea la grafía del nombre (`X-API-Key`, `api_key`,
-  `API%5FKEY`). Un cuerpo JSON que no se puede comprobar, por ejemplo porque está cortado, se retiene
-  en lugar de guardarse sin comprobar.
+- **Ocultación antes de guardar** — se sustituyen los valores bajo nombres secretos (`password`,
+  `token`, `api_key`, se escriban o codifiquen como sea) y bajo claves que no son ASCII simple, y
+  solo las cabeceras y los parámetros de query de la lista permitida conservan su valor. Los
+  cuerpos JSON, de formulario y multipart se analizan; un cuerpo que no se puede analizar se
+  sustituye por una nota en lugar de guardarse. Los mensajes de registro también se ocultan.
 - **Almacenamiento acotado** — por defecto, como máximo 500 solicitudes y 256 KiB de cada cuerpo; los
   mensajes de log van a un búfer circular y las subidas de más de 4 MiB se transmiten en streaming en
   lugar de copiarse. Las cabeceras y las URL se guardan completas.
@@ -58,7 +59,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 148 tests de Swift Testing en macOS y 149 en un simulador de iOS. Las solicitudes van
+- **Probado** — 158 tests de Swift Testing en macOS y 159 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -174,19 +175,43 @@ func makeAPISession() -> URLSession {
 
 ### Elegir qué se conserva
 
-Los límites fuera de rango se ajustan al rango. Los fragmentos de nombre se comparan con nombres
-normalizados, así que `"iban"` también detecta `IBAN`, `iban_number` e `ibanNumber`:
+Los límites fuera de rango se ajustan al rango. Los nombres secretos se normalizan igual que las
+claves con las que se comparan, así que `"license_number"` también detecta `licenseNumber` y
+`LICENSE-NUMBER`, y solo los parámetros de query indicados conservan su valor:
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### Qué se guarda
+
+- **Se guarda:** el método, el estado, los tiempos, los nombres de las cabeceras, los valores de
+  las cabeceras de la lista permitida (por defecto `Accept`, `Accept-Encoding`, `Accept-Language`,
+  `Cache-Control`, `Content-Encoding`, `Content-Length`, `Content-Type`, `ETag` y `User-Agent`),
+  el esquema, el host, la ruta y los nombres de los parámetros de query de la URL, y los cuerpos
+  JSON, de formulario, multipart y `text/plain` después de ocultar.
+- **Nunca se guarda:** la información de usuario y el fragmento de la URL, los valores de query
+  que no están en la lista permitida, los valores de todas las demás cabeceras (`Authorization`,
+  `Cookie` y `Set-Cookie` aunque estén en la lista), los valores bajo nombres secretos como
+  `password`, `token` o `api_key`, los segmentos de ruta que parecen identificadores (se muestran
+  como `:id`) y las partes de archivo de los cuerpos multipart.
+- **Las claves que no son ASCII simple** una vez decodificados los escapes, aplicada NFKC e
+  igualadas mayúsculas y minúsculas (`pаssword` con una `а` cirílica, `pass\u200Dword`, `şifre`)
+  tienen su valor oculto por defecto.
+- **Los cuerpos que no se pueden analizar** (un tipo de contenido desconocido o ausente, JSON o
+  multipart mal formado, un cuerpo cortado en el límite de tamaño) se sustituyen por una nota como
+  `[body omitted: 512 bytes, application/xml]`.
+- **Los mensajes de registro** pasan por las mismas reglas antes de que `LogStore` los guarde.
+
+La ocultación es una red de seguridad, no una garantía. Mantén los secretos fuera de las
+solicitudes que registras y de los mensajes de registro desde el principio.
 
 ### Registrar mensajes
 
@@ -259,7 +284,7 @@ Referencia de la API y artículos:
 - [Captura del tráfico de red](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — qué sesiones se registran, cómo llegan las solicitudes al servidor, límites de memoria y qué no se registra.
 - [Ocultación de datos sensibles](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — cómo se comparan los nombres, qué se sustituye, por qué algunos cuerpos se retienen y los límites.
+  — qué se guarda y qué nunca se guarda, cómo se comparan las claves, por qué se omiten algunos cuerpos y los límites.
 - [Mantener las herramientas fuera de las compilaciones de release](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — condiciones de compilación y un target interno aparte.
 

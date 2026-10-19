@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@fbf2dd5bb72dde66bfdd8caa9db66f9061072989 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -45,10 +45,11 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Eine Zeile zum Aufzeichnen** — `NetworkCapture.start()` zeichnet `URLSession.shared` auf und
   danach jede Session, die aus der default- oder ephemeral-Konfiguration erstellt wird, auch von
   Bibliotheken, die auf `URLSession` aufbauen. Deine App erhält jede Antwort unverändert.
-- **Schwärzen vor dem Speichern** — Werte in Headern, Queries, Formularen, Multipart und JSON mit
-  sensiblen Namen werden ersetzt, egal wie der Name geschrieben ist (`X-API-Key`, `api_key`,
-  `API%5FKEY`). Ein JSON-Body, der sich nicht prüfen lässt, zum Beispiel weil er abgeschnitten wurde,
-  wird zurückgehalten, statt ungeprüft gespeichert zu werden.
+- **Schwärzen vor dem Speichern** — Werte unter geheimen Namen (`password`, `token`, `api_key`,
+  egal wie geschrieben oder kodiert) und unter Schlüsseln, die kein reines ASCII sind, werden
+  ersetzt; nur Header und Query-Parameter auf der Allowlist behalten ihre Werte. JSON-, Formular-
+  und Multipart-Bodys werden geparst; ein Body, der sich nicht parsen lässt, wird durch einen
+  Hinweis ersetzt, statt gespeichert zu werden. Auch Log-Meldungen werden geschwärzt.
 - **Begrenzte Speicherung** — standardmäßig höchstens 500 Anfragen und 256 KiB pro Body; Log-Meldungen
   liegen in einem Ringpuffer, und Uploads über 4 MiB werden gestreamt statt kopiert.
   Header und URLs werden vollständig gespeichert.
@@ -57,7 +58,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 148 Swift-Testing-Tests auf macOS und 149 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 158 Swift-Testing-Tests auf macOS und 159 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -174,19 +175,43 @@ func makeAPISession() -> URLSession {
 
 ### Festlegen, was gespeichert wird
 
-Grenzwerte außerhalb ihres Bereichs werden auf den Bereich begrenzt. Namensfragmente werden mit
-normalisierten Namen abgeglichen, daher erfasst `"iban"` auch `IBAN`, `iban_number` und `ibanNumber`:
+Grenzwerte außerhalb ihres Bereichs werden auf den Bereich begrenzt. Geheime Namen werden wie die
+Schlüssel normalisiert, mit denen sie verglichen werden, daher erfasst `"license_number"` auch
+`licenseNumber` und `LICENSE-NUMBER`, und nur die aufgeführten Query-Parameter behalten ihre Werte:
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### Was gespeichert wird
+
+- **Gespeichert:** Methode, Status, Zeiten, Header-Namen, die Werte der Header auf der Allowlist
+  (standardmäßig `Accept`, `Accept-Encoding`, `Accept-Language`, `Cache-Control`,
+  `Content-Encoding`, `Content-Length`, `Content-Type`, `ETag` und `User-Agent`), Schema, Host,
+  Pfad und Query-Parameternamen der URL sowie JSON-, Formular-, Multipart- und `text/plain`-Bodys
+  nach dem Schwärzen.
+- **Nie gespeichert:** User-Info und Fragment der URL, Query-Werte, die nicht auf der Allowlist
+  stehen, die Werte aller anderen Header (`Authorization`, `Cookie` und `Set-Cookie` auch dann,
+  wenn sie auf der Allowlist stehen), Werte unter geheimen Namen wie `password`, `token` oder
+  `api_key`, Pfadsegmente, die wie Kennungen aussehen (als `:id` angezeigt), und Datei-Parts von
+  Multipart-Bodys.
+- **Schlüssel, die kein reines ASCII sind**, nachdem Escapes dekodiert, NFKC angewendet und
+  Groß-/Kleinschreibung angeglichen wurde (`pаssword` mit kyrillischem `а`, `pass\u200Dword`,
+  `şifre`), haben standardmäßig verborgene Werte.
+- **Bodys, die sich nicht parsen lassen** (ein unbekannter oder fehlender Content-Type, fehlerhaftes
+  JSON oder Multipart, ein an der Größengrenze abgeschnittener Body), werden durch einen Hinweis wie
+  `[body omitted: 512 bytes, application/xml]` ersetzt.
+- **Log-Meldungen** durchlaufen dieselben Regeln, bevor `LogStore` sie speichert.
+
+Schwärzen ist ein Sicherheitsnetz, keine Garantie. Halte Geheimnisse von vornherein aus den
+aufgezeichneten Anfragen und aus Log-Meldungen heraus.
 
 ### Meldungen loggen
 
@@ -260,7 +285,7 @@ API-Referenz und Artikel:
 - [Netzwerkverkehr aufzeichnen](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — welche Sessions aufgezeichnet werden, wie Anfragen den Server erreichen, Speichergrenzen und was nicht aufgezeichnet wird.
 - [Sensible Daten schwärzen](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — wie Namen abgeglichen werden, was ersetzt wird, warum manche Bodys zurückgehalten werden, und die Grenzen.
+  — was gespeichert wird und was nie, wie Schlüssel abgeglichen werden, warum manche Bodys ausgelassen werden, und die Grenzen.
 - [Die Tools aus Release-Builds heraushalten](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — Compilation Conditions und ein eigenes internes Target.
 

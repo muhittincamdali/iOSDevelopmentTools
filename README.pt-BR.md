@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@fbf2dd5bb72dde66bfdd8caa9db66f9061072989 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -45,10 +45,11 @@ concurrency do Swift 6.
 - **Uma linha para registrar** — `NetworkCapture.start()` registra `URLSession.shared` e todas as
   sessões criadas depois a partir da configuração default ou ephemeral, inclusive as de bibliotecas
   construídas sobre `URLSession`. Seu app recebe cada resposta sem alterações.
-- **Ocultação antes de armazenar** — valores de cabeçalhos, query, formulários, multipart e JSON com
-  nomes sensíveis são substituídos, não importa como o nome seja escrito (`X-API-Key`, `api_key`,
-  `API%5FKEY`). Um corpo JSON que não pode ser verificado, por exemplo por ter sido cortado, é retido
-  em vez de armazenado sem verificação.
+- **Ocultação antes de armazenar** — valores sob nomes secretos (`password`, `token`, `api_key`,
+  não importa como sejam escritos ou codificados) e sob chaves que não são ASCII simples são
+  substituídos, e só os cabeçalhos e parâmetros de query da lista permitida mantêm seus valores.
+  Corpos JSON, de formulário e multipart são analisados; um corpo que não pode ser analisado é
+  substituído por uma nota em vez de ser armazenado. Mensagens de log também são ocultadas.
 - **Armazenamento limitado** — por padrão, no máximo 500 requisições e 256 KiB de cada corpo; as mensagens
   de log ficam em um buffer circular, e uploads acima de 4 MiB são transmitidos em streaming em vez de
   copiados. Cabeçalhos e URLs são armazenados inteiros.
@@ -57,7 +58,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 148 testes de Swift Testing no macOS e 149 em um simulador de iOS. As requisições vão de
+- **Testado** — 158 testes de Swift Testing no macOS e 159 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -173,19 +174,43 @@ func makeAPISession() -> URLSession {
 
 ### Escolher o que é mantido
 
-Limites fora da faixa são ajustados para a faixa. Os fragmentos de nome são comparados com nomes
-normalizados, então `"iban"` também captura `IBAN`, `iban_number` e `ibanNumber`:
+Limites fora da faixa são ajustados para a faixa. Os nomes secretos são normalizados como as chaves
+com que são comparados, então `"license_number"` também captura `licenseNumber` e
+`LICENSE-NUMBER`, e só os parâmetros de query listados mantêm seus valores:
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### O que é registrado
+
+- **Registrado:** método, status, tempos, nomes de cabeçalhos, os valores dos cabeçalhos da lista
+  permitida (por padrão `Accept`, `Accept-Encoding`, `Accept-Language`, `Cache-Control`,
+  `Content-Encoding`, `Content-Length`, `Content-Type`, `ETag` e `User-Agent`), o esquema, o host,
+  o caminho e os nomes dos parâmetros de query da URL, e corpos JSON, de formulário, multipart e
+  `text/plain` depois da ocultação.
+- **Nunca registrado:** informações de usuário e fragmento da URL, valores de query fora da lista
+  permitida, os valores de todos os outros cabeçalhos (`Authorization`, `Cookie` e `Set-Cookie`
+  mesmo que estejam na lista), valores sob nomes secretos como `password`, `token` ou `api_key`,
+  segmentos de caminho que parecem identificadores (mostrados como `:id`) e partes de arquivo de
+  corpos multipart.
+- **Chaves que não são ASCII simples** depois de decodificar escapes, aplicar NFKC e igualar
+  maiúsculas e minúsculas (`pаssword` com um `а` cirílico, `pass\u200Dword`, `şifre`) têm o valor
+  oculto por padrão.
+- **Corpos que não podem ser analisados** (um tipo de conteúdo desconhecido ou ausente, JSON ou
+  multipart malformado, um corpo cortado no limite de tamanho) são substituídos por uma nota como
+  `[body omitted: 512 bytes, application/xml]`.
+- **Mensagens de log** passam pelas mesmas regras antes de o `LogStore` guardá-las.
+
+A ocultação é uma rede de segurança, não uma garantia. Mantenha segredos fora das requisições que
+você registra e das mensagens de log desde o início.
 
 ### Registrar mensagens de log
 
@@ -258,7 +283,7 @@ Referência da API e artigos:
 - [Capturando o tráfego de rede](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — quais sessões são registradas, como as requisições chegam ao servidor, limites de memória e o que não é registrado.
 - [Ocultando dados sensíveis](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — como os nomes são comparados, o que é substituído, por que alguns corpos são retidos e os limites.
+  — o que é registrado e o que nunca é, como as chaves são comparadas, por que alguns corpos são omitidos e os limites.
 - [Mantendo as ferramentas fora dos builds de release](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — condições de compilação e um target interno separado.
 

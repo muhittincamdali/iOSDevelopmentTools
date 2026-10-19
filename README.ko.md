@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@fbf2dd5bb72dde66bfdd8caa9db66f9061072989 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -43,9 +43,10 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **한 줄로 기록 시작** — `NetworkCapture.start()`는 `URLSession.shared`와 이후에 default 또는
   ephemeral 구성으로 만들어지는 모든 세션을 기록합니다. `URLSession` 위에 만들어진 라이브러리도
   포함됩니다. 앱은 모든 응답을 변경 없이 그대로 받습니다.
-- **저장 전에 가리기** — 민감한 이름을 가진 헤더, 쿼리, 폼, multipart, JSON 값은 이름의 철자가
-  어떻든(`X-API-Key`, `api_key`, `API%5FKEY`) 다른 값으로 바뀝니다. 예를 들어 중간에 잘려서 검사할 수
-  없는 JSON 본문은 검사 없이 저장하는 대신 보류합니다.
+- **저장 전에 가리기** — 비밀 이름(`password`, `token`, `api_key`, 철자나 인코딩과 상관없이)과
+  순수 ASCII가 아닌 키 아래의 값은 바뀌고, 허용 목록에 있는 헤더와 쿼리 매개변수만 값을 유지합니다.
+  JSON, 폼, multipart 본문은 파싱하며, 파싱할 수 없는 본문은 저장하는 대신 안내 문구로 바꿉니다.
+  로그 메시지도 가려집니다.
 - **저장량 제한** — 기본값으로 요청은 최대 500개, 본문은 각각 최대 256 KiB입니다. 로그
   메시지는 링 버퍼에 보관하고, 4 MiB를 넘는 업로드는 복사하지 않고 스트리밍합니다.
   헤더와 URL은 자르지 않고 그대로 저장합니다.
@@ -54,7 +55,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 148개, iOS 시뮬레이터에서 149개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 158개, iOS 시뮬레이터에서 159개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -168,19 +169,38 @@ func makeAPISession() -> URLSession {
 
 ### 보관할 내용 선택하기
 
-범위를 벗어난 한도 값은 범위 안으로 조정됩니다. 이름 조각은 정규화된 이름과 비교하므로 `"iban"`은
-`IBAN`, `iban_number`, `ibanNumber`도 잡아냅니다.
+범위를 벗어난 한도 값은 범위 안으로 조정됩니다. 비밀 이름은 비교 대상인 키와 같은 방식으로
+정규화되므로 `"license_number"`는 `licenseNumber`와 `LICENSE-NUMBER`도 잡아내며, 나열한 쿼리
+매개변수만 값을 유지합니다.
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### 기록되는 내용
+
+- **기록되는 것:** 메서드, 상태 코드, 소요 시간, 헤더 이름, 허용 목록에 있는 헤더의 값(기본값은
+  `Accept`, `Accept-Encoding`, `Accept-Language`, `Cache-Control`, `Content-Encoding`,
+  `Content-Length`, `Content-Type`, `ETag`, `User-Agent`), URL의 스킴, 호스트, 경로, 쿼리 매개변수
+  이름, 그리고 가린 뒤의 JSON, 폼, multipart, `text/plain` 본문.
+- **절대 기록되지 않는 것:** URL의 사용자 정보와 프래그먼트, 허용 목록에 없는 쿼리 값, 그 밖의 모든
+  헤더 값(`Authorization`, `Cookie`, `Set-Cookie`는 허용 목록에 있어도 제외), `password`, `token`,
+  `api_key` 같은 비밀 이름 아래의 값, 식별자처럼 보이는 경로 세그먼트(`:id`로 표시), multipart 본문의
+  파일 파트.
+- **순수 ASCII가 아닌 키**(이스케이프를 풀고 NFKC를 적용하고 대소문자를 맞춘 뒤 기준, 예를 들어
+  키릴 문자 `а`가 들어간 `pаssword`, `pass\u200Dword`, `şifre`)의 값은 기본적으로 가려집니다.
+- **파싱할 수 없는 본문**(알 수 없거나 없는 Content-Type, 잘못된 JSON이나 multipart, 크기 한도에서
+  잘린 본문)은 `[body omitted: 512 bytes, application/xml]` 같은 안내 문구로 바뀝니다.
+- **로그 메시지**도 `LogStore`가 보관하기 전에 같은 규칙을 거칩니다.
+
+가리기는 안전망일 뿐 보장이 아닙니다. 애초에 기록하는 요청과 로그 메시지에 비밀 값을 넣지 마세요.
 
 ### 메시지 로그 남기기
 
@@ -253,7 +273,7 @@ API 레퍼런스와 문서:
 - [네트워크 트래픽 캡처하기](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — 기록되는 세션, 요청이 서버에 도달하는 방식, 메모리 한도, 기록되지 않는 것.
 - [민감한 데이터 가리기](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — 이름을 비교하는 방식, 바뀌는 값, 일부 본문을 보류하는 이유, 그리고 한계.
+  — 기록되는 것과 절대 기록되지 않는 것, 키를 비교하는 방식, 일부 본문을 생략하는 이유, 그리고 한계.
 - [릴리스 빌드에서 도구 제외하기](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — 컴파일 조건과 별도의 내부용 타깃.
 

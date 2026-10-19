@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@fbf2dd5bb72dde66bfdd8caa9db66f9061072989 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -45,10 +45,11 @@ concurrency в Swift 6.
 - **Одна строка для записи** — `NetworkCapture.start()` записывает `URLSession.shared` и все сессии,
   которые создаются потом из конфигурации default или ephemeral, включая библиотеки, построенные на
   `URLSession`. Ваше приложение получает каждый ответ без изменений.
-- **Маскирование до сохранения** — значения заголовков, query, форм, multipart и JSON с
-  чувствительными именами заменяются, как бы имя ни было написано (`X-API-Key`, `api_key`,
-  `API%5FKEY`). Тело JSON, которое нельзя проверить, например потому, что оно обрезано, не
-  сохраняется непроверенным, а удерживается.
+- **Маскирование до сохранения** — значения под секретными именами (`password`, `token`, `api_key`,
+  как бы они ни были написаны или закодированы) и под ключами, которые не являются простым ASCII,
+  заменяются, а свои значения сохраняют только заголовки и параметры query из разрешённого списка.
+  Тела JSON, форм и multipart разбираются; тело, которое нельзя разобрать, заменяется пометкой
+  вместо сохранения. Сообщения журнала тоже маскируются.
 - **Ограниченный объём хранения** — по умолчанию не более 500 запросов и 256 KiB на каждое тело;
   сообщения журнала хранятся в кольцевом буфере, а загрузки больше 4 MiB передаются потоком, а не
   копируются. Заголовки и URL сохраняются целиком.
@@ -57,7 +58,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 148 тестов Swift Testing на macOS и 149 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 158 тестов Swift Testing на macOS и 159 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -173,20 +174,43 @@ func makeAPISession() -> URLSession {
 
 ### Выбрать, что сохранять
 
-Значения лимитов вне допустимых диапазонов приводятся к границам диапазона. Фрагменты имён
-сопоставляются с нормализованными именами, поэтому `"iban"` ловит и `IBAN`, и `iban_number`, и
-`ibanNumber`:
+Значения лимитов вне допустимых диапазонов приводятся к границам диапазона. Секретные имена
+нормализуются так же, как ключи, с которыми их сравнивают, поэтому `"license_number"` ловит и
+`licenseNumber`, и `LICENSE-NUMBER`, а значения сохраняют только перечисленные параметры query:
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### Что записывается
+
+- **Записывается:** метод, статус, время, имена заголовков, значения заголовков из разрешённого
+  списка (по умолчанию `Accept`, `Accept-Encoding`, `Accept-Language`, `Cache-Control`,
+  `Content-Encoding`, `Content-Length`, `Content-Type`, `ETag` и `User-Agent`), схема, хост, путь
+  и имена параметров query в URL, а также тела JSON, форм, multipart и `text/plain` после
+  маскирования.
+- **Никогда не записывается:** данные пользователя и фрагмент URL, значения query вне
+  разрешённого списка, значения всех остальных заголовков (`Authorization`, `Cookie` и
+  `Set-Cookie` даже из разрешённого списка), значения под секретными именами вроде `password`,
+  `token` или `api_key`, сегменты пути, похожие на идентификаторы (показываются как `:id`), и
+  файловые части тел multipart.
+- **Ключи, которые не являются простым ASCII** после декодирования escape-последовательностей,
+  NFKC и приведения регистра (`pаssword` с кириллической `а`, `pass\u200Dword`, `şifre`), по
+  умолчанию скрывают своё значение.
+- **Тела, которые нельзя разобрать** (неизвестный или отсутствующий тип содержимого, повреждённый
+  JSON или multipart, тело, обрезанное на пределе размера), заменяются пометкой вроде
+  `[body omitted: 512 bytes, application/xml]`.
+- **Сообщения журнала** проходят те же правила, прежде чем `LogStore` их сохранит.
+
+Маскирование — это страховка, а не гарантия. Не допускайте секретов в записываемых запросах и
+сообщениях журнала с самого начала.
 
 ### Записывать сообщения в журнал
 
@@ -259,7 +283,7 @@ struct MacDebugScenes: Scene {
 - [Перехват сетевого трафика](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — какие сессии записываются, как запросы доходят до сервера, лимиты памяти и что не записывается.
 - [Маскирование чувствительных данных](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — как сопоставляются имена, что заменяется, почему некоторые тела удерживаются, и ограничения.
+  — что записывается и что не записывается никогда, как сопоставляются ключи, почему некоторые тела опускаются, и ограничения.
 - [Как не включать инструменты в release-сборки](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — условия компиляции и отдельный внутренний target.
 
