@@ -13,7 +13,7 @@ struct ReadmeSampleTests {
         #expect(session.configuration.timeoutIntervalForRequest == 30)
     }
 
-    @Test("The configuration sample sets limits, fragments and ignored hosts")
+    @Test("The configuration sample sets limits, secret names, query parameters and ignored hosts")
     func configuration() {
         let previous = NetworkLogger.shared.configuration
         defer { NetworkLogger.shared.configuration = previous }
@@ -21,8 +21,10 @@ struct ReadmeSampleTests {
         let configuration = NetworkLogger.shared.configuration
         #expect(configuration.maximumEntries == 1_000)
         #expect(configuration.maximumBodySize == 512 * 1024)
-        #expect(configuration.redaction.isSensitive(name: "IBAN"))
+        #expect(configuration.redaction.isSensitive(name: "licenseNumber"))
         #expect(configuration.redaction.isSensitive(name: "Authorization"))
+        let url = URL(string: "https://api.example.com/items?page=2&license_number=X1")!
+        #expect(configuration.redaction.redact(url: url) == "https://api.example.com/items?page=2&license_number=\(RedactionPolicy.replacement)")
         #expect(!configuration.records(host: "eu.analytics.example.com"))
     }
 

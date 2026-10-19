@@ -207,7 +207,7 @@ struct ConsoleTests {
         }
     }
 
-    @Test("A request's detail view draws its method, status and why a body was withheld")
+    @Test("A request's detail view draws its method, status and why a body was omitted")
     func detailDrawsContent() throws {
         let logger = NetworkLogger(configuration: .init(maximumBodySize: 8))
         var request = URLRequest(url: URL(string: "https://api.example.com/upload?token=x")!)
@@ -217,8 +217,8 @@ struct ConsoleTests {
         let response = HTTPURLResponse(url: request.url!, statusCode: 201, httpVersion: nil, headerFields: ["Content-Type": "image/png"])
         let id = try #require(logger.record(request: request, response: response, body: Data([0, 1, 2]), startDate: Date()))
         let entry = try #require(logger.entry(id: id))
-        #expect(entry.requestBody?.redaction == .withheld)
-        let expected = ["POST", "201", "Withheld"]
+        #expect(entry.requestBody?.redaction == .omitted)
+        let expected = ["POST", "201", "body omitted: 28 bytes, application/json"]
         let text = try renderedText(of: NavigationStack { NetworkEntryView(entry: entry) }, expecting: expected)
         for string in expected {
             #expect(text.contains(string), "\(string) is not drawn in the detail view: \(text)")

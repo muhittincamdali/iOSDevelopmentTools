@@ -110,9 +110,15 @@ struct NetworkLoggerTests {
         let id = try #require(logger.record(request: sent, response: response("/a", status: 200), body: Data("123456".utf8), startDate: Date()))
         let entry = try #require(logger.entry(id: id))
         #expect(entry.requestBody == nil)
-        #expect(entry.responseBody?.data == Data("1234".utf8))
+        // A body cut off at the limit cannot be parsed, so it is omitted.
+        #expect(entry.responseBody?.redaction == .omitted)
+        #expect(entry.responseBody?.text?.hasPrefix("[body omitted: 6 bytes, ") == true)
         #expect(entry.responseBody?.byteCount == 6)
         #expect(entry.responseBody?.isTruncated == true)
+        // Without redaction, the first bytes are kept.
+        let raw = NetworkLogger(configuration: .init(maximumBodySize: 4, redaction: .disabled))
+        let rawID = try #require(raw.record(request: sent, response: response("/a", status: 200), body: Data("123456".utf8), startDate: Date()))
+        #expect(raw.entry(id: rawID)?.responseBody?.data == Data("1234".utf8))
     }
 
     @Test("An end date before the start gives a duration of zero, not a negative one")

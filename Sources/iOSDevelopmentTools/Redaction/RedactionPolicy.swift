@@ -1,122 +1,127 @@
 import Foundation
 
-/// Decides which values are replaced before a request or response is stored.
+/// Decides what is hidden before a request, a response or a log message is stored.
 ///
-/// A header, query parameter, form field, multipart field or JSON key is sensitive when its
-/// normalized name contains one of the policy's name fragments. Normalizing lowercases the name,
-/// removes percent-encoding, applies Unicode compatibility normalization (NFKC, so full-width
-/// `ｐａｓｓｗｏｒｄ` reads as `password`) and drops every character that is not an ASCII letter
-/// or digit, so `Authorization`, `X-API-Key`, `api_key`, `apiKey`, `API%5FKEY` and
-/// `pass\u{200B}word` all match the fragments `authorization`, `apikey` and `password`.
+/// The policy follows one rule: what it does not fully understand is hidden, never shown.
 ///
-/// Matching on fragments errs on the side of hiding too much: with the default fragments a JSON
-/// key named `author` is hidden because it contains `auth`. Pass your own fragments to change that.
+/// - **Keys** (JSON fields, query and form names, header names, `key=value` in text) are folded:
+///   escapes are decoded, then NFKC, case folding, and `_`, `-`, `.` and spaces are removed. Only a
+///   key that is then plain ASCII letters and digits is compared with ``secretNames``. Any other
+///   key, for example one with a Cyrillic letter, a zero-width character or a `[`, has its value
+///   hidden.
+/// - **Values** of secret keys are hidden whole, whatever their type. Other values are scanned
+///   for JWTs, bearer tokens, long hex or Base64 strings, card numbers, IBANs and email addresses.
+/// - **Headers** keep their value only when the name is on ``allowedHeaders``.
+/// - **URLs** lose their user info and fragment; query values are hidden unless the name is on
+///   ``allowedQueryParameters``, and path segments that look like identifiers become `:id`.
+/// - **Bodies** are parsed (JSON, forms, multipart, plain text). A body that cannot be parsed,
+///   has an unknown content type, was cut off or is larger than ``maximumCheckedBodySize`` is
+///   replaced by a note such as `[body omitted: 512 bytes, application/xml]`.
+///
+/// Redaction is a safety net, not a guarantee. Keep secrets out of logs in the first place.
 public struct RedactionPolicy: Sendable, Hashable {
-    /// The text that replaces a sensitive value.
+    /// How much of a URL is recorded.
+    public enum URLDetail: Sendable, Hashable {
+        /// Scheme, host, port, path and query, redacted.
+        case full
+        /// Scheme, host and port only.
+        case hostOnly
+    }
+
+    /// The text that replaces a hidden value.
     public static let replacement = "[REDACTED]"
 
-    /// The name fragments that the default policy treats as sensitive.
-    public static let defaultNameFragments: [String] = [
-        "auth", "cookie", "token", "secret", "password", "passwd", "passphrase", "apikey",
-        "session", "signature", "credential", "privatekey", "cardnumber", "cvv", "cvc",
+    /// The text that replaces a path segment that looks like an identifier or a secret.
+    public static let identifierPlaceholder = ":id"
+
+    /// What is recorded for a URL that cannot be parsed and has no host.
+    public static let unparsedURL = "<unparsed URL>"
+
+    /// Bodies larger than this are omitted without being parsed: 1 MiB.
+    public static let maximumCheckedBodySize = 1_048_576
+
+    /// The names whose values are always hidden: the shared list, then this library's extensions
+    /// (`passphrase`, `credential`, `cvc`, `sessid`).
+    ///
+    /// A folded key matches a name of five or more letters when it contains it (`newPassword`,
+    /// `x_refresh_token`), and a shorter name when one of its words is that name or it ends with
+    /// it (`api-key`, `userPin`, `creditcard`).
+    public static let defaultSecretNames: [String] = [
+        "password", "passwd", "pwd", "secret", "token", "access_token", "refresh_token", "id_token",
+        "api_key", "apikey", "key", "auth", "authorization", "cookie", "set-cookie", "session", "sid",
+        "otp", "pin", "cvv", "card", "iban", "ssn", "private_key", "client_secret", "signature",
+        "passphrase", "credential", "cvc", "sessid",
     ]
 
-    /// The default policy: ``defaultNameFragments``, and bodies that cannot be checked are withheld.
+    /// The headers whose values are kept by default.
+    public static let defaultAllowedHeaders: [String] = [
+        "Accept", "Accept-Encoding", "Accept-Language", "Cache-Control", "Content-Encoding",
+        "Content-Length", "Content-Type", "ETag", "User-Agent",
+    ]
+
+    /// The default policy: the default secret names and header allowlist, no query values kept.
     public static let `default` = RedactionPolicy()
 
-    /// A policy that stores everything as it was sent and received.
-    public static let disabled = RedactionPolicy(nameFragments: [], withholdsUncheckedBodies: false)
+    /// A policy that stores everything as it was sent and received. Use it only with test
+    /// servers and test accounts.
+    public static let disabled = RedactionPolicy(isEnabled: false, secretNames: [], allowedHeaders: [], allowedQueryParameters: [], urlDetail: .full)
 
-    /// The normalized name fragments. Empty fragments are dropped, because they would match every name.
-    public let nameFragments: Set<String>
+    /// Whether the policy changes anything at all.
+    public let isEnabled: Bool
 
-    /// Whether a body that looks structured (JSON, a form, multipart) but cannot be parsed, or was
-    /// cut off at the capture limit, is withheld instead of stored unchecked.
-    ///
-    /// A truncated JSON body cannot be parsed, so without this a secret in its first bytes would
-    /// be stored as it was sent.
-    public let withholdsUncheckedBodies: Bool
+    /// The folded secret names: ``defaultSecretNames`` and the names passed to the initializer.
+    public let secretNames: Set<String>
+
+    /// The folded names of the headers whose values are kept.
+    public let allowedHeaders: Set<String>
+
+    /// The folded names of the query parameters whose values are kept. Empty by default.
+    public let allowedQueryParameters: Set<String>
+
+    /// How much of a URL is recorded.
+    public let urlDetail: URLDetail
+
+    let secretNameMatcher: SecretNameMatcher
 
     /// Creates a policy.
     ///
     /// - Parameters:
-    ///   - nameFragments: Names, or parts of names, to treat as sensitive. They are normalized
-    ///     the same way as the names they are compared with.
-    ///   - withholdsUncheckedBodies: Whether to withhold structured bodies that cannot be checked.
+    ///   - additionalSecretNames: Names to hide in addition to ``defaultSecretNames``. The default
+    ///     names cannot be removed.
+    ///   - allowedHeaders: The headers whose values are kept. Headers that are always hidden
+    ///     (`Authorization`, `Cookie`, names with `token`, `key`, …) stay hidden when listed.
+    ///   - allowedQueryParameters: The query parameters whose values are kept. A secret name
+    ///     stays hidden when listed.
+    ///   - urlDetail: How much of a URL is recorded.
     public init(
-        nameFragments: some Sequence<String> = RedactionPolicy.defaultNameFragments,
-        withholdsUncheckedBodies: Bool = true
+        additionalSecretNames: [String] = [],
+        allowedHeaders: [String] = RedactionPolicy.defaultAllowedHeaders,
+        allowedQueryParameters: [String] = [],
+        urlDetail: URLDetail = .full
     ) {
-        self.nameFragments = Set(nameFragments.map(Self.normalized).filter { !$0.isEmpty })
-        self.withholdsUncheckedBodies = withholdsUncheckedBodies
+        self.init(
+            isEnabled: true, secretNames: Self.defaultSecretNames + additionalSecretNames,
+            allowedHeaders: allowedHeaders, allowedQueryParameters: allowedQueryParameters, urlDetail: urlDetail)
     }
 
-    /// Whether the policy changes anything at all.
-    public var isEnabled: Bool { !nameFragments.isEmpty }
+    private init(isEnabled: Bool, secretNames: [String], allowedHeaders: [String], allowedQueryParameters: [String], urlDetail: URLDetail) {
+        self.isEnabled = isEnabled
+        self.secretNames = Self.plainNames(secretNames)
+        secretNameMatcher = SecretNameMatcher(names: self.secretNames)
+        self.allowedHeaders = Self.plainNames(allowedHeaders)
+        self.allowedQueryParameters = Self.plainNames(allowedQueryParameters)
+        self.urlDetail = urlDetail
+    }
 
-    /// Whether a header, parameter or field with this name has its value replaced.
+    /// The folded names that can match a key; names that are empty or not plain ASCII after
+    /// folding can match nothing and are dropped.
+    private static func plainNames(_ names: [String]) -> Set<String> {
+        Set(names.map(FoldedKey.init).filter { $0.isPlain && !$0.folded.isEmpty }.map(\.folded))
+    }
+
+    /// Whether a value under this key (a JSON field, a query or form name, a header name) is
+    /// hidden: the key is a secret name, or it is not plain ASCII after folding.
     public func isSensitive(name: String) -> Bool {
-        guard isEnabled else { return false }
-        let normalizedName = Self.normalized(name)
-        guard !normalizedName.isEmpty else { return false }
-        return nameFragments.contains { normalizedName.contains($0) }
-    }
-
-    /// The name reduced to lowercase ASCII letters and digits, after removing percent-encoding
-    /// and applying NFKC.
-    ///
-    /// Decoding is repeated (at most four times) so a doubly encoded name is caught as well. NFKC
-    /// maps full-width, circled, ligature and similar compatibility forms to the letters they stand
-    /// for; without it they would be dropped as non-ASCII and hide the name.
-    static func normalized(_ name: String) -> String {
-        var decoded = name.replacingOccurrences(of: "+", with: " ")
-        for _ in 0..<4 {
-            // A byte test: a prepended mark such as U+0600 joins a "%" into one Character.
-            guard decoded.utf8.contains(UInt8(ascii: "%")) else { break }
-            let next = percentDecoded(decoded)
-            guard next != decoded else { break }
-            decoded = next
-        }
-        var result = String.UnicodeScalarView()
-        for scalar in decoded.precomposedStringWithCompatibilityMapping.unicodeScalars where scalar.isASCII {
-            switch scalar.value {
-            case 0x30...0x39, 0x61...0x7A: result.append(scalar)
-            case 0x41...0x5A: result.append(Unicode.Scalar(UInt8(scalar.value + 0x20)))
-            default: continue
-            }
-        }
-        return String(result)
-    }
-
-    /// The text with every valid `%XX` sequence decoded and everything else kept.
-    ///
-    /// Each sequence is decoded on its own, unlike `removingPercentEncoding`, which gives up on the
-    /// whole string when one sequence is invalid: `pass%77ord%ZZ` becomes `password%ZZ`. Bytes that
-    /// do not form UTF-8 are replaced, which cannot hide a name because only ASCII is kept.
-    static func percentDecoded(_ text: String) -> String {
-        let bytes = Array(text.utf8)
-        var decoded: [UInt8] = []
-        decoded.reserveCapacity(bytes.count)
-        var index = 0
-        while index < bytes.count {
-            if bytes[index] == UInt8(ascii: "%"), index + 2 < bytes.count,
-               let high = hexValue(bytes[index + 1]), let low = hexValue(bytes[index + 2]) {
-                decoded.append(high << 4 | low)
-                index += 3
-            } else {
-                decoded.append(bytes[index])
-                index += 1
-            }
-        }
-        return String(decoding: decoded, as: UTF8.self)
-    }
-
-    private static func hexValue(_ byte: UInt8) -> UInt8? {
-        switch byte {
-        case 0x30...0x39: byte - 0x30
-        case 0x41...0x46: byte - 0x41 + 10
-        case 0x61...0x66: byte - 0x61 + 10
-        default: nil
-        }
+        isEnabled && hidesValue(of: FoldedKey(name))
     }
 }

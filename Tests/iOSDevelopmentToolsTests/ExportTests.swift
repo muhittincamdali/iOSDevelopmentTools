@@ -35,8 +35,10 @@ struct ExportTests {
 
     @Test("A GET becomes a quoted curl command with sorted headers")
     func curlGET() throws {
-        let command = try entry("https://api.example.com/v1/items?page=2", headers: ["Accept": "application/json", "X-Trace": "abc"]).curlCommand()
-        #expect(command == "curl --globoff 'https://api.example.com/v1/items?page=2' -H 'Accept: application/json' -H 'X-Trace: abc'")
+        let lenient = NetworkLogger.Configuration(redaction: RedactionPolicy(allowedHeaders: ["Accept", "X-Trace"], allowedQueryParameters: ["page"]))
+        let command = try entry("https://api.example.com/v1/items?page=2&q=x", headers: ["Accept": "application/json", "X-Trace": "abc", "X-Other": "1"],
+                                configuration: lenient).curlCommand()
+        #expect(command == "curl --globoff 'https://api.example.com/v1/items?page=2&q=[REDACTED]' -H 'Accept: application/json' -H 'X-Other: [REDACTED]' -H 'X-Trace: abc'")
     }
 
     @Test("Methods, bodies and redacted values are written as curl expects")
@@ -45,19 +47,22 @@ struct ExportTests {
             "https://api.example.com/login?token=t",
             method: "POST",
             headers: ["Content-Type": "application/json", "Content-Length": "40", "X-Empty": ""],
-            body: Data(#"{"note":"it's","password":"p"}"#.utf8)
+            body: Data(#"{"note":"it's","password":"p"}"#.utf8),
+            configuration: .init(redaction: RedactionPolicy(allowedHeaders: RedactionPolicy.defaultAllowedHeaders + ["X-Empty"]))
         ).curlCommand()
         #expect(command == #"curl --globoff -X 'POST' 'https://api.example.com/login?token=[REDACTED]' -H 'Content-Type: application/json' -H 'X-Empty;' --data-binary '{"note":"it'\''s","password":"[REDACTED]"}'"#)
     }
 
     @Test("Bodies that cannot be repeated are left out with a comment", arguments: [
-        ("application/json", Data(#"{"password":"#.utf8), 1024, "withheld by redaction"),
-        ("text/plain", Data(repeating: 65, count: 64), 16, "only 16 of 64 bytes were stored"),
-        ("application/octet-stream", Data([0x00, 0xFF, 0x10]), 1024, "3 bytes of binary data"),
+        ("application/json", Data(#"{"password":"#.utf8), 1024, RedactionPolicy.default, "omitted by redaction (12 bytes)"),
+        ("application/octet-stream", Data([0x00, 0xFF, 0x10]), 1024, .default, "omitted by redaction (3 bytes)"),
+        ("text/plain", Data(repeating: 65, count: 64), 16, .default, "omitted by redaction (64 bytes)"),
+        ("text/plain", Data(repeating: 65, count: 64), 16, .disabled, "only 16 of 64 bytes were stored"),
+        ("application/octet-stream", Data([0x00, 0xFF, 0x10]), 1024, .disabled, "3 bytes of binary data"),
     ])
-    func curlOmittedBodies(contentType: String, body: Data, limit: Int, note: String) throws {
+    func curlOmittedBodies(contentType: String, body: Data, limit: Int, policy: RedactionPolicy, note: String) throws {
         let command = try entry("https://e.com/", method: "PUT", headers: ["Content-Type": contentType], body: body,
-                                configuration: .init(maximumBodySize: limit)).curlCommand()
+                                configuration: .init(maximumBodySize: limit, redaction: policy)).curlCommand()
         let lines = command.split(separator: "\n")
         #expect(lines.count == 2)
         #expect(lines[0].hasPrefix("# Request body left out: ") && lines[0].contains(note))
@@ -103,7 +108,8 @@ struct ExportTests {
     @Test("The archive has the HAR 1.2 structure, oldest entry first")
     func harStructure() throws {
         let later = try entry("https://e.com/b", offset: 10)
-        let earlier = try entry("https://e.com/a?q=a%20b&token=x", headers: ["Accept": "*/*"], responseHeaders: ["Content-Type": "text/plain"], responseBody: Data("hello".utf8))
+        let earlier = try entry("https://e.com/a?q=a%20b&token=x", headers: ["Accept": "*/*"], responseHeaders: ["Content-Type": "text/plain"],
+                                responseBody: Data("hello".utf8), configuration: .init(redaction: RedactionPolicy(allowedQueryParameters: ["q"])))
         let log = try harObject([later, earlier])
         #expect(log["version"] as? String == "1.2")
         let creator = try #require(log["creator"] as? [String: Any])
@@ -134,25 +140,31 @@ struct ExportTests {
         #expect(timings["dns"] == -1)
     }
 
-    @Test("Binary, withheld and failed requests are described, not lost")
+    @Test("Binary, omitted and failed requests are described, not lost")
     func harBodies() throws {
-        let binary = try entry("https://e.com/img", responseHeaders: ["Content-Type": "image/png"], responseBody: Data([0x89, 0x50, 0xFF]))
-        let withheld = try entry("https://e.com/w", method: "POST", headers: ["Content-Type": "application/json"], body: Data("{bad".utf8))
+        let image = try entry("https://e.com/img", responseHeaders: ["Content-Type": "image/png"], responseBody: Data([0x89, 0x50, 0xFF]))
+        let binary = try entry("https://e.com/raw", responseHeaders: ["Content-Type": "image/png"], responseBody: Data([0x89, 0x50, 0xFF]),
+                               configuration: .init(redaction: .disabled))
+        let malformed = try entry("https://e.com/w", method: "POST", headers: ["Content-Type": "application/json"], body: Data("{bad".utf8))
         let failed = try entry("https://e.com/f", status: nil, error: URLError(.timedOut))
-        let entries = try #require(try harObject([binary, withheld, failed])["entries"] as? [[String: Any]])
+        let entries = try #require(try harObject([image, binary, malformed, failed])["entries"] as? [[String: Any]])
 
-        let binaryContent = try #require((entries[0]["response"] as? [String: Any])?["content"] as? [String: Any])
+        let imageContent = try #require((entries[0]["response"] as? [String: Any])?["content"] as? [String: Any])
+        #expect(imageContent["text"] as? String == "[body omitted: 3 bytes, image/png]")
+        #expect((imageContent["comment"] as? String)?.hasPrefix("Omitted by redaction") == true)
+
+        let binaryContent = try #require((entries[1]["response"] as? [String: Any])?["content"] as? [String: Any])
         #expect(binaryContent["encoding"] as? String == "base64")
         #expect(binaryContent["text"] as? String == Data([0x89, 0x50, 0xFF]).base64EncodedString())
 
-        let postData = try #require((entries[1]["request"] as? [String: Any])?["postData"] as? [String: Any])
-        #expect(postData["text"] as? String == "")
-        #expect((postData["comment"] as? String)?.hasPrefix("Withheld by redaction") == true)
+        let postData = try #require((entries[2]["request"] as? [String: Any])?["postData"] as? [String: Any])
+        #expect(postData["text"] as? String == "[body omitted: 4 bytes, application/json]")
+        #expect((postData["comment"] as? String)?.hasPrefix("Omitted by redaction") == true)
 
-        let failedResponse = try #require(entries[2]["response"] as? [String: Any])
+        let failedResponse = try #require(entries[3]["response"] as? [String: Any])
         #expect(failedResponse["status"] as? Int == 0)
         #expect(failedResponse["bodySize"] as? Int == -1)
-        #expect((entries[2]["comment"] as? String)?.contains("NSURLErrorDomain -1001") == true)
+        #expect((entries[3]["comment"] as? String)?.contains("NSURLErrorDomain -1001") == true)
     }
 
     @Test("Metrics timings are used when present, and their sum is the total time")

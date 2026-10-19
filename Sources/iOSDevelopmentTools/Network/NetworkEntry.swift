@@ -4,7 +4,8 @@ import Foundation
 public struct HTTPHeader: Sendable, Hashable, Codable {
     /// The header name, as it was sent or received.
     public let name: String
-    /// The header value, or ``RedactionPolicy/replacement`` when the name is sensitive.
+    /// The header value, or ``RedactionPolicy/replacement`` when the header is not on the
+    /// policy's allowlist or its name is sensitive.
     public let value: String
 
     /// Creates a header.
@@ -27,13 +28,14 @@ public struct HTTPHeader: Sendable, Hashable, Codable {
 
 /// A request or response body as it was stored: possibly cut off, possibly redacted.
 public struct CapturedBody: Sendable, Hashable {
-    /// The stored bytes. Empty when the body was withheld.
+    /// The stored bytes. When the body was omitted, a note such as
+    /// `[body omitted: 512 bytes, application/xml]`.
     public let data: Data
     /// How many bytes the body had as it was sent or received, including bytes that were not
     /// stored. Redaction can make ``data`` longer or shorter than this.
     public let byteCount: Int
-    /// Whether only the first bytes were stored because the body was larger than
-    /// ``NetworkLogger/Configuration/maximumBodySize``.
+    /// Whether the body was larger than ``NetworkLogger/Configuration/maximumBodySize``. Such a
+    /// body cannot be parsed, so redaction omits it.
     public let isTruncated: Bool
     /// What redaction did to the stored bytes.
     public let redaction: RedactionOutcome
@@ -53,7 +55,7 @@ public struct CapturedBody: Sendable, Hashable {
     ///   - byteCount: The size of the whole body.
     static func capture(prefix: Data, byteCount: Int, contentType: String?, policy: RedactionPolicy) -> CapturedBody {
         let isTruncated = byteCount > prefix.count
-        let (data, outcome) = policy.redact(body: prefix, contentType: contentType, isComplete: !isTruncated)
+        let (data, outcome) = policy.redact(body: prefix, contentType: contentType, isComplete: !isTruncated, byteCount: byteCount)
         return CapturedBody(data: data, byteCount: byteCount, isTruncated: isTruncated, redaction: outcome)
     }
 
@@ -137,7 +139,8 @@ public struct NetworkEntry: Sendable, Identifiable, Hashable {
     public let url: String
     /// The host the request went to.
     public let host: String?
-    /// The URL path, without query or fragment, with `;name=value` parameters redacted.
+    /// The URL path, without query or fragment, redacted like ``url``; empty when the policy
+    /// records the host only.
     public let path: String
     /// The request headers, sorted by name and redacted.
     public let requestHeaders: [HTTPHeader]
@@ -152,8 +155,11 @@ public struct NetworkEntry: Sendable, Identifiable, Hashable {
     public internal(set) var responseHeaders: [HTTPHeader] = []
     /// The response body, once it finished loading.
     public internal(set) var responseBody: CapturedBody?
-    /// The `Content-Type` of the response, if any.
+    /// The `Content-Type` of the response as its header shows it, redacted, or the MIME type the
+    /// system derived.
     public internal(set) var responseContentType: String?
+    /// The `Content-Type` header as received, kept only to parse the response body when it ends.
+    var receivedContentType: String?
     /// The error the request failed with.
     public internal(set) var error: NetworkError?
     /// Where the server redirected the request, redacted. The redirected request is a separate entry.
@@ -170,7 +176,7 @@ public struct NetworkEntry: Sendable, Identifiable, Hashable {
         self.method = request.httpMethod ?? "GET"
         self.url = request.url.map(policy.redact(url:)) ?? ""
         self.host = request.url?.host()
-        self.path = request.url.map { policy.redact(urlString: $0.path(percentEncoded: true)) } ?? ""
+        self.path = request.url.map(policy.redactedPath(of:)) ?? ""
         self.requestHeaders = policy.redact(headers: HTTPHeader.sorted(request.allHTTPHeaderFields ?? [:]))
         self.requestBody = body
     }
@@ -186,7 +192,7 @@ public struct NetworkEntry: Sendable, Identifiable, Hashable {
         endDate.map { max(0, $0.timeIntervalSince(startDate)) }
     }
 
-    /// The `Content-Type` of the request, if any.
+    /// The `Content-Type` of the request as its stored header shows it, if any.
     public var requestContentType: String? {
         HTTPHeader.value(named: "Content-Type", in: requestHeaders)
     }
