@@ -71,6 +71,19 @@ struct RedactionPolicyTests {
         #expect(disabled.redact(text: "password=hunter2") == "password=hunter2")
     }
 
+    @available(*, deprecated)
+    @Test("The 2.0.0 names still build and hide at least as much as before")
+    func deprecatedNames() {
+        let policy = RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["license_number"])
+        #expect(policy.isSensitive(name: "licenseNumber") && policy.isSensitive(name: "password"))
+        #expect(policy.nameFragments == policy.secretNames && policy.withholdsUncheckedBodies)
+        // An empty list no longer turns redaction off, and unparsed bodies are omitted either way.
+        let lenient = RedactionPolicy(nameFragments: [], withholdsUncheckedBodies: false)
+        #expect(lenient.isSensitive(name: "token"))
+        #expect(RedactionPolicy(withholdsUncheckedBodies: false) == .default)
+        #expect(lenient.redact(body: Data(#"{"a":"#.utf8), contentType: "application/json").outcome == .withheld)
+    }
+
     // MARK: Headers
 
     @Test("Only allowlisted headers keep their values")
