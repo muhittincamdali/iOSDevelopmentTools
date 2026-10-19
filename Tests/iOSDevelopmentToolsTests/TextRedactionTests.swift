@@ -61,6 +61,8 @@ struct TextRedactionTests {
         ("paid with 4111-1111-1111-1112 today", "paid with 4111-1111-1111-1112 today"),
         ("to DE89 3704 0044 0532 0130 00 now", "to [REDACTED] now"),
         ("to DE89 3704 0044 0532 0130 01 now", "to DE89 3704 0044 0532 0130 01 now"),
+        ("to DE89 3704 0044 0532 0130 00 and", "to [REDACTED] and"), ("DE89370400440532013000.", "[REDACTED]."),
+        ("ref BF65030133E1 placed", "ref BF65030133E1 placed"),
         ("mail ada.l+x@example.co.uk now", "mail [REDACTED] now"),
         ("Order E621E1F8-C36C-495A-93FC-0C247A3E6E5F placed", "Order E621E1F8-C36C-495A-93FC-0C247A3E6E5F placed"),
         ("/Users/ada/Library/Developer/CoreSimulator/Devices/1A2B/data", "/Users/ada/Library/Developer/CoreSimulator/Devices/1A2B/data"),

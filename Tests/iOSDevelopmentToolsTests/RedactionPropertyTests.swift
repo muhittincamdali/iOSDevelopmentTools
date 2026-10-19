@@ -100,6 +100,12 @@ struct RedactionPropertyTests {
             "Giriş başarılı, 3 öğe yüklendi", "Family 👨‍👩‍👧 joined the café", "Загружено 5 элементов", "設定を保存しました",
         ]
         for line in lines { #expect(policy.redact(text: line) == line) }
+        // The digits of a UUID can pass the Luhn check; they are not laid out as a card number.
+        for _ in 0..<5_000 {
+            let line = "Order \(UUID().uuidString) placed, ref \(UUID().uuidString.lowercased())"
+            #expect(policy.redact(text: line) == line)
+        }
+        #expect(policy.redact(text: "id AB123456-1234-4234-8230-ABCDEF123456") == "id AB123456-1234-4234-8230-ABCDEF123456")
         let url = try #require(URL(string: "https://e.com/v1/items/42?page=2&sort=asc"))
         #expect(RedactionPolicy(allowedQueryParameters: ["page", "sort"]).redact(url: url) == url.absoluteString)
     }

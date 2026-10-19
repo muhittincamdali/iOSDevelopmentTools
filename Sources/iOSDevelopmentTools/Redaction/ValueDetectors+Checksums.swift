@@ -6,6 +6,9 @@ extension ValueDetectors {
         static let cardDigits = 13...19
         static let ibanLength = 15...34
 
+        /// Card numbers written in groups have at most this many digits per group (4-4-4-4, 4-6-5).
+        static let maximumCardGroupLength = 6
+
         /// 13 to 19 digits, optionally grouped by single spaces or hyphens, that pass the Luhn check.
         static func cardNumbers(in scalars: [Unicode.Scalar]) -> [Range<Int>] {
             var ranges: [Range<Int>] = []
@@ -17,21 +20,37 @@ extension ValueDetectors {
                 }
                 let start = index
                 var digits: [Int] = []
+                var groupLengths = [0]
                 var end = index
                 while index < scalars.count {
                     if isDigit(scalars[index]) {
                         digits.append(Int(scalars[index].value - 0x30))
+                        groupLengths[groupLengths.count - 1] += 1
                         index += 1
                         end = index
                     } else if scalars[index] == " " || scalars[index] == "-", index + 1 < scalars.count, isDigit(scalars[index + 1]) {
+                        groupLengths.append(0)
                         index += 1
                     } else {
                         break
                     }
                 }
-                if cardDigits.contains(digits.count), passesLuhn(digits) { ranges.append(start..<end) }
+                if cardDigits.contains(digits.count), passesLuhn(digits), isCardLayout(groupLengths, start..<end, in: scalars) {
+                    ranges.append(start..<end)
+                }
             }
             return ranges
+        }
+
+        /// Whether grouped digits are laid out as a card number: groups of at most six digits that
+        /// stand as their own word. The digits of a UUID such as `ab123456-1234-4234-8234-123456abcdef`
+        /// are not, so an identifier in a log line is kept.
+        private static func isCardLayout(_ groupLengths: [Int], _ range: Range<Int>, in scalars: [Unicode.Scalar]) -> Bool {
+            guard groupLengths.count > 1 else { return true }
+            guard groupLengths.allSatisfy({ $0 <= maximumCardGroupLength }) else { return false }
+            let touchesWordBefore = range.lowerBound > 0 && isLetterOrDigit(scalars[range.lowerBound - 1])
+            let touchesWordAfter = range.upperBound < scalars.count && isLetterOrDigit(scalars[range.upperBound])
+            return !touchesWordBefore && !touchesWordAfter
         }
 
         /// Whether a number passes the Luhn check that card numbers carry in their last digit.
@@ -44,8 +63,8 @@ extension ValueDetectors {
             return sum % 10 == 0
         }
 
-        /// A country code, two check digits and up to 30 letters or digits, optionally grouped by
-        /// single spaces, whose mod-97 remainder is 1.
+        /// A country code, two check digits and up to 30 letters or digits, written as one word or in
+        /// groups of four separated by single spaces, whose mod-97 remainder is 1.
         static func ibans(in scalars: [Unicode.Scalar]) -> [Range<Int>] {
             var ranges: [Range<Int>] = []
             var index = 0
@@ -66,26 +85,31 @@ extension ValueDetectors {
                 && isDigit(scalars[index + 2]) && isDigit(scalars[index + 3])
         }
 
-        /// The end of the longest valid IBAN that starts at `start`.
+        /// IBANs printed in groups have this many characters per group, the last one fewer.
+        static let ibanGroupLength = 4
+
+        /// The end of the IBAN that starts at `start`: its whole first word, or, when that word is
+        /// a group of four, the longest run of following groups that is a valid IBAN. It always
+        /// ends where a word ends, so the start of a longer word is never taken for one.
         private static func ibanEnd(_ scalars: [Unicode.Scalar], from start: Int) -> Int? {
-            var characters: [Unicode.Scalar] = []
-            var ends: [Int] = []
             var index = start
-            while index < scalars.count, characters.count < ibanLength.upperBound {
-                if isLetterOrDigit(scalars[index]) {
-                    characters.append(scalars[index])
-                    index += 1
-                    ends.append(index)
-                } else if scalars[index] == " ", index + 1 < scalars.count, isLetterOrDigit(scalars[index + 1]) {
-                    index += 1
-                } else {
-                    break
+            while index < scalars.count, isLetterOrDigit(scalars[index]) { index += 1 }
+            var characters = Array(scalars[start..<index])
+            var ends = [(index, characters.count)]
+            if characters.count == ibanGroupLength {
+                while index + 1 < scalars.count, scalars[index] == " ", characters.count < ibanLength.upperBound {
+                    var groupEnd = index + 1
+                    while groupEnd < scalars.count, isLetterOrDigit(scalars[groupEnd]) { groupEnd += 1 }
+                    let groupLength = groupEnd - index - 1
+                    guard (1...ibanGroupLength).contains(groupLength) else { break }
+                    characters += scalars[(index + 1)..<groupEnd]
+                    index = groupEnd
+                    ends.append((index, characters.count))
+                    if groupLength < ibanGroupLength { break }
                 }
             }
-            guard characters.count >= ibanLength.lowerBound else { return nil }
-            for length in stride(from: characters.count, through: ibanLength.lowerBound, by: -1)
-            where mod97(characters[..<length]) == 1 {
-                return ends[length - 1]
+            for (end, count) in ends.reversed() where ibanLength.contains(count) && mod97(characters[..<count]) == 1 {
+                return end
             }
             return nil
         }
