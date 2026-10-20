@@ -229,8 +229,9 @@ The triggers:
 - **A secret name**, with or without a separator, quoted or not: `password=…`, `password …`,
   `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`, `Bearer: …`. The text is hidden from the value
   after the name. Punctuation inside a word is read as a separator (`pass~word`), two words are
-  read together (`pass word`), and one letter that has no ASCII form is read as any letter
-  (`passꞏword`).
+  read together (`pass word`), and one letter that has no ASCII form is read as any letter or,
+  between two letters, as none (`passꞏword`). The plural `s` is a letter of the word here too:
+  `tokenꞏ` reads as `tokens` and `tokenꞏs` as `tokens`.
 - **A secret name written as a value.** After a key that holds a name and that the app allows
   (`name`, `key`, `label`, `type`, `id`, …, but never `path`, the route of a request), a name that
   names a secret, is not plain ASCII or is JSON: `name="password"`, `label="Пароль"`,
