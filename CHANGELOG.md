@@ -7,60 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Redaction now follows one shared specification instead of a patch per reported bypass. The rule:
-what the policy does not fully understand is hidden, never shown. Redaction is a safety net, not
-a guarantee; keep secrets out of logs in the first place.
+Redaction follows one shared specification instead of a patch per reported bypass. The rule: what
+the policy does not fully understand is hidden, never shown. It is built for secrets recorded by
+accident; structured input is default-safe and free text is a best effort with one cut point (see
+"Threat model" in the redaction guide). Redaction is a safety net, not a guarantee; keep secrets
+out of logs in the first place.
 
 ### Security
 
-- Keys (JSON fields, query, form and multipart names, header names, `key=value` in text) are
-  folded first: percent, `\u` and `&#` escapes are decoded, then NFKC, case folding, and `_`, `-`,
-  `.` and spaces are removed. Only a key that is then plain ASCII letters and digits is compared
-  with the secret names. Any other key (look-alike letters from another script, format characters
-  such as ZWJ or a soft hyphen, combining marks, other separators) has its value hidden. A key
-  that matches hides its whole value, whatever its type.
-- Bodies are parsed, never scanned by hand: JSON with `JSONSerialization`, redacted on the parsed
-  tree and serialized again (so of a repeated key only the value the parse kept is stored), forms
-  with the platform's percent decoding, multipart with a strict RFC 2046 parser that always omits
-  file parts. A body with an unknown or missing content type, one that does not parse, one that
-  was cut off, one over 1 MiB and JSON in a charset other than UTF-8, UTF-16 or UTF-32 is
-  replaced by a note such as `[body omitted: 512 bytes, application/xml]`. In 2.0.0, plain-text,
-  XML and other bodies were stored unchecked.
+- Keys (JSON member names, form, query and multipart field names, header names) are read after
+  their escapes are decoded by the parser. Only a key made of ASCII letters, digits, `_`, `-`, `.`
+  and spaces is compared with the secret names, with the separators folded away and the letters
+  lowercased. Any other key has its value hidden: a letter outside ASCII (also a full-width one),
+  look-alike letters from another script, format characters such as ZWJ or a soft hyphen,
+  combining marks, other punctuation, an empty key and a key longer than 256 characters. A key
+  that matches hides its whole value, whatever its type, at every repetition.
+- Names written as values are read by the same rule: `{"name":"Authorization","value":…}`, JSON
+  Patch and SCIM `{"op":…,"path":"/password","value":…}`, `label=Password&value=…`,
+  `[["Authorization","…"]]`, and a name that is not plain ASCII or has no letter or digit
+  (`Şifre`, `ⓟⓘⓝ`, `🔑`) hide the values beside them.
+- Bodies are parsed, never scanned by hand: JSON with a JSON parser whose tree must agree with
+  `JSONSerialization` (stored as sent, with hidden values replaced, so it stays valid JSON), forms
+  with the platform's percent decoding, multipart with a strict RFC 2046 and RFC 7578 parser that
+  always omits file parts and file names. A body is omitted with a note such as
+  `[body omitted: 512 bytes, application/xml]` when its content type is unknown or missing, when it
+  does not parse completely, was cut off or is over 1 MiB, when JSON is in another encoding than
+  its `charset` names, and when a common server parser could split it into fields differently: a
+  form with a `;`, a bare `%` or a name spelled two ways, a multipart body with `--boundary` other
+  than at a CRLF delimiter, LF-only part headers, or a quoted, repeated or over-long boundary. In
+  2.0.0, plain-text, XML and other bodies were stored unchecked.
 - Headers keep their values only when they are on an allowlist (by default `Accept`,
   `Accept-Encoding`, `Accept-Language`, `Cache-Control`, `Content-Encoding`, `Content-Length`,
   `Content-Type`, `ETag` and `User-Agent`). `Authorization`, `Proxy-Authorization`, `Cookie`,
-  `Set-Cookie`, `X-Api-Key` and names with `token`, `secret`, `key`, `auth`, `session` or
-  `signature` stay hidden when listed.
+  `Set-Cookie`, `X-Api-Key`, names with `token`, `secret`, `key`, `auth`, `session` or `signature`
+  and names that are not ASCII tokens stay hidden when listed, and so do values that start with an
+  authentication scheme, as in 2.0.0.
 - URLs lose their user info and fragment. Query values are hidden unless the parameter is on an
-  allowlist, which is empty by default. Path segments that look like identifiers or secrets
-  (UUIDs, numbers of six or more digits, long hex or Base64, JWTs, mixed tokens of 16 or more
-  characters) become `:id`.
-- Values of other keys, kept header values and free text are scanned for JWTs, bearer
-  credentials, hex or Base64 strings of 32 or more characters, card numbers (Luhn), IBANs
-  (mod 97) and email addresses.
-- `LogStore` messages and the error descriptions of failed requests are redacted with the
-  free-text rule: `key=value`, `key: value` and `"key":"value"` follow the key rule, a secret word
-  without `=` or `:` hides the rest of the line, a key and its value on two lines are both found,
-  and U+2028, U+2029, U+0085, vertical tab and form feed are folded to line feeds first.
+  allowlist, which is empty by default, and a query that servers could split differently is
+  written as `?[REDACTED]`. Path segments that look like identifiers or secrets become `:id`, and
+  so does the segment after one that names a secret. A path of more than 64 segments or a query of
+  more than 128 parameters is recorded with its scheme, host and port only.
+- Free text (`LogStore` messages, error descriptions of failed requests, kept header values,
+  `text/plain` bodies and the strings of structured input) has one cut point: from the first
+  trigger, everything to the end of the text is hidden, the lines below included. The triggers
+  are a secret name with or without a separator, quoted or not, also written as a value
+  (`name="pin"`, `<key>password</key>`); a key that is not plain ASCII, has no letter or digit, or
+  is missing; the words of a key that name a secret when read together (`pass word=`); a separator
+  that is escaped (`%3D`, `&#61;`, `\=`) or only looks like one; a word that mixes scripts or holds
+  an invisible character; a quote or bracket that does not close; and JSON that does not parse. A
+  trigger inside a tag hides the tag from its `<`. Text with no trigger is kept as it is, apart
+  from the value detectors, and JSON in it is read by the key rule of structured input.
+- Values are scanned for JWTs, bearer credentials, hex or Base64 strings of 32 or more characters,
+  card numbers (Luhn), IBANs (mod 97), email addresses with names and domains in any script and the
+  password in `user:password@host`, in the same way in bodies, free text, URLs and JSON strings.
+- Hostile input is bounded: JSON may be open 64 levels deep across every document a text is in, at
+  most four documents are read one inside another, and the documents found in one input read at
+  most four times its length. The tests run on a thread with 512 KiB of stack and, in a release
+  build, check that a megabyte of input takes less than a second and, on macOS, that a megabyte of
+  free text takes less than 16 MB of memory beyond the input.
 
 ### Added
 
 - `RedactionPolicy(additionalSecretNames:allowedHeaders:allowedQueryParameters:urlDetail:)`,
   `redact(text:)`, `URLDetail` (`.hostOnly` records only scheme, host and port),
   `defaultSecretNames`, `defaultAllowedHeaders`, `secretNames`, `allowedHeaders`,
-  `allowedQueryParameters` and `LogStore.Configuration.redaction`.
-- A test for each bypass class of the specification, property tests with generated obfuscations
-  of every secret name and generated secrets, and tests that ordinary keys, allowlisted headers
-  and log lines are kept. Every bypass reported against 2.0.0 is kept as a test. 158 tests run on
-  macOS.
+  `allowedQueryParameters`, `maximumJSONDepth`, `maximumNestedDocuments`, `maximumPathSegments`,
+  `maximumQueryParameters` and `LogStore.Configuration.redaction`.
+- A test for each bypass class of the specification, every bypass reported against earlier
+  versions, the test inputs of 2.0.0, property tests with generated obfuscations of every secret
+  name, generated triggers after which no value may show and generated keys, tests that ordinary
+  keys, allowlisted headers and text with no trigger stay readable, parser-differential, stack,
+  time-limit and peak-memory tests, and the examples of the guide. 443 tests run on macOS and
+  440 on an iOS simulator.
 
 ### Changed
 
 - `RedactionOutcome.withheld` is now `.omitted`, and an omitted body stores the note in place of
   its bytes. The console, HAR files and cURL commands say why a body is missing.
-- Secret names replace name fragments: a name of five or more letters matches anywhere in a
-  folded key, a shorter one (`key`, `pin`, `sid`) as one of its words or at its end, so
-  `keyboard` keeps its value while `author` no longer matches `auth`.
+- Secret names replace name fragments: a name of five or more letters counts anywhere in a key, a
+  shorter one (`key`, `pin`, `otp`) as one of its words or at its end, and `pass`, `pw` and `sid`
+  only as a word, so `keyboard` and `bypass` keep their values while `author` no longer matches
+  `auth`. `bearer` is one of the names, since what follows it is a credential.
+- JSON bodies are stored as sent instead of serialized again, and UTF-16 and UTF-32 JSON is stored
+  as UTF-8. A query parameter without `=` is kept only when it is allowlisted.
 
 ### Deprecated
 
