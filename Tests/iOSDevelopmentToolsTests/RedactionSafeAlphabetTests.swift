@@ -52,7 +52,7 @@ struct RedactionSafeAlphabetTests {
                 #expect(!output.contains(Self.secret), "U+\(String(scalar.value, radix: 16, uppercase: true)): \(text.debugDescription) -> \(output.debugDescription)")
             }
         }
-        for text in ["user\u{2014} \(Self.secret)", "note\u{2192}\(Self.secret)", "ok \u{1F511} \(Self.secret)", "x\u{E000}\(Self.secret)", "x\u{0378}\(Self.secret)", "a\u{2800}\(Self.secret)", "ok \u{07} \(Self.secret)", "ok \u{85}x \u{9F} \(Self.secret)"] {
+        for text in ["user\u{2014} \(Self.secret)", "note\u{2192}\(Self.secret)", "ok \u{1F511} \(Self.secret)", "x\u{E000}\(Self.secret)", "x\u{0378}\(Self.secret)", "a\u{2800}\(Self.secret)", "ok \u{07} \(Self.secret)", "ok \u{85}x \u{9F} \(Self.secret)", "ok\u{1680}\(Self.secret)"] {
             for output in stored(text) {
                 #expect(!output.contains(Self.secret), "\(text.debugDescription) -> \(output.debugDescription)")
             }
@@ -62,7 +62,7 @@ struct RedactionSafeAlphabetTests {
     @Test("letters, marks and digits of any script are text", arguments: [
         "Kullanıcı İstanbul'da giriş yaptı", "Straße naïve café", "Zaloguj się, użytkownik", "заказ №42 отправлен", "张伟 登录成功",
         "ユーザー登録", "Γειά σου κόσμε", "שלום עולם", "مرحبا بالعالم", "١٢٣ ٤٥٦", "½ cup, x² + y²", "took 120µs", "ｆｕｌｌ ｗｉｄｔｈ",
-        "done \u{1F44D}", "status=200 \u{2026}",
+        "done \u{1F44D}", "status=200 \u{2026}", "a\u{A0}b\u{3000}c\u{2003}d",
     ])
     func safeText(text: String) {
         #expect(policy.redact(text: text) == text)

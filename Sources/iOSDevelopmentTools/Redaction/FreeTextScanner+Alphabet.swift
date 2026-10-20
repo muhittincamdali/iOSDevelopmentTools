@@ -6,8 +6,8 @@ extension FreeTextScanner {
     /// normalization reads as ASCII (`＝`, `…`, `™`, `ｐ`) is read as that ASCII. Any other
     /// punctuation mark or symbol is outside (`꞉`, `≔`, `→`, `·`, `’`, `€`, `、`), and so is an
     /// emoji, a skin tone, a private-use or unassigned code point, a dash outside ASCII (`—`,
-    /// `゠`), which the scanning copy reads as `-`, and the blank Braille pattern, which it reads
-    /// as a space. A modifier letter (`ʻ`, `ː`) is written as a separator as often as a letter,
+    /// `゠`), which the scanning copy reads as `-`, and a space that compatibility normalization
+    /// does not read as an ASCII space (U+1680, the blank Braille pattern), which it reads as one. A modifier letter (`ʻ`, `ː`) is written as a separator as often as a letter,
     /// so it is outside too, apart from those of East Asian text (`ー`), unless one is glued to
     /// ASCII.
     func isOutsideSafeAlphabet(_ i: Int) -> Bool {
@@ -15,7 +15,7 @@ extension FreeTextScanner {
         guard byte == CompatibilityText.unreadable || byte == UInt8(ascii: "-") || byte == UInt8(ascii: " ") else { return false }
         let scalar = source[text.offsets[i]]
         guard !scalar.isASCII else { return false }
-        if byte == UInt8(ascii: " ") { return !scalar.properties.isWhitespace }
+        if byte == UInt8(ascii: " ") { return !compatibility.foldsToASCII(scalar) }
         if byte == UInt8(ascii: "-") { return !compatibility.foldsToASCII(scalar) }
         switch scalar.properties.generalCategory {
         case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .otherLetter, .nonspacingMark, .spacingMark, .enclosingMark,
