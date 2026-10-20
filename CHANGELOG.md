@@ -31,7 +31,8 @@ out of logs in the first place.
   with the platform's percent decoding, multipart with a strict RFC 2046 and RFC 7578 parser that
   always omits file parts and file names. A body is omitted with a note such as
   `[body omitted: 512 bytes, application/xml]` when its content type is unknown or missing, when it
-  does not parse completely, was cut off or is over 1 MiB, when JSON is in another encoding than
+  does not parse completely, was cut off or is over `maximumBodySize` (256 KiB by default, at
+  most 16 MiB), when JSON is in another encoding than
   its `charset` names, and when a common server parser could split it into fields differently: a
   form with a `;`, a bare `%` or a name spelled two ways, a multipart body with `--boundary` other
   than at a CRLF delimiter, LF-only part headers, or a quoted, repeated or over-long boundary. In
@@ -44,19 +45,29 @@ out of logs in the first place.
   authentication scheme, as in 2.0.0.
 - URLs lose their user info and fragment. Query values are hidden unless the parameter is on an
   allowlist, which is empty by default, and a query that servers could split differently is
-  written as `?[REDACTED]`. Path segments that look like identifiers or secrets become `:id`, and
+  written as `?[REDACTED]`. A host that is neither a name of ASCII labels nor an IP address, or in
+  which a value detector finds something, is reduced to the scheme. Path segments that look like identifiers or secrets become `:id`, and
   so does the segment after one that names a secret. A path of more than 64 segments or a query of
   more than 128 parameters is recorded with its scheme, host and port only.
 - Free text (`LogStore` messages, error descriptions of failed requests, kept header values,
   `text/plain` bodies and the strings of structured input) has one cut point: from the first
   trigger, everything to the end of the text is hidden, the lines below included. The triggers
-  are a secret name with or without a separator, quoted or not, also written as a value
+  are a key before `=` or `:` that is not on `allowedTextKeys` (`status`, `method`, `path`,
+  `duration_ms` and `count` by default), also in JSON members, two-element arrays and element tags
+  in the text; a secret name with or without a separator, quoted or not, also written as a value
   (`name="pin"`, `<key>password</key>`); a key that is not plain ASCII, has no letter or digit, or
-  is missing; the words of a key that name a secret when read together (`pass word=`); a separator
-  that is escaped (`%3D`, `&#61;`, `\=`) or only looks like one; a word that mixes scripts or holds
-  an invisible character; a quote or bracket that does not close; and JSON that does not parse. A
-  trigger inside a tag hides the tag from its `<`. Text with no trigger is kept as it is, apart
-  from the value detectors, and JSON in it is read by the key rule of structured input.
+  is missing; the words of a key that name a secret when read together (`pass word=`); a
+  character outside the safe alphabet (letters, marks and digits of any script, the ASCII space,
+  tab, LF and CR, printable ASCII), judged by its own Unicode category, so `꞉`, `≔`, `＝`, `…`,
+  `‥`, `№`, emoji, VT, FF, U+0085 and U+2028 cut the text; an escape (`%3D`, `&#61;`, `\u0041`,
+  `\=`), which is never decoded; a word longer than 256 characters; a word that mixes scripts or
+  holds an invisible character; a quote or bracket that does not close; and JSON that does not
+  parse. A trigger inside a tag hides the tag from its `<`. Text with no trigger is kept as it is,
+  apart from the value detectors, and JSON in it is read by the key rule of structured input.
+- Multipart part headers keep their names only when they are on the header allowlist; any other
+  is written as `[REDACTED]: [REDACTED]`.
+- A `LogStore` message is redacted up to 1 MiB of Unicode scalars, on the thread that logs it; a
+  longer one is redacted up to its last line break before that length and the rest is hidden.
 - Values are scanned for JWTs, bearer credentials, hex or Base64 strings of 32 or more characters,
   card numbers (Luhn), IBANs (mod 97), email addresses with names and domains in any script and the
   password in `user:password@host`, in the same way in bodies, free text, URLs and JSON strings.
@@ -68,17 +79,19 @@ out of logs in the first place.
 
 ### Added
 
-- `RedactionPolicy(additionalSecretNames:allowedHeaders:allowedQueryParameters:urlDetail:)`,
+- `RedactionPolicy(additionalSecretNames:allowedHeaders:allowedQueryParameters:allowedTextKeys:maximumBodySize:urlDetail:)`,
   `redact(text:)`, `URLDetail` (`.hostOnly` records only scheme, host and port),
-  `defaultSecretNames`, `defaultAllowedHeaders`, `secretNames`, `allowedHeaders`,
-  `allowedQueryParameters`, `maximumJSONDepth`, `maximumNestedDocuments`, `maximumPathSegments`,
-  `maximumQueryParameters` and `LogStore.Configuration.redaction`.
+  `defaultSecretNames`, `defaultAllowedHeaders`, `defaultAllowedTextKeys`, `headerParameterNames`,
+  `secretNames`, `allowedHeaders`, `allowedQueryParameters`, `allowedTextKeys`, `maximumBodySize`,
+  `defaultMaximumBodySize`, `bodySizeLimit`, `maximumJSONDepth`, `maximumNestedDocuments`,
+  `maximumPathSegments`, `maximumQueryParameters`, `LogStore.Configuration.redaction` and
+  `LogStore.maximumRedactedMessageLength`.
 - A test for each bypass class of the specification, every bypass reported against earlier
   versions, the test inputs of 2.0.0, property tests with generated obfuscations of every secret
   name, generated triggers after which no value may show and generated keys, tests that ordinary
   keys, allowlisted headers and text with no trigger stay readable, parser-differential, stack,
-  time-limit and peak-memory tests, and the examples of the guide. 443 tests run on macOS and
-  440 on an iOS simulator.
+  time-limit and peak-memory tests, the probes of every review of the shared rules, and the
+  examples of the guide. 494 tests run on macOS and 491 on an iOS simulator.
 
 ### Changed
 
