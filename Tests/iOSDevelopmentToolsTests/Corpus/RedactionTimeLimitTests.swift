@@ -103,6 +103,13 @@ struct RedactionTimeLimitTests {
         TimedInput(testDescription: "log lines of URLs with 100 query parameters", make: {
             repeated("https://a.example/?" + (0..<100).map { "k\($0)=v" }.joined(separator: "&"), separator: " ", prefix: "", suffix: "")
         }, redact: redactor.redact),
+        // A clean URL is read as a URL and the text after it read on, so each one costs a parse.
+        TimedInput(testDescription: "log lines of clean URLs with identifiers", make: {
+            repeated("GET https://api.example.com/v1/users/12345678/items 200", separator: "\n", prefix: "", suffix: "")
+        }, redact: redactor.redact),
+        TimedInput(testDescription: "log lines of clean URLs with 40 segments", make: {
+            repeated("https://a.example/" + (0..<40).map { "s\($0)" }.joined(separator: "/"), separator: " ", prefix: "", suffix: "")
+        }, redact: redactor.redact),
     ]
 
     /// Secret names written as values, which make the scanner read the markup around them, the
