@@ -240,14 +240,20 @@ struct RedactionScalingTests {
     }
 
     /// The shortest of three runs of each, alternating between them so that a slow period on the
-    /// machine affects both.
+    /// machine affects both. The time is the CPU time of this thread, so the other tests that run at
+    /// the same time do not count.
     private func fastest(_ small: () -> Void, _ large: () -> Void) -> (small: Duration, large: Duration) {
-        let clock = ContinuousClock()
         var result = (small: Duration.seconds(Int.max), large: Duration.seconds(Int.max))
         for _ in 0..<3 {
-            result.small = min(result.small, clock.measure(small))
-            result.large = min(result.large, clock.measure(large))
+            result.small = min(result.small, Self.cpuTime(small))
+            result.large = min(result.large, Self.cpuTime(large))
         }
         return result
+    }
+
+    private static func cpuTime(_ work: () -> Void) -> Duration {
+        let start = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
+        work()
+        return .nanoseconds(Int64(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - start))
     }
 }
