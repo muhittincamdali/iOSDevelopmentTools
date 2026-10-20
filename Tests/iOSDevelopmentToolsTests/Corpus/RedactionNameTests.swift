@@ -116,6 +116,7 @@ struct RedactionNameTests {
         #expect(redactor.redact(body: Data("{\"\(plain)\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(plain)\":\"bob\"}")
         #expect(redactor.redact(body: Data("{\"\(plain)x\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(plain)x\":\"[REDACTED]\"}")
         #expect(Redactor(allowedTextKeys: [plain]).redact("\(plain)=bob") == "\(plain)=bob")
-        #expect(Redactor(allowedTextKeys: [plain + "x"]).redact("\(plain)x=bob") == "\(plain)x=[REDACTED]")
+        // In text a word longer than 256 characters is a trigger where it starts.
+        #expect(Redactor(allowedTextKeys: [plain + "x"]).redact("\(plain)x=bob") == "[REDACTED]")
     }
 }

@@ -12,29 +12,52 @@ extension FreeTextScanner {
     }
 
     /// A run of characters up to white space, a separator, a quote or a boundary. It is a
-    /// trigger when it holds a separator of its own, escaped or one that only looks like one, and,
-    /// in text, when it names a secret (`password hunter2`, `PIN 1234`, also split by a space:
-    /// `pass word`) or cannot be read.
+    /// trigger when it holds a character outside the safe alphabet with text after it (see
+    /// ``isOutsideSafeAlphabet(_:)``) or an escaped separator, and, in text, when it holds an
+    /// escape (see ``startsEscape(_:)``), is longer than ``longestWord``, names a secret
+    /// (`password hunter2`, `PIN 1234`, also split by a space: `pass word`) or cannot be read.
+    /// Only the part of the word before its first escape or unsafe character is read for names:
+    /// escapes are never decoded to read a name in text, and the cut is there at the latest.
     mutating func word() {
         let start = position
         let lineEnd = currentLineEnd()
         let end = wordEnd(from: start, to: lineEnd)
         position = end
-        if let embedded = embeddedSeparator(in: start..<end) {
-            cut(atByte: embedded)
+        let range = start..<end
+        guard readsWords else {
+            // In a name, a separator of its own, escaped or one that only looks like one, starts a
+            // value written into the name.
+            if let embedded = [firstUnsafeCharacter(in: range), escapedValueStart(in: range)].compactMap({ $0 }).min() {
+                cut(atByte: embedded)
+            }
             return
         }
-        guard readsWords else { return }
-        switch read(start..<end) {
-        case .valueStart where namesNoValue(start..<end):
-            break
-        case .plain:
-            if let secretEnd = secretEndAcrossSpace(after: start..<end, lineEnd: lineEnd) { cut(afterByte: secretEnd - 1) }
-        case .ambiguous:
+        guard !isOpaque(range) else {
             cut(atByte: start)
-        case .valueStart(let valueStart):
-            cut(afterByte: valueStart - 1)
+            return
         }
+        // What a value detector finds in the word with its escapes decoded starts the cut there
+        // (`a\u0040b.com`), so the decoding only ever hides more.
+        let stop = [firstUnsafeCharacter(in: range), firstEscape(in: range), escapedValueStart(in: range)].compactMap { $0 }.min()
+        let readable = start..<(stop ?? end)
+        if !readable.isEmpty {
+            switch read(readable) {
+            case .valueStart where namesNoValue(readable):
+                break
+            case .plain:
+                if stop == nil, let secretEnd = secretEndAcrossSpace(after: range, lineEnd: lineEnd) {
+                    cut(afterByte: secretEnd - 1)
+                    return
+                }
+            case .ambiguous:
+                cut(atByte: start)
+                return
+            case .valueStart(let valueStart):
+                cut(afterByte: valueStart - 1)
+                return
+            }
+        }
+        if let stop { cut(atByte: stop) }
     }
 
     /// Whether a word that holds a secret name names no value after it: the name of an end tag
@@ -64,58 +87,6 @@ extension FreeTextScanner {
     }
 
     private static let splittingBoundaries = ByteSet("|,;&?")
-
-    /// Punctuation, a math symbol or a modifier letter or symbol outside ASCII, such as `꞉`, `∶`,
-    /// `≔`, `→` or `·`, may be meant as a separator, and `=` or `:` written as `%3D`, `&#61;` or
-    /// `\u003A` is one. Anywhere in a word, with more text after it on its line or below, such a
-    /// character is a trigger: glued between other characters (`user꞉bob`, `e%79≔…`,
-    /// `token·"…"`), at the end of a word with its value after white space (`user꞉ bob`,
-    /// `pɑsswoʀd≔ hunter2`), at the start of a word (`a ꞉b`) and on its own (`user ꞉ bob`). A
-    /// connector without an ASCII form counts only glued between other characters (`user‿bob`);
-    /// between words of prose it does not. A dash of any kind is read as `-` (see
-    /// ``CompatibilityText``), which joins words. Quotation marks, brackets, currency signs,
-    /// emoji, skin tones and the punctuation of East Asian scripts are not read this way.
-    private func embeddedSeparator(in range: Range<Int>) -> Int? {
-        let first = text.offsets[range.lowerBound]
-        let lookAlike = range.first { k in
-            let after = scalarEnd(k)
-            guard isSeparatorLike(k, glued: text.offsets[k] > first && after < range.upperBound) else { return false }
-            // At the end of the word a value may follow after white space or on a line below.
-            return after < range.upperBound || firstText(from: range.upperBound) != nil
-        }
-        return [lookAlike, escapedValueStart(in: range)].compactMap { $0 }.min()
-    }
-
-    /// The byte after the bytes that the scalar of byte `i` became.
-    private func scalarEnd(_ i: Int) -> Int {
-        var k = i + 1
-        while k < text.count, text.offsets[k] == text.offsets[i] { k += 1 }
-        return k
-    }
-
-    /// A character without an ASCII reading that may be a separator; one that has an ASCII
-    /// reading (`．`, `‥`, `－`) is read as that. With `glued`, for a character between other
-    /// characters of a word, connectors count too.
-    private func isSeparatorLike(_ i: Int, glued: Bool = false) -> Bool {
-        guard text.bytes[i] == CompatibilityText.unreadable else { return false }
-        let scalar = source[text.offsets[i]]
-        // A skin tone belongs to the emoji before it (`👍🏽`).
-        guard !scalar.properties.isEmojiModifier else { return false }
-        switch scalar.properties.generalCategory {
-        case .otherPunctuation, .mathSymbol, .modifierLetter, .modifierSymbol: break
-        case .connectorPunctuation:
-            guard glued else { return false }
-        default: return false
-        }
-        // `、`, `。`, `ー` and `・` belong to the East Asian text around them, but not to ASCII.
-        return !Self.isEastAsian(scalar) || (i > 0 && text.bytes[i - 1] != CompatibilityText.unreadable && !text.isSpace(i - 1))
-    }
-
-    /// CJK symbols and punctuation, kana and the full-width and half-width forms (the full-width
-    /// `＝` and `：` are read as separators already).
-    private static func isEastAsian(_ scalar: Unicode.Scalar) -> Bool {
-        (0x3000...0x30FF).contains(scalar.value) || (0xFF00...0xFFEF).contains(scalar.value)
-    }
 
     /// The end of the word that starts at `start`. An HTML character reference (`&#97;`) and a
     /// `\u{…}` escape are part of a word, though `&`, `;` and `{` end words elsewhere.
@@ -160,7 +131,7 @@ extension FreeTextScanner {
     }
 
     /// The length of `\u{…}` at `i`, or nil.
-    private func bracedEscapeLength(at i: Int) -> Int? {
+    func bracedEscapeLength(at i: Int) -> Int? {
         guard text.bytes[i] == UInt8(ascii: "\\"), i + 3 < text.count, text.bytes[i + 1] == UInt8(ascii: "u"), text.bytes[i + 2] == UInt8(ascii: "{")
         else { return nil }
         var k = i + 3

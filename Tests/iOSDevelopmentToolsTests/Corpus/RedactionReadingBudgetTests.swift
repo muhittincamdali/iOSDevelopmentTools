@@ -17,7 +17,8 @@ struct RedactionReadingBudgetTests {
         RedactionTimeLimitTests.quoted(payload, levels: levels)
     }
 
-    private static let payload = String(repeating: "ı", count: 2_000)
+    // Words of one letter: a word longer than 256 characters would cut the text by itself.
+    private static let payload = String(repeating: "ı ", count: 1_000)
 
     @Test("the input is read freely and what is found in it takes four times its length at most")
     func budget() {

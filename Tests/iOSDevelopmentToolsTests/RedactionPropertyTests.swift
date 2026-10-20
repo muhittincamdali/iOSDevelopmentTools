@@ -153,7 +153,7 @@ struct RedactionPropertyTests {
             "GET /v1/items 200 in 35 ms", "Loaded 42 items for user 7", "Retrying request (attempt 2 of 3)",
             "Cache hit for items-page-2", "Order E621E1F8-C36C-495A-93FC-0C247A3E6E5F placed", "The request timed out.",
             "Sync finished at 12:30:45, 3 changes", "Opened https://example.com/docs/getting-started",
-            "Giriş başarılı, 3 öğe yüklendi", "Family 👨‍👩‍👧 joined the café", "Загружено 5 элементов", "設定を保存しました",
+            "Giriş başarılı, 3 öğe yüklendi", "Family joined the café", "Загружено 5 элементов", "設定を保存しました",
             "GET /v1/items status=200 duration_ms=35 count=3", "path=/v1/items method=GET", #"{"count":3,"status":"ok"}"#,
             "[INFO] Loaded {0} of [1/3]",
         ]

@@ -93,7 +93,7 @@ struct TextRedactionTests {
         ("ok t\u{043E}ken hunter2", "ok [REDACTED]"),
         ("p\u{0430}ssword hunter2", "[REDACTED]"),
         ("t\u{03BF}ken=1 status=2", "[REDACTED]"),
-        ("ok creds%3Dhunter2 x", "ok creds[REDACTED]"), ("status=ok path=%2Fcb%3Ftoken%3Dhunter2", "status=ok path=%2Fcb%3Ftoken[REDACTED]"),
+        ("ok creds%3Dhunter2 x", "ok creds[REDACTED]"), ("status=ok path=%2Fcb%3Ftoken%3Dhunter2", "status=ok path=[REDACTED]"),
         ("ok creds\\u003ahunter2", "ok creds[REDACTED]"),
         ("Signed in with token abc123 for ada", "Signed in with token [REDACTED]"),
         ("session started", "session [REDACTED]"),
@@ -108,7 +108,7 @@ struct TextRedactionTests {
     }
 
     @Test("Words of one writing system, times and dates are kept", arguments: [
-        "iPhoneで設定を保存しました", "Загружено 5 элементов", "sent hello%20world & 100% done", "Giriş başarılı, 3 öğe yüklendi", "took 120µs",
+        "iPhoneで設定を保存しました", "Загружено 5 элементов", "sent hello world & 100% done", "Giriş başarılı, 3 öğe yüklendi", "took 120µs",
         "Sync finished at 12:30:45, 3 changes", "at 2026-10-19T10:30:00Z done", "between 9:05 and 10:30:00.250+03:00.",
     ])
     func readableText(text: String) {
@@ -185,13 +185,18 @@ struct TextRedactionTests {
         #expect(policy.redact(text: long).hasSuffix("token=\(redacted)"))
         let quotes = String(repeating: "\"x\":", count: 20_000)
         #expect(!policy.redact(text: quotes).isEmpty)
+        // One word longer than 256 characters is a trigger where it starts.
         let ats = String(repeating: "a@", count: 20_000)
-        #expect(policy.redact(text: ats) == ats)
+        #expect(policy.redact(text: ats) == redacted)
+        let spacedAts = String(repeating: "a@ ", count: 20_000)
+        #expect(policy.redact(text: spacedAts) == spacedAts)
         let times = String(repeating: "12:30:45 ", count: 20_000)
         #expect(policy.redact(text: times) == times)
         // Between two digits a `:` is a time, so nothing is hidden.
         let ratios = String(repeating: "1:", count: 50_000)
-        #expect(policy.redact(text: ratios) == ratios)
+        #expect(policy.redact(text: ratios) == redacted)
+        let spacedRatios = String(repeating: "1:2 ", count: 25_000)
+        #expect(policy.redact(text: spacedRatios) == spacedRatios)
         let objects = String(repeating: #"{"count":1} "#, count: 10_000)
         #expect(policy.redact(text: objects) == objects)
         #expect(policy.redact(text: String(repeating: #"{""#, count: 50_000)) == redacted)
@@ -214,11 +219,14 @@ struct TextRedactionTests {
         #expect(raw.entries.first?.message == "password=hunter2")
     }
 
-    @Test("Emoji sequences, skin tones and the micro sign are text, not disguises", arguments: [
-        "Family 👩‍👩‍👧‍👦 joined", "Liked 👍🏽 twice", "coder 👩🏽‍💻 online", "❤️‍🔥 streak", "took 120µs", "reacted 👍🏽x",
+    // The safe alphabet of free text holds letters, marks and digits of any script, white space
+    // and ASCII: an emoji, a skin tone or a symbol is a trigger, and hides the text after it.
+    @Test("Emoji, skin tones and symbols hide the text after them; the micro sign is a letter", arguments: [
+        ("Family 👩‍👩‍👧‍👦 joined", "Family [REDACTED]"), ("Liked 👍🏽 twice", "Liked [REDACTED]"), ("coder 👩🏽‍💻 online", "coder [REDACTED]"),
+        ("❤️‍🔥 streak", "[REDACTED]"), ("reacted 👍🏽x", "reacted [REDACTED]"), ("took 120µs", "took 120µs"), ("done 👍", "done 👍"),
     ])
-    func emojiAndSigns(text: String) {
-        #expect(policy.redact(text: text) == text)
+    func emojiAndSigns(text: String, expected: String) {
+        #expect(policy.redact(text: text) == expected)
     }
 
     @Test("A joiner or skin tone between letters still hides what a disguised name hides", arguments: [

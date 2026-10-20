@@ -260,7 +260,7 @@ struct RedactionRegressionTests {
     @Test("A look-alike separator at the end of a word hides the value after it, wherever free text is stored", arguments: [
         "p\u{0251}sswo\u{0280}d\u{A789} hunter2", "p\u{0251}sswo\u{0280}d\u{2254} hunter2", "x\u{A789} hunter2", "note\u{A789} hunter2",
         "creds\u{A789}\thunter2", "user\u{2236}  hunter2", "user\u{02F8} hunter2", "user\u{2192} hunter2", "user\u{00B7} hunter2",
-        "a b note\u{A789} hunter2", "note\u{A789}\nhunter2", "\u{A789} hunter2", "status=200 x\u{A789} hunter2",
+        "a b note\u{A789} hunter2", "note\u{A789}\nhunter2", "\u{A789} hunter2", "status=200 x\u{A789} hunter2", "a \u{203F} hunter2",
     ])
     func lookAlikeSeparatorBeforeSpace(text: String) {
         #expect(!policy.redact(text: text).contains(Self.secret), "\(policy.redact(text: text).debugDescription)")
@@ -275,7 +275,7 @@ struct RedactionRegressionTests {
     }
 
     @Test("A look-alike separator with nothing after it, and a connector between words, hide nothing", arguments: [
-        "note\u{A789}", "a \u{203F} b", "status=200 done\u{A789}",
+        "note\u{A789}", "status=200 done\u{A789}", "done \u{1F44D}",
     ])
     func lookAlikeSeparatorWithoutValue(text: String) {
         #expect(policy.redact(text: text) == text)

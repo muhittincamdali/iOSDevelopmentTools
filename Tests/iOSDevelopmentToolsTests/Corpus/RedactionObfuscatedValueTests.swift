@@ -15,7 +15,7 @@ struct RedactionObfuscatedValueTests {
         ("token\u{2192}hunter2", "token[REDACTED]"),
         ("\u{1D429}\u{1D41A}\u{1D42C}\u{1D42C}\u{1D430}\u{1D428}\u{1D42B}\u{1D41D}\u{A789}hunter2",
          "\u{1D429}\u{1D41A}\u{1D42C}\u{1D42C}\u{1D430}\u{1D428}\u{1D42B}\u{1D41D}[REDACTED]"),
-        ("pass\u{200B}word\u{A789}hunter2", "pass\u{200B}word[REDACTED]"),
+        ("pass\u{200B}word\u{A789}hunter2", "[REDACTED]"),
         ("password\u{FE13}hunter2", "password\u{FE13}[REDACTED]"),
     ])
     func lookAlikeSeparators(input: String, expected: String) {
@@ -27,7 +27,7 @@ struct RedactionObfuscatedValueTests {
     @Test("punctuation outside ASCII after other words is a separator too", arguments: [
         ("Tokyo\u{00B7}Osaka\u{00B7}Kyoto", "Tokyo[REDACTED]"),
         ("user\u{2192}bob", "user[REDACTED]"),
-        ("my_k$ e%79\u{2254}S3CRETV&b=2", "my_k$ e%79[REDACTED]"),
+        ("my_k$ e%79\u{2254}S3CRETV&b=2", "my_k$ e[REDACTED]"),
         ("a;\u{2254}S3CRETV", "a;[REDACTED]"),
         ("key \u{2254}S3CRETV", "key [REDACTED]"),
     ])
@@ -40,9 +40,10 @@ struct RedactionObfuscatedValueTests {
     @Test("a look-alike separator inside a name hides the rest of the text", arguments: [
         ("pass\u{00B7}word='hunter2' next", "pass[REDACTED]"),
         ("pass\u{2027}wd: hunter2", "pass[REDACTED]"),
-        ("SECRET_K\u{2010}EY=hunter2\nnext", "SECRET_K‐EY=[REDACTED]"),
-        ("pa\u{00AD}ss\u{00B7}word :\n  <hunter2> next", "pa\u{AD}ss[REDACTED]"),
-        ("DB_SECRET_KE\u{2010}Y\n=\n<hunter2>", "DB_SECRET_KE\u{2010}Y\n=\n[REDACTED]"),
+        // A dash outside ASCII is outside the safe alphabet; `SECRET` before it is a secret name.
+        ("SECRET_K\u{2010}EY=hunter2\nnext", "SECRET[REDACTED]"),
+        ("pa\u{00AD}ss\u{00B7}word :\n  <hunter2> next", "[REDACTED]"),
+        ("DB_SECRET_KE\u{2010}Y\n=\n<hunter2>", "DB_SECRET[REDACTED]"),
         ("pass\u{2027}word\nS3CRETV", "pass[REDACTED]"),
         ("- p\u{2027}in :\n  (S3CRETV)", "- p[REDACTED]"),
     ])

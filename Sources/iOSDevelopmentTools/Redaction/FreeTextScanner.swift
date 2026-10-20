@@ -11,8 +11,9 @@
 ///   (`name="password"`, `<key>password</key>`): the text is hidden from the value after it;
 /// - a name held by an allowed key that holds one (`name=`, `label=`, …) that names a secret or
 ///   is not plain ASCII: hidden from its value;
-/// - a separator that is escaped (`%3D`, `&#61;`, `\=`) or only looks like one (`꞉`): hidden from
-///   there;
+/// - a character outside the safe alphabet (see ``isOutsideSafeAlphabet(_:)``), an escape
+///   (`%3D`, `&#61;`, `\x41`), which is never decoded, and a word longer than ``longestWord``:
+///   hidden from there;
 /// - a word that cannot be read with certainty (mixed scripts, an invisible character in it), a
 ///   quote or bracket that does not close, and JSON that does not parse: hidden from there.
 ///
@@ -91,8 +92,17 @@ struct FreeTextScanner {
     // MARK: Reading
 
     private mutating func step() {
+        if readsWords, let control = hiddenControl(before: position) {
+            cut(atOffset: control, trigger: position)
+            return
+        }
         let byte = text.bytes[position]
         if text.isSpace(position) || text.isLineTerminator(position) {
+            // The blank Braille pattern is read as a space, but it is a symbol.
+            if isOutsideSafeAlphabet(position), firstText(from: position + 1) != nil {
+                cut(atByte: position)
+                return
+            }
             position += 1
         } else if isSeparator(position) {
             separator()
@@ -101,6 +111,11 @@ struct FreeTextScanner {
         } else if Self.marks.contains(byte), readsWords {
             readMark()
         } else if Self.boundaries.contains(byte) || Self.quotes.contains(byte), referenceLength(at: position) == nil {
+            // A character reference by name (`&amp;`, `&lt;`) is an escape.
+            if readsWords, namedReferenceLength(at: position) != nil {
+                cut(atByte: position)
+                return
+            }
             position += 1
             noteTag(byte, at: position - 1)
         } else if let end = urlEnd(from: position, lineEnd: currentLineEnd()) {

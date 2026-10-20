@@ -25,7 +25,7 @@ extension RedactionPolicy {
     ///   The text is hidden from the value after the name. Words are read after their escapes are
     ///   decoded, with punctuation inside them (`pass~word`) and a space or `|` between two of them
     ///   (`pass word`) read as a separator, and one letter that has no ASCII form (`ɑ`, `ı`) read
-    ///   as any letter or, between two letters, as none (`passꞏword`). This is a best effort: a
+    ///   as any letter or, between two letters, as none. This is a best effort: a
     ///   name disguised with two or more such letters and written without a separator
     ///   (`pɑsswoʀd hunter2`) is not found.
     /// - **A secret name written as a value.** After an allowed key that holds a name (`name=`,
@@ -40,8 +40,16 @@ extension RedactionPolicy {
     /// - **A key that is not plain ASCII** or has no letter or digit, or no key at all, before
     ///   `=` or `:` (`pаssword=…` with a Cyrillic `а`, `🔑=…`, `user[name]=…`, `=…`), and the last
     ///   words of a key that, read as one name, name a secret (`pass word=…`, `c v v: …`).
-    /// - **A separator that is escaped or only looks like one:** `%3D`, `&#61;`, `%u003D`, `\=`,
-    ///   `꞉`, `≔`, `＝`, `：`.
+    /// - **A character outside the safe alphabet.** Letters, marks and digits of any script, white
+    ///   space, line breaks and ASCII are text, and so is a character that Unicode compatibility
+    ///   normalization reads as ASCII (`…`, `™`, `ｐ`). Every other character with text after it
+    ///   is a trigger: punctuation and symbols outside ASCII (`꞉`, `≔`, `→`, `·`, `—`, `’`, `、`,
+    ///   `€`), emoji, control characters and private-use or unassigned code points. A separator
+    ///   written outside ASCII (`＝`, `：`) cuts the text too. There is no list of look-alikes to
+    ///   get around.
+    /// - **An escape**, which is never decoded: `%XX`, `%uXXXX`, `&name;` (`&amp;`, `&lt;`), `&#…;`,
+    ///   `\NNN`, `\xNN`, `\uNNNN` and `\u{…}`, and `\=`. The text is hidden from the escape on.
+    /// - **A word longer than 256 characters**, which is no name or value that can be read.
     /// - **An ambiguous token**: a word that mixes scripts (`pаssword` with a Cyrillic `а`) or
     ///   holds an invisible character other than a mark (a zero-width space, `pa\u{115F}ssword`,
     ///   a control character), a quote or bracket that does not close, and JSON that does not

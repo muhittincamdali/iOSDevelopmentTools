@@ -63,7 +63,8 @@ struct LogStoreTests {
         ("", 1, "", false),
     ])
     func truncation(message: String, limit: Int, expected: String, isTruncated: Bool) throws {
-        let logs = store(.init(maximumMessageLength: limit, systemLogSubsystem: nil))
+        // Emoji are outside the safe alphabet of free text, so the cut is checked without redaction.
+        let logs = store(.init(maximumMessageLength: limit, systemLogSubsystem: nil, redaction: .disabled))
         logs.info(message)
         let entry = try #require(logs.entries.first)
         #expect(entry.message == expected)
@@ -73,7 +74,7 @@ struct LogStoreTests {
     @Test("A huge message costs only the kept characters")
     func hugeMessage() throws {
         let logs = store(.init(maximumMessageLength: 10, systemLogSubsystem: nil))
-        logs.info(String(repeating: "x", count: 5_000_000), category: String(repeating: "c", count: 1000))
+        logs.info(String(repeating: "x\n", count: 2_500_000), category: String(repeating: "c", count: 1000))
         let entry = try #require(logs.entries.first)
         #expect(entry.message.count == 11)
         #expect(entry.category.count == LogStore.maximumCategoryLength + 1)

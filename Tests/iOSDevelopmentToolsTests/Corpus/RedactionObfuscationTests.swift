@@ -45,12 +45,21 @@ struct RedactionObfuscationTests {
         "\u{30D1}\u{30B9}\u{30EF}\u{30FC}\u{30C9}\u{3092}\u{5909}\u{66F4}\u{3057}\u{307E}\u{3057}\u{305F}",
         "Merhaba d\u{00FC}nya status=200",
         "\u{6771}\u{4EAC} 3:00",
-        "\u{4F60}\u{597D}\u{3001}\u{4E16}\u{754C}",
-        "\u{6771}\u{4EAC}\u{30FB}\u{5927}\u{962A}",
-        "100\u{20AC}/month",
     ])
     func otherScriptText(input: String) {
         #expect(redactor.redact(input) == input)
+    }
+
+    // Punctuation and symbols outside ASCII are outside the safe alphabet: the text after them is
+    // hidden, in every script.
+    @Test("punctuation and symbols of other scripts hide the text after them", arguments: [
+        ("\u{4F60}\u{597D}\u{3001}\u{4E16}\u{754C}", "\u{4F60}\u{597D}[REDACTED]"),
+        ("\u{6771}\u{4EAC}\u{30FB}\u{5927}\u{962A}", "\u{6771}\u{4EAC}[REDACTED]"),
+        ("100\u{20AC}/month", "100[REDACTED]"),
+        ("\u{8A2D}\u{5B9A}\u{3002}", "\u{8A2D}\u{5B9A}\u{3002}"),
+    ])
+    func otherScriptPunctuation(input: String, expected: String) {
+        #expect(redactor.redact(input) == expected)
     }
 
     @Test("hides the value of a name with invisible characters or marks", arguments: [
@@ -69,11 +78,12 @@ struct RedactionObfuscationTests {
     }
 
     @Test("hides the value of a name with escapes", arguments: [
-        ("pass%77ord=hunter2", "pass%77ord=[REDACTED]"),
-        ("%70%61%73%73%77%6F%72%64=hunter2", "%70%61%73%73%77%6F%72%64=[REDACTED]"),
-        ("p&#97;ssword=hunter2", "p&#97;ssword=[REDACTED]"),
-        ("p&#x61;ssword=hunter2", "p&#x61;ssword=[REDACTED]"),
-        ("&quot;password&quot;:&quot;hunter2&quot;", "&quot;password[REDACTED]"),
+        // An escape in free text is a trigger where it starts.
+        ("pass%77ord=hunter2", "pass[REDACTED]"),
+        ("%70%61%73%73%77%6F%72%64=hunter2", "[REDACTED]"),
+        ("p&#97;ssword=hunter2", "p[REDACTED]"),
+        ("p&#x61;ssword=hunter2", "p[REDACTED]"),
+        ("&quot;password&quot;:&quot;hunter2&quot;", "[REDACTED]"),
         ("{\"pass\\u0077ord\":\"hunter2\"}", "{\"pass\\u0077ord\":[REDACTED]"),
         ("log {\"pass\\u0077ord\":\"hunter2\"}", "log {\"pass\\u0077ord\":[REDACTED]"),
         ("password=abc&#100;ef next=1", "password=[REDACTED]"),
@@ -99,7 +109,8 @@ struct RedactionObfuscationTests {
     @Test("escapes of characters that end a value are not decoded")
     func escapedTerminators() {
         #expect(redactor.redact("password=a%26b%20c next=1") == "password=[REDACTED]")
-        #expect(redactor.redact("count=50%25 of %ZZ & more") == "count=50%25 of %ZZ & more")
+        #expect(redactor.redact("count=50%25 of %ZZ & more") == "count=50[REDACTED]")
+        #expect(redactor.redact("count=50% of %ZZ & more") == "count=50% of %ZZ & more")
     }
 
     @Test("folds . like _ and - and still finds the secret word", arguments: [
@@ -175,7 +186,7 @@ struct RedactionObfuscationTests {
         ("the token count: 5", "the token [REDACTED]"),
         ("a long bypassword x=1", "a long bypassword [REDACTED]"),
         ("Authorization failed for user=bob", "Authorization [REDACTED]"),
-        ("p%61ss word=hunter2", "p%61ss [REDACTED]"),
+        ("p%61ss word=hunter2", "p[REDACTED]"),
     ])
     func secretWordsBeforePairs(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)

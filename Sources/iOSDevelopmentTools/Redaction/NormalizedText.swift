@@ -195,6 +195,19 @@ final class CompatibilityText {
     static let unreadable: UInt8 = 0xFF
 
     private var cache: [UInt32: [UInt8]] = [:]
+    private var foldCache: [UInt32: Bool] = [:]
+
+    /// Whether compatibility decomposition alone reads the scalar as ASCII (`－` as `-`, `＝` as
+    /// `=`), without the readings this type adds to it: a dash of any kind as `-`, every space as
+    /// ` ` and a digit of any script as its digit.
+    func foldsToASCII(_ scalar: Unicode.Scalar) -> Bool {
+        if scalar.isASCII { return true }
+        if let cached = foldCache[scalar.value] { return cached }
+        let parts = String(scalar).decomposedStringWithCompatibilityMapping.unicodeScalars.filter { !ScalarClass.isInvisible($0) }
+        let folds = !parts.isEmpty && parts.allSatisfy(\.isASCII)
+        foldCache[scalar.value] = folds
+        return folds
+    }
 
     func ascii(_ scalar: Unicode.Scalar) -> [UInt8] {
         if scalar.isASCII { return [UInt8(scalar.value)] }

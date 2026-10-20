@@ -57,13 +57,13 @@ struct RedactionEdgeCaseTests {
         ("q=password%3dhunter2", "q=[REDACTED]"),
         ("status=password%3dhunter2", "status=password[REDACTED]"),
         ("secret%3Ax", "secret[REDACTED]"),
-        ("user%5Bpassword%5D=hunter2&user%5Bname%5D=bob", "user%5Bpassword[REDACTED]"),
+        ("user%5Bpassword%5D=hunter2&user%5Bname%5D=bob", "user[REDACTED]"),
         ("password%5B%5D=hunter2", "password[REDACTED]"),
-        ("user%5bpassword%5d%3dhunter2", "user%5bpassword[REDACTED]"),
-        ("user%5Bpassword%5D%5Bconfirmation%5D=x", "user%5Bpassword[REDACTED]"),
-        ("password+%3D+hunter2", "password+[REDACTED]"),
+        ("user%5bpassword%5d%3dhunter2", "user[REDACTED]"),
+        ("user%5Bpassword%5D%5Bconfirmation%5D=x", "user[REDACTED]"),
+        ("password+%3D+hunter2", "password[REDACTED]"),
         ("q=password+%3A+hunter2&x=1", "q=[REDACTED]"),
-        ("status=password+%3A+hunter2&x=1", "status=password+[REDACTED]"),
+        ("status=password+%3A+hunter2&x=1", "status=password[REDACTED]"),
         ("password%20%3D%20hunter2", "password[REDACTED]"),
         ("q=password%20%3A%20hunter2&x=1", "q=[REDACTED]"),
         ("status=password%20%3A%20hunter2&x=1", "status=password[REDACTED]"),
@@ -168,8 +168,8 @@ extension RedactionEdgeCaseTests {
     // spells, so its value is hidden.
     @Test("hides the value of form names that are not plain", arguments: [
         ("password[=x", "password[REDACTED]"),
-        ("user%5Bpassport%5D=X1234", "user%5Bpassport%5D=[REDACTED]"),
-        ("%5B=x", "%5B=[REDACTED]"),
+        ("user%5Bpassport%5D=X1234", "user[REDACTED]"),
+        ("%5B=x", "[REDACTED]"),
     ])
     func namesThatAreNotPlain(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
