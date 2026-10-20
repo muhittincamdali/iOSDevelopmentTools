@@ -192,6 +192,40 @@ struct RedactionScalingTests {
         )
     }
 
+    // A JSON string that the free-text rule changed was escaped again one scalar at a time, each
+    // escape copying what was written before it: a megabyte of quotes took two seconds, two
+    // megabytes six.
+    @Test("a JSON string full of quotes or line breaks is written again in time linear in its length", arguments: [
+        ("say \\\"hi\\\" ", "ayse@ornek.com"), ("INFO request ok\\n", "password hunter2"),
+    ])
+    func escapedStringScale(unit: String, last: String) {
+        func json(_ length: Int) -> String { RedactionTimeLimitTests.oneLongString(unit, then: last, total: length) }
+        let (small, large) = (json(50_000), json(200_000))
+        expectLinear(
+            "JSON body of one string of \(unit.debugDescription)",
+            small: { _ = redactor.redact(body: Data(small.utf8), contentType: "application/json") },
+            large: { _ = redactor.redact(body: Data(large.utf8), contentType: "application/json") },
+            maximumRatio: 10
+        )
+        let (smallNested, largeNested) = (
+            RedactionTimeLimitTests.inOneString(RedactionTimeLimitTests.turkishObject, levels: 2, total: 50_000),
+            RedactionTimeLimitTests.inOneString(RedactionTimeLimitTests.turkishObject, levels: 2, total: 200_000)
+        )
+        expectLinear(
+            "log line of JSON in one string, two levels",
+            small: { _ = redactor.redact(smallNested) },
+            large: { _ = redactor.redact(largeNested) },
+            maximumRatio: 10
+        )
+        let (smallText, largeText) = (String(repeating: unit, count: 50_000 / unit.count), String(repeating: unit, count: 200_000 / unit.count))
+        expectLinear(
+            "escaping \(unit.debugDescription)",
+            small: { _ = JSONDocument.escaped(smallText) },
+            large: { _ = JSONDocument.escaped(largeText) },
+            maximumRatio: 10
+        )
+    }
+
     // A JSON or form name was compared in time quadratic in its length: 80,000 characters took
     // 3 seconds, a megabyte about 8 minutes.
     @Test("comparing a long JSON or form name takes time linear in its length")
