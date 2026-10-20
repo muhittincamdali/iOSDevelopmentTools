@@ -5,7 +5,7 @@ import Testing
 @Suite("Redaction corpus: eleventh review probes")
 struct RedactionEleventhReviewProbeTests {
     /// The probes whose secret still shows, each one a limitation that the documentation names
-    /// ("What it does not find" in KeepingSecretsOutOfLogs, the threat model, and the members
+    /// ("What it does not find" in RedactingSensitiveData, the threat model, and the members
     /// that stay beside a name), by probe number.
     static let documentedLimitations: [Int: String] = {
         var limitations: [Int: String] = [:]

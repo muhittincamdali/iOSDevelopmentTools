@@ -4,7 +4,7 @@ import Testing
 @Suite("Redaction corpus: review probes")
 struct RedactionReviewProbeTests {
     /// The probes whose secret still shows, each one a limitation that the documentation names
-    /// ("What is not found" in KeepingSecretsOutOfLogs), by probe number.
+    /// ("What is not found" in RedactingSensitiveData), by probe number.
     static let documentedLimitations: [Int: String] = {
         var limitations: [Int: String] = [:]
         let byReason: [(String, [Int])] = [
