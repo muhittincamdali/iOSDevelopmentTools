@@ -245,8 +245,15 @@ The triggers:
 
 JSON in the text (`{"…`, `[{…`, `["…`, `[[…`) is parsed with a JSON parser and redacted by the
 key rule of structured input, as a body is; its strings are free text again, with this rule.
-URLs with a scheme and `//` are recorded as ``RedactionPolicy/redact(url:)`` records them. Line
-breaks are kept as they are written.
+A URL with a scheme and `//` is recorded as ``RedactionPolicy/redact(url:)`` records it, but it
+is not a safe island: its query, fragment and `;` path parameters may end with a name whose value
+the text after the URL holds (`?api_key= hunter2`). Unless every parameter in them is on
+``RedactionPolicy/allowedQueryParameters`` and has a value in the URL, the text is hidden from
+right after the first `?`, `#` or `;` that starts one; the path before it stays, redacted. A URL
+that ends with `=` or `:`, or whose last path segment names a secret, hides the text after it; a
+URL past the limits of segments or parameters hides the text after its host; one that does not
+parse hides the text from the URL, and one whose host is not written hides it from after the
+scheme. Line breaks are kept as they are written.
 
 | Log message | Stored |
 | --- | --- |
@@ -262,6 +269,9 @@ breaks are kept as they are written.
 | `<key>password</key>` and a `<string>` below | `<key>[REDACTED]` |
 | `Payment failed: card declined` | `Payment failed: [REDACTED]` |
 | `git clone https://bob:hunter2@github.com/x/y.git` | `git clone https://github.com/x/y.git` |
+| `GET https://a.example/x?api_key= hunter2` | `GET https://a.example/x?[REDACTED]` |
+| `see https://a.example/cb#access_token= hunter2` | `see https://a.example/cb#[REDACTED]` |
+| `see https://a.example/v1/password= hunter2` | `see https://a.example/v1/password= [REDACTED]` |
 
 ### Limits keep hostile input from exhausting the stack, the time and the memory
 
