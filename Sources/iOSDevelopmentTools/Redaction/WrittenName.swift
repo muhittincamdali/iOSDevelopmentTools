@@ -156,6 +156,9 @@ struct NamingFields {
     /// fields is not held a second time as Unicode scalars.
     private let naming: [Int]
 
+    /// Whether any field names a secret in its value.
+    var hasNamingField: Bool { !naming.isEmpty }
+
     /// Reads the fields one at a time, in order.
     init(_ fields: some Sequence<Field>, policy: RedactionPolicy, compatibility: CompatibilityText) {
         var naming: [Int] = []

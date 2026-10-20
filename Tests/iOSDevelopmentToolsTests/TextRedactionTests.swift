@@ -75,12 +75,16 @@ struct TextRedactionTests {
     @Test("URLs in text follow the URL rules")
     func urlsInText() {
         #expect(policy.redact(text: "Opened https://example.com/docs/getting-started.") == "Opened https://example.com/docs/getting-started.")
+        // A query that is not all allowed and filled cuts the text right after its `?`: a URL in
+        // text is not a safe island.
         #expect(policy.redact(text: "GET https://ada:pw@api.x.com/v1/users/123456?page=2&token=hunter2#top done")
-            == "GET https://api.x.com/v1/users/:id?page=\(redacted)&token=\(redacted) done")
-        #expect(policy.redact(text: #"opened "https://e.com/a?q=1" now"#) == #"opened "https://e.com/a?q=[REDACTED]" now"#)
+            == "GET https://api.x.com/v1/users/:id?\(redacted)")
+        #expect(policy.redact(text: #"opened "https://e.com/a?q=1" now"#) == #"opened "https://e.com/a?[REDACTED]"#)
         let lenient = RedactionPolicy(allowedQueryParameters: ["page"], urlDetail: .full)
-        #expect(lenient.redact(text: "see https://e.com/list?page=2&token=x") == "see https://e.com/list?page=2&token=\(redacted)")
-        #expect(RedactionPolicy(urlDetail: .hostOnly).redact(text: "see https://e.com/a/b?c=d") == "see https://e.com")
+        #expect(lenient.redact(text: "see https://e.com/list?page=2&token=x") == "see https://e.com/list?\(redacted)")
+        #expect(lenient.redact(text: "see https://e.com/list?page=2 done") == "see https://e.com/list?page=2 done")
+        #expect(RedactionPolicy(urlDetail: .hostOnly).redact(text: "see https://e.com/a/b done") == "see https://e.com done")
+        #expect(RedactionPolicy(urlDetail: .hostOnly).redact(text: "see https://e.com/a/b?c=d") == "see https://e.com?\(redacted)")
         // A path segment that holds a secret key or word becomes :id, in text and in requests.
         // `oauth` ends with `auth`, so the segment after it is a value too.
         #expect(policy.redact(text: "see https://e.com/a,token:hunter2/b,password=x/oauth/token") == "see https://e.com/:id/:id/:id/:id")

@@ -67,7 +67,7 @@ struct RedactionNestingTests {
     @Test("a URL counts as a document")
     func urlLevel() {
         let url = "see https://example.com/a?status=ok"
-        #expect(redact(Self.noted(url, times: 3)) == Self.noted("see https://example.com/a?status=[REDACTED]", times: 3))
+        #expect(redact(Self.noted(url, times: 3)) == Self.noted("see https://example.com/a?[REDACTED]", times: 3))
         #expect(redact(Self.noted(url, times: 4)) == Self.noted(#"{"note":"[REDACTED]"}"#, times: 3))
         // Each URL writes the redacted value of the next one encoded again. Every URL of a chain
         // holds all the URLs after it, so reading them goes past the reading budget (four times
