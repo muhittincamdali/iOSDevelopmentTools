@@ -66,17 +66,16 @@ struct RedactionNestingTests {
 
     @Test("a URL counts as a document")
     func urlLevel() {
-        let url = "see https://example.com/a?status=ok"
-        #expect(redact(Self.noted(url, times: 3)) == Self.noted("see https://example.com/a?[REDACTED]", times: 3))
+        // A clean URL in text is read as `redact(url:)` reads it, as one more document.
+        let url = "see https://example.com/users/12345678 ok"
+        #expect(redact(Self.noted(url, times: 3)) == Self.noted("see https://example.com/users/:id ok", times: 3))
         #expect(redact(Self.noted(url, times: 4)) == Self.noted(#"{"note":"[REDACTED]"}"#, times: 3))
-        // Each URL writes the redacted value of the next one encoded again. Every URL of a chain
-        // holds all the URLs after it, so reading them goes past the reading budget (four times
-        // the line) at the third, whose value is hidden whole; two fit.
+        // A URL with a query is not clean: it cuts the text where it starts, so a chain of URLs in
+        // query values is never read one inside another.
         let allowed = Redactor(allowedQueryParameters: ["q"])
         let chain = String(repeating: "https://a.example/?q=", count: 5) + "x"
-        #expect(allowed.redact(chain) == "https://a.example/?q=https%3A%2F%2Fa.example%2F%3Fq%3Dhttps%253A%252F%252Fa.example%252F%253Fq%253D[REDACTED]")
-        let two = String(repeating: "https://a.example/?q=", count: 2) + "x"
-        #expect(allowed.redact(two) == two)
+        #expect(allowed.redact(chain) == "[REDACTED]")
+        #expect(allowed.redact("see " + String(repeating: "https://a.example/?q=", count: 2) + "x") == "see [REDACTED]")
     }
 
     @Test("a multipart part is a document inside the body")

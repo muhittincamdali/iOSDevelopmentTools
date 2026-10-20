@@ -61,14 +61,14 @@ extension RedactionPolicy {
     /// with a JSON parser, within the limits of ``maximumJSONDepth`` and
     /// ``maximumNestedDocuments``, and redacted by the key rule of structured input before its
     /// members are compared with ``allowedTextKeys``; its strings are free text again, with this
-    /// rule. A URL with a scheme and `//` is recorded as ``redact(url:)`` records it, but it is
-    /// not a safe place to read on from: unless every parameter of its query, fragment and `;`
-    /// path parameters is on ``allowedQueryParameters`` and has a value in the URL, the text is
-    /// hidden from right after the first `?`, `#` or `;` that starts one
-    /// (`GET https://a.example/x?api_key= hunter2` is stored as `GET https://a.example/x?[REDACTED]`),
-    /// and a URL that ends with `=` or `:` or with a secret name hides the text after it. A URL
-    /// that does not parse, or whose host is not written, hides the text from the URL or from
-    /// after its scheme.
+    /// rule. A URL with a scheme and `//` has no island logic: a clean URL — `scheme://host` with
+    /// an optional path of ASCII letters, digits, `.`, `_`, `-` and `/`, a host name or IPv4
+    /// address, no host or segment that names a secret, and white space, a line break or
+    /// punctuation that ends a sentence after it — is recorded as ``redact(url:)`` records it.
+    /// Any other URL hides the text from where it starts: a query, a fragment, `;`, `%`, `=`, `:`,
+    /// `@`, `\`, a port, user info, an escape or a character outside ASCII makes it so
+    /// (`GET https://a.example/x?page=2 done` is stored as `GET [REDACTED]`).
+    /// ``allowedQueryParameters`` does not apply to a URL in text.
     public func redact(text: String) -> String {
         guard isEnabled else { return text }
         return redact(text, nesting: .text(length: text.unicodeScalars.count))

@@ -75,19 +75,19 @@ struct TextRedactionTests {
     @Test("URLs in text follow the URL rules")
     func urlsInText() {
         #expect(policy.redact(text: "Opened https://example.com/docs/getting-started.") == "Opened https://example.com/docs/getting-started.")
-        // A query that is not all allowed and filled cuts the text right after its `?`: a URL in
-        // text is not a safe island.
-        #expect(policy.redact(text: "GET https://ada:pw@api.x.com/v1/users/123456?page=2&token=hunter2#top done")
-            == "GET https://api.x.com/v1/users/:id?\(redacted)")
-        #expect(policy.redact(text: #"opened "https://e.com/a?q=1" now"#) == #"opened "https://e.com/a?[REDACTED]"#)
+        #expect(policy.redact(text: "GET https://api.x.com/v1/users/123456 done") == "GET https://api.x.com/v1/users/:id done")
+        // A URL that is not clean cuts the text where it starts: a URL in text is not a safe
+        // island, and the allowed query parameters do not apply in text.
+        #expect(policy.redact(text: "GET https://ada:pw@api.x.com/v1/users/123456?page=2&token=hunter2#top done") == "GET \(redacted)")
+        #expect(policy.redact(text: #"opened "https://e.com/a?q=1" now"#) == #"opened "[REDACTED]"#)
         let lenient = RedactionPolicy(allowedQueryParameters: ["page"], urlDetail: .full)
-        #expect(lenient.redact(text: "see https://e.com/list?page=2&token=x") == "see https://e.com/list?\(redacted)")
-        #expect(lenient.redact(text: "see https://e.com/list?page=2 done") == "see https://e.com/list?page=2 done")
+        #expect(lenient.redact(text: "see https://e.com/list?page=2&token=x") == "see \(redacted)")
+        #expect(lenient.redact(text: "see https://e.com/list?page=2 done") == "see \(redacted)")
         #expect(RedactionPolicy(urlDetail: .hostOnly).redact(text: "see https://e.com/a/b done") == "see https://e.com done")
-        #expect(RedactionPolicy(urlDetail: .hostOnly).redact(text: "see https://e.com/a/b?c=d") == "see https://e.com?\(redacted)")
-        // A path segment that holds a secret key or word becomes :id, in text and in requests.
-        // `oauth` ends with `auth`, so the segment after it is a value too.
-        #expect(policy.redact(text: "see https://e.com/a,token:hunter2/b,password=x/oauth/token") == "see https://e.com/:id/:id/:id/:id")
+        #expect(RedactionPolicy(urlDetail: .hostOnly).redact(text: "see https://e.com/a/b?c=d") == "see \(redacted)")
+        // A segment that names a secret, or one with `,`, `:` or `=` in it, makes the URL not clean.
+        #expect(policy.redact(text: "see https://e.com/oauth/token ok") == "see \(redacted)")
+        #expect(policy.redact(text: "see https://e.com/a,token:hunter2/b,password=x/oauth/token") == "see \(redacted)")
     }
 
     @Test("Text that cannot be read with certainty is hidden from the ambiguity on", arguments: [

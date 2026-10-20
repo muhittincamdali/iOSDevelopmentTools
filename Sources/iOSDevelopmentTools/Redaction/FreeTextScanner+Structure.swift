@@ -1,4 +1,4 @@
-/// JSON and URLs written into free text, read with their parsers.
+/// JSON written into free text, read with its parser.
 extension FreeTextScanner {
     // MARK: JSON
 
@@ -75,71 +75,4 @@ extension FreeTextScanner {
         position = end
         if readsWords, mentionsSecret(in: jsonStart..<end) { cut(afterByte: end - 1) }
     }
-
-    // MARK: URLs
-
-    /// The end of a URL with a scheme and `//` that starts at `i` (`https://…`, `redis://…`): up to
-    /// white space, a quote or an angle bracket, without punctuation that ends a sentence.
-    func urlEnd(from i: Int, lineEnd: Int) -> Int? {
-        guard ASCII.isLetter(text.bytes[i]), i == 0 || !Self.isSchemeCharacter(text.bytes[i - 1]) else { return nil }
-        var k = i + 1
-        while k < lineEnd, k - i <= Self.maximumSchemeLength, Self.isSchemeCharacter(text.bytes[k]) { k += 1 }
-        guard k + 2 < lineEnd, text.bytes[k] == UInt8(ascii: ":"), text.bytes[k + 1] == UInt8(ascii: "/"), text.bytes[k + 2] == UInt8(ascii: "/") else {
-            return nil
-        }
-        var end = k + 3
-        while end < lineEnd, !text.isSpace(end), !Self.urlEnds.contains(text.bytes[end]) { end += 1 }
-        while end > k + 3, Self.trailingPunctuation.contains(text.bytes[end - 1]) { end -= 1 }
-        return end
-    }
-
-    private static let maximumSchemeLength = 32
-    private static let urlEnds = ByteSet("\"'<>`")
-    private static let trailingPunctuation = ByteSet(".,;:!?)]}")
-
-    private static func isSchemeCharacter(_ byte: UInt8) -> Bool {
-        ASCII.isAlphanumeric(byte) || byte == UInt8(ascii: "+") || byte == UInt8(ascii: "-") || byte == UInt8(ascii: ".")
-    }
-
-    /// A URL, recorded as ``RedactionPolicy/redact(url:)`` records it, up to where it cuts the
-    /// text (see ``RedactionPolicy/cutInWrittenURL(_:)``): a URL is never a safe place to read on
-    /// from, unless all of it is written and nothing in it is left for the text after it to
-    /// complete. A URL one level too many, or longer than the reading budget leaves, hides the
-    /// whole text it is in; in a text that is not inside a document, the text is cut at the URL.
-    mutating func url(to end: Int) {
-        let region = text.original(position..<end)
-        guard let inner = nesting.enteringDocument(), inner.reads(region.count) else {
-            if nesting.isEmbedded { hideWholeText() } else { cut(atByte: position) }
-            return
-        }
-        let scalars = Array(source[region])
-        let urlCut = policy.cutInWrittenURL(scalars)
-        let shown = urlCut?.written ?? scalars.count
-        if shown > 0 {
-            let written = String(String.UnicodeScalarView(scalars[..<shown]))
-            let redacted = policy.redactedURL(written, nesting: inner)
-            let range = region.lowerBound..<(region.lowerBound + shown)
-            let span = RedactionPolicy.Span(start: range.lowerBound, end: range.upperBound, replacement: redacted)
-            record(spans: redacted == written ? [] : [span], region: range)
-        } else if let urlCut, urlCut.cut > 0 {
-            // A host that is not written: the cut after the scheme hides the URL, which is not
-            // text for the value detectors.
-            record(spans: [], region: region)
-        }
-        position = end
-        guard let urlCut else { return }
-        // A cut after the URL starts where a value after it would: past the quotes, brackets,
-        // separators and spaces that follow it (`/password: hunter2`).
-        cut(atByte: urlCut.cut == scalars.count ? valueStart(after: end) : text.byteIndex(atOrAfter: region.lowerBound + urlCut.cut))
-    }
-
-    /// The first byte at or after `i` that a value could start at: past closing quotes and
-    /// brackets, spaces and separators.
-    func valueStart(after i: Int) -> Int {
-        var k = i
-        while k < text.count, Self.closingMarks.contains(text.bytes[k]) || text.isSpace(k) || isSeparator(k) { k += 1 }
-        return k
-    }
-
-    private static let closingMarks = ByteSet("\"'`)]}>")
 }

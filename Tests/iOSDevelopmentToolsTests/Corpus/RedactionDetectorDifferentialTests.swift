@@ -87,9 +87,11 @@ struct RedactionDetectorDifferentialTests {
         // The URL ends before the dot that ends a sentence, and an unsigned token ends in a dot: the
         // token is found in the query without it and in the text with it, and both are hidden.
         ("see https://h.example/p?note=eyJhbGciOiJub25lIn0.eyJzdWIiOiIxIn0.", "see [REDACTED]"),
-        ("see https://h.example/p?note=x%20eyJhbGciOiJub25lIn0.eyJzdWIiOiIxIn0..", "see https://h.example/p?note=x+[REDACTED].."),
-        // A card number that starts in the query and goes on after the URL.
-        ("see https://h.example/p?note=4242 4242 4242 4242 ok", "see https://h.example/p?note=[REDACTED] ok"),
+        ("see https://h.example/p?note=x%20eyJhbGciOiJub25lIn0.eyJzdWIiOiIxIn0..", "see [REDACTED]"),
+        // A card number that starts in the query and goes on after the URL, and one after a
+        // clean URL.
+        ("see https://h.example/p?note=4242 4242 4242 4242 ok", "see [REDACTED]"),
+        ("see https://h.example/p/4242 4242 4242 4242 ok", "see https://h.example/p/[REDACTED] ok"),
     ])
     func findingAcrossURLEnd(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)

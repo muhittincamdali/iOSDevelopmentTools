@@ -109,7 +109,9 @@ public struct RedactionPolicy: Sendable, Hashable {
     public let allowedHeaders: Set<String>
 
     /// The folded names of the query parameters whose values are kept. Empty by default. A name
-    /// that is not plain ASCII or names a secret is never on it.
+    /// that is not plain ASCII or names a secret is never on it. It applies to URLs that are
+    /// recorded as URLs (``redact(url:)``, a request's URL), not to a URL written in free text,
+    /// which is shown only when it has no query at all (see ``redact(text:)``).
     public let allowedQueryParameters: Set<String>
 
     /// The folded keys after which free text is read on: ``defaultAllowedTextKeys`` and the keys
@@ -140,8 +142,8 @@ public struct RedactionPolicy: Sendable, Hashable {
     ///     keys that are hidden anyway.
     ///   - allowedHeaders: The headers whose values are kept. Headers that are always hidden
     ///     (`Authorization`, `Cookie`, names with `token`, `key`, …) stay hidden when listed.
-    ///   - allowedQueryParameters: The query parameters whose values are kept. A secret name
-    ///     stays hidden when listed.
+    ///   - allowedQueryParameters: The query parameters whose values are kept in a recorded URL. A
+    ///     secret name stays hidden when listed. A URL in free text does not use them.
     ///   - allowedTextKeys: Keys after which free text is read on, in addition to
     ///     ``defaultAllowedTextKeys``. A key that is not plain ASCII or names a secret is dropped.
     ///   - maximumBodySize: Bodies larger than this, in bytes, are omitted unread. Kept between 0

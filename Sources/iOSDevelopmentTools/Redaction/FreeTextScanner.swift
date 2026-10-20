@@ -16,10 +16,10 @@
 ///   hidden from there;
 /// - a word that cannot be read with certainty (mixed scripts, an invisible character in it), a
 ///   quote or bracket that does not close, and JSON that does not parse: hidden from there;
-/// - a URL whose query, fragment or `;` path parameters are not all allowed and filled
-///   (`?api_key= …`), or whose end names a value (`/password= …`): hidden from right after the
-///   `?`, `#` or `;`, or from the value after the URL (see
-///   ``RedactionPolicy/cutInWrittenURL(_:)``).
+/// - a URL that is not clean: anything but `scheme://host` with an optional path of ASCII
+///   letters, digits, `.`, `_`, `-` and `/` that names no secret, followed by white space, a line
+///   break or punctuation that ends a sentence (`?page=2`, `:8080`, `user@`, `%3D`, `/password`):
+///   hidden from where the URL starts (see ``url(to:)``).
 ///
 /// Everything from the trigger to the end of the text is hidden, whatever lines follow; a trigger
 /// inside a tag that has not ended hides the tag from its `<`. JSON and URLs before the trigger

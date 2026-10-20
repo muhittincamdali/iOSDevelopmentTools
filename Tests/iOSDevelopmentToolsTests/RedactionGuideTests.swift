@@ -26,7 +26,8 @@ struct RedactionGuideTests {
         #expect(policy.redact(text: #"field name="password" hunter2"#) == #"field name="[REDACTED]"#)
         #expect(policy.redact(text: #"<input value="hunter2" name="password">"#) == "[REDACTED]")
         #expect(policy.redact(text: "<key>password</key>\n<string>k-1</string>") == "<key>[REDACTED]")
-        #expect(policy.redact(text: "git clone https://bob:hunter2@github.com/x/y.git") == "git clone https://github.com/x/y.git")
+        #expect(policy.redact(text: "git clone https://bob:hunter2@github.com/x/y.git") == "git clone [REDACTED]")
+        #expect(policy.redact(text: "git clone https://github.com/x/y.git") == "git clone https://github.com/x/y.git")
         #expect(policy.redact(text: "Payment failed: card declined") == "Payment failed: [REDACTED]")
         #expect(policy.redact(text: "Order 1234 shipped :(") == "Order 1234 shipped :[REDACTED]")
     }

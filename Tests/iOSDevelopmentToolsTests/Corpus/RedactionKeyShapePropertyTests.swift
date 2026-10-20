@@ -152,7 +152,9 @@ struct RedactionKeyShapePropertyTests {
         for host in ["example.com", "api.example.co.uk", "localhost", "my-host", "10.0.0.1", "[::1]", "[2001:db8::7]", "a1-b2.example", "example.com."] {
             let url = try #require(URL(string: "https://\(host)/a"))
             #expect(redactor.redact(url: url) == "https://\(host)/a", "\(host)")
-            #expect(redactor.redact("see https://\(host)/a done") == "see https://\(host)/a done", "\(host)")
+            // In text, a host with `:` or brackets makes the URL not clean, so the text is cut there.
+            let inText = host.contains(":") ? "see [REDACTED]" : "see https://\(host)/a done"
+            #expect(redactor.redact("see https://\(host)/a done") == inText, "\(host)")
         }
         #expect(Redactor(urlDetail: .hostOnly).redact(url: try #require(URL(string: "https://example.com:8443/a?b=1"))) == "https://example.com:8443")
     }
