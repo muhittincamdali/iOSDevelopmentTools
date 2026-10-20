@@ -1,3 +1,5 @@
+import Foundation
+
 /// Names written as values: the one rule that decides whether a string names a field whose value
 /// is hidden. Every path that reads such a name calls ``namesSecret(_:in:compatibility:)``: JSON
 /// objects and arrays (in a body, in a line of text, in a JSON string, in a form value, in a URL
@@ -50,6 +52,17 @@ enum WrittenName {
     /// JSON Patch, SCIM, forms and configurations write them.
     static let nameFields: Set<String> = ["name", "key", "field", "label", "type", "header", "param", "path", "id", "k", "n"]
 
+    /// The fields that hold a name in records as often as in pairs: a person, a place or a product
+    /// (`name`), an identifier (`id`) or a media type (`type`). Beside a name of theirs that is only
+    /// written outside plain ASCII, the fields that carry a value are hidden, not the whole record
+    /// (see ``mayBeRecordValue(_:field:policy:compatibility:)``).
+    static let recordFields: Set<String> = ["name", "id", "type"]
+
+    /// The words of the fields that carry the value of a pair, as HTTP archives, JSON Patch, SCIM,
+    /// forms and configurations write it. A field with one of them as a word carries one too
+    /// (`ParameterValue`, `defaultValue`, `value_2`, `userData`).
+    static let valueWords: Set<String> = ["value", "values", "val", "v", "content", "data", "text", "input", "answer"]
+
     /// The fields that stay beside a name that names a secret, when they hold a string: the names
     /// of pairs, which are names and not values.
     static let stayingFields: Set<String> = ["name", "key", "field", "header", "param", "path", "k", "n"]
@@ -81,6 +94,41 @@ enum WrittenName {
         if isField(field, oneOf: stayingFields) { return true }
         guard isField(field, oneOf: ["op"]), value.count <= 7 else { return false }
         return operations.contains(String(String.UnicodeScalarView(value)).lowercased())
+    }
+
+    /// Whether the field `field` carries the value of a pair (see ``valueWords``): beside a name
+    /// that names a secret it is hidden whole, whatever the name. A field that is not plain ASCII
+    /// is hidden by the key rule anyway.
+    static func carriesValue(_ field: [Unicode.Scalar]) -> Bool {
+        PlainName(field)?.holdsWord(of: valueWords) ?? false
+    }
+
+    /// Whether a name held by `field` that the key rule hides only because it is not plain ASCII
+    /// may be the value of a record rather than the name of a pair: `field` is one of
+    /// ``recordFields``, and the name is written in letters, marks and digits that compatibility
+    /// normalization leaves as they are, spaces and printable ASCII punctuation, and names no
+    /// secret word as free text reads it (`Ayşe Yılmaz`, `İstanbul`, `image/png`,
+    /// `iPhone 15 Pro (256 GB)`, `John O'Brien`). A name in symbols, in styled letters (`ⓟ`, `𝐩`,
+    /// `ｐ`), with a format character or one that names a secret is not.
+    static func mayBeRecordValue(
+        _ value: [Unicode.Scalar], field: [Unicode.Scalar], policy: RedactionPolicy, compatibility: CompatibilityText
+    ) -> Bool {
+        guard isField(field, oneOf: recordFields), value.count <= PlainName.maximumKeyLength, PlainName(value) == nil,
+              value.allSatisfy(isWrittenAsItIs), value.contains(where: { ScalarClass.isLetterOrNumber($0) })
+        else { return false }
+        // Compared scalar by scalar: `String` equality would take a decomposed `é` for a composed one.
+        let text = String(String.UnicodeScalarView(value))
+        guard text.precomposedStringWithCompatibilityMapping.unicodeScalars.elementsEqual(value) else { return false }
+        return !FreeTextScanner.nameNamesSecret(value, policy: policy, compatibility: compatibility)
+    }
+
+    /// Printable ASCII, or a letter, mark or decimal digit of another script.
+    private static func isWrittenAsItIs(_ scalar: Unicode.Scalar) -> Bool {
+        if scalar.isASCII { return (0x20...0x7E).contains(scalar.value) }
+        switch ScalarTable.category(scalar) {
+        case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .otherLetter, .nonspacingMark, .spacingMark, .decimalNumber: return true
+        default: return false
+        }
     }
 
     /// Whether `field`, in any case, is one of `names`, which are lowercase ASCII.
@@ -144,49 +192,3 @@ enum WrittenName {
     }
 }
 
-/// The fields of an object, a form, a URL query or a multipart body that name a secret in their
-/// value. The value of every other field is hidden whole, whatever the field is called, unless it
-/// stays beside the name (see ``WrittenName/staysBesideName(_:value:)``): the fields have no
-/// order, so what belongs to the name cannot be told.
-struct NamingFields {
-    enum Value {
-        case string([Unicode.Scalar])
-        /// An object or an array, which a field that holds a name cannot hold as a name.
-        case structure
-        /// A number, `true`, `false`, `null`, or no value at all.
-        case other
-    }
-
-    /// A field: its name, and its value as the rule reads it.
-    typealias Field = (name: [Unicode.Scalar], value: Value)
-
-    /// The positions of the fields that name a secret. Only these are kept, so a body of many
-    /// fields is not held a second time as Unicode scalars.
-    private let naming: [Int]
-
-    /// Whether any field names a secret in its value.
-    var hasNamingField: Bool { !naming.isEmpty }
-
-    /// Reads the fields one at a time, in order.
-    init(_ fields: some Sequence<Field>, policy: RedactionPolicy, compatibility: CompatibilityText) {
-        var naming: [Int] = []
-        for (index, (name, value)) in fields.enumerated() {
-            let names: Bool = switch value {
-            case .string(let text): WrittenName.namesSecret(text, in: .field(name), policy: policy, compatibility: compatibility)
-            case .structure: WrittenName.holdsName(name)
-            case .other: false
-            }
-            if names { naming.append(index) }
-        }
-        self.naming = naming
-    }
-
-    /// Whether the value of field `index` is hidden because another field names a secret. The
-    /// field is made again only then.
-    func hidesValue(at index: Int, of field: @autoclosure () -> Field) -> Bool {
-        guard naming.count > 1 || naming.first.map({ $0 != index }) == true else { return false }
-        let (name, value) = field()
-        guard case .string(let text) = value else { return true }
-        return !WrittenName.staysBesideName(name, value: text)
-    }
-}

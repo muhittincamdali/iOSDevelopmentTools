@@ -6,9 +6,10 @@ extension JSONDocument {
     ///   at any depth, inside
     ///   arrays and for every repetition of a name, becomes the string `"[REDACTED]"`, whatever its
     ///   type.
-    /// - **Names written as values** (see ``WrittenName``). In an object with a member whose value
-    ///   is a name that names a secret, the values of the other members are hidden whole, whatever
-    ///   their names: an object has no order, so what belongs to the name cannot be told. The
+    /// - **Names written as values** (see ``WrittenName`` and ``NamingFields``). In an object with
+    ///   a member whose value is a name that names a secret, the members that carry the value of
+    ///   a pair are hidden whole, and, unless the name is a `name`, `id` or `type` that is only
+    ///   written outside plain ASCII, the other members too: an object has no order. The
     ///   value of a member that holds a name (`name`, `key`, `field`, `label`, `type`, `header`,
     ///   `param`, `path`, `id`, `k`, `n`, or a member whose own name is not plain ASCII) is read by
     ///   the key rule, so a name that is not plain ASCII (`Şifre`, `ⓟⓘⓝ`, `🔑`, `Password:`)

@@ -168,6 +168,17 @@ struct PlainName {
 
     private func endsWord(_ k: Int) -> Bool { k == letters.count || startsWord[k] }
 
+    /// Whether one of the name's words, lowercased, is in `words` (`newValue` and `value_2` hold
+    /// `value`).
+    func holdsWord(of words: Set<String>) -> Bool {
+        var start = 0
+        for end in 1...letters.count where end == letters.count || startsWord[end] {
+            if words.contains(String(decoding: letters[start..<end], as: UTF8.self)) { return true }
+            start = end
+        }
+        return false
+    }
+
     /// Whether a word starts at byte `i`: after a separator, between letters and digits, at a
     /// camel-case hump (`accessToken`) or at the last capital of an acronym (`AWSSecret`).
     private static func startsWord(_ i: Int, in bytes: [UInt8]) -> Bool {

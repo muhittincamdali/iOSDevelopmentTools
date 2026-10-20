@@ -67,11 +67,16 @@ struct RedactionHeldNameTests {
     }
 
     /// The cost of the default, named in the documentation: a name in another script hides the
-    /// members beside it whatever they hold.
-    @Test("a held name in another script hides the members beside it")
-    func nonASCIINamesHideOthers() {
-        #expect(json(#"{"id":1,"name":"Ayşe","role":"admin"}"#) == #"{"id":"[REDACTED]","name":"Ayşe","role":"[REDACTED]"}"#)
+    /// value beside it, and under a field that only pairs use, every member beside it. Under
+    /// `name`, `id` and `type` it may be a person, a place, a product or a media type, so the rest
+    /// of the record stays.
+    @Test("a held name in another script hides the value beside it; under name, id and type the rest of a record stays")
+    func nonASCIINamesHideValues() {
+        #expect(json(#"{"id":1,"name":"Ayşe","role":"admin"}"#) == #"{"id":1,"name":"Ayşe","role":"admin"}"#)
+        #expect(json(#"{"name":"Ayşe","value":"x","role":"admin"}"#) == #"{"name":"Ayşe","value":"[REDACTED]","role":"admin"}"#)
         #expect(json(#"{"type":"image/png","data":"AAAA"}"#) == #"{"type":"image/png","data":"[REDACTED]"}"#)
+        #expect(json(#"{"label":"Ayşe","role":"admin"}"#) == #"{"label":"Ayşe","role":"[REDACTED]"}"#)
+        #expect(json(#"{"name":"ⓢⓣⓐⓣⓤⓢ","role":"admin"}"#) == #"{"name":"[REDACTED]","role":"[REDACTED]"}"#)
     }
 
     @Test("forms, URL queries and multipart bodies follow the same rule")
@@ -137,7 +142,8 @@ struct RedactionHeldNameTests {
     func guideExamples() {
         let fields = #"[{"label":"Şifre","value":"hunter2"},{"label":"ⓟⓘⓝ","value":"1234"},{"label":"status","value":"ok"}]"#
         #expect(json(fields) == #"[{"label":"Şifre","value":"[REDACTED]"},{"label":"[REDACTED]","value":"[REDACTED]"},{"label":"status","value":"ok"}]"#)
-        #expect(json(#"{"name":"Ayşe","role":"admin"}"#) == #"{"name":"Ayşe","role":"[REDACTED]"}"#)
+        #expect(json(#"{"name":"Ayşe","role":"admin"}"#) == #"{"name":"Ayşe","role":"admin"}"#)
+        #expect(json(#"{"name":"Şifre","value":"hunter2"}"#) == #"{"name":"Şifre","value":"[REDACTED]"}"#)
         #expect(redactor.redact("<string name=\"password\" />\nhunter2") == "[REDACTED]")
     }
 
