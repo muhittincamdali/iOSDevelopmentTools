@@ -32,8 +32,9 @@ extension RedactionPolicy {
     }
 
     /// The disposition with only the field name, read as free text; the content type as
-    /// `type/subtype`; other headers by the header rule (see ``redact(headers:)``). A file name is
-    /// never written.
+    /// `type/subtype`; other headers by the header rule (see ``redact(headers:)``), with a name
+    /// that is not on ``allowedHeaders``, or in which a value detector finds something, written as
+    /// ``replacement`` too. A file name is never written.
     private func renderedHeaders(of part: MultipartBody.Part, nesting: Nesting) -> [String] {
         var lines = ["Content-Disposition: form-data; name=\"\(Self.quotedStringContent(redactedName(part.name, nesting: nesting)))\""]
         if let contentType = part.contentType { lines.append("Content-Type: " + contentType.essence) }
@@ -41,9 +42,20 @@ extension RedactionPolicy {
             let name = header.name.lowercased()
             guard name != "content-disposition", name != "content-type" else { continue }
             let value = header.value.trimmingCharacters(in: .whitespaces)
-            lines.append(header.name + ": " + redactedHeaderValue(name: header.name, value: value))
+            let shownName = shownPartHeaderName(header.name)
+            lines.append(shownName + ": " + (shownName == header.name ? redactedHeaderValue(name: header.name, value: value) : Self.replacement))
         }
         return lines
+    }
+
+    /// A part header's name as it is written: the name of a header whose value is kept, unless a
+    /// value detector finds something in it; ``replacement`` for any other, whose value is hidden
+    /// too. A part header is written by the app or a library into the body, so its name may hold
+    /// what its value would.
+    private func shownPartHeaderName(_ name: String) -> String {
+        guard !hidesHeader(named: name) else { return Self.replacement }
+        let scalars = Array(name.unicodeScalars)
+        return detectorSpans(in: NormalizedText(scalars, compatibility: CompatibilityText())).isEmpty ? name : Self.replacement
     }
 
     /// The content of a part, read as a body one level inside the multipart body. A part is a

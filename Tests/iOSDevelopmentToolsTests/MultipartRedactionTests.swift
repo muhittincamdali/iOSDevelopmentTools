@@ -17,7 +17,17 @@ struct MultipartRedactionTests {
         return Data(text.utf8)
     }
 
-    @Test("Fields are redacted by name, file parts omitted, other part headers follow the header rule")
+    // Section 6 of the redaction rules: a part header name outside the header allowlist is written
+    // as `[REDACTED]`, and the value detectors read the names too.
+    @Test("A part header name outside the allowlist, or with a finding in it, is written as [REDACTED] with its value")
+    func partHeaderNames() {
+        let lenient = RedactionPolicy(allowedHeaders: ["X-Note", "X-4111111111111111"])
+        let body = multipart([("Content-Disposition: form-data; name=\"a\"\r\nX-Note: hi\r\nX-4111111111111111: v\r\nX-Other: v", "ok")])
+        let (data, _) = lenient.redact(body: body, contentType: contentType)
+        #expect(data == multipart([("Content-Disposition: form-data; name=\"a\"\r\nX-Note: hi\r\n\(redacted): \(redacted)\r\n\(redacted): \(redacted)", "ok")]))
+    }
+
+    @Test("Fields are redacted by name, file parts omitted, other part headers follow the header rule and hide their names")
     func fields() {
         let body = multipart([
             ("Content-Disposition: form-data; name=\"user\"", "ada"),
@@ -29,7 +39,7 @@ struct MultipartRedactionTests {
         #expect(data == multipart([
             ("Content-Disposition: form-data; name=\"user\"", "ada"),
             ("Content-Disposition: form-data; name=\"password\"", redacted),
-            ("Content-Disposition: form-data; name=\"avatar\"\r\nContent-Type: image/png\r\nX-Token: \(redacted)", "[body omitted: 7 bytes, image/png]"),
+            ("Content-Disposition: form-data; name=\"avatar\"\r\nContent-Type: image/png\r\n\(redacted): \(redacted)", "[body omitted: 7 bytes, image/png]"),
         ]))
     }
 

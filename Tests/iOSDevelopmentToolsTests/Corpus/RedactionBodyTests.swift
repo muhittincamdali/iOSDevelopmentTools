@@ -150,8 +150,8 @@ struct RedactionBodyTests {
         ])
         let expected = multipart([
             "Content-Disposition: form-data; name=\"note\"\r\nContent-Type: text/plain\r\n\r\n[body omitted: 1 bytes, text/plain]",
-            "Content-Disposition: form-data; name=\"bio\"\r\nX-Secret: [REDACTED]\r\nContent-Length: 2\r\n\r\nhi",
-            "Content-Disposition: form-data; name=\"data\"\r\nContent-Transfer-Encoding: [REDACTED]\r\n\r\n[body omitted: 12 bytes, text/plain]",
+            "Content-Disposition: form-data; name=\"bio\"\r\n[REDACTED]: [REDACTED]\r\nContent-Length: 2\r\n\r\nhi",
+            "Content-Disposition: form-data; name=\"data\"\r\n[REDACTED]: [REDACTED]\r\n\r\n[body omitted: 12 bytes, text/plain]",
             "Content-Disposition: form-data; name=\"a=[REDACTED]\"\r\n\r\n[REDACTED]",
         ])
         let output = redact(body, "multipart/form-data; boundary=XyZ")
@@ -162,7 +162,7 @@ struct RedactionBodyTests {
     @Test("finds the colon of a part header among the scalars, also before a mark")
     func multipartHeaderColon() {
         let body = multipart(["Content-Disposition: form-data; name=\"bio\"\r\nX-Note:\u{301}s3cr3t\r\n\r\nhi"])
-        let expected = multipart(["Content-Disposition: form-data; name=\"bio\"\r\nX-Note: [REDACTED]\r\n\r\nhi"])
+        let expected = multipart(["Content-Disposition: form-data; name=\"bio\"\r\n[REDACTED]: [REDACTED]\r\n\r\nhi"])
         #expect(redact(body, "multipart/form-data; boundary=XyZ") == expected)
     }
 
