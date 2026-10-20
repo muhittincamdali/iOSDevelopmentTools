@@ -151,7 +151,7 @@ public final class LogStore: Sendable {
         let configuration = configuration
         guard level >= configuration.minimumLevel else { return }
         // Redacted before it is cut, so a cut cannot shorten a secret below what a detector finds.
-        let (text, isTruncated) = Self.truncated(configuration.redaction.redact(text: message()), to: configuration.maximumMessageLength)
+        let (text, isTruncated) = Self.truncated(Self.redacted(message(), with: configuration.redaction), to: configuration.maximumMessageLength)
         let categoryName = Self.truncated(category, to: Self.maximumCategoryLength).text
         let entry = LogEntry(
             date: Date(), level: level, category: categoryName, message: text, isTruncated: isTruncated,
@@ -200,6 +200,28 @@ public final class LogStore: Sendable {
     }
 
     // MARK: Internals
+
+    /// The most Unicode scalars of a message that are redacted: 1 MiB, as for a body (see
+    /// ``RedactionPolicy/maximumCheckedBodySize``). Redaction runs on the thread that logs and takes
+    /// time in proportion to what it reads, while no message is kept longer than
+    /// ``Configuration/messageLengthLimit``. A longer message is redacted up to its last line break
+    /// before this length, and the rest of it is hidden; one with no line break there is hidden
+    /// whole.
+    public static let maximumRedactedMessageLength = 1_048_576
+
+    /// The message as it is kept before it is cut off: redacted with `policy`, and past
+    /// ``maximumRedactedMessageLength`` hidden. A value detector never finds anything across a
+    /// line break, so none is split where the message is cut.
+    static func redacted(_ message: String, with policy: RedactionPolicy) -> String {
+        guard policy.isEnabled else { return message }
+        let scalars = message.unicodeScalars
+        guard let limit = scalars.index(scalars.startIndex, offsetBy: maximumRedactedMessageLength, limitedBy: scalars.endIndex),
+              limit < scalars.endIndex
+        else { return policy.redact(text: message) }
+        guard let lineEnd = scalars[..<limit].lastIndex(where: { $0 == "\n" || $0 == "\r" }) else { return RedactionPolicy.replacement }
+        let kept = policy.redact(text: String(scalars[...lineEnd]))
+        return kept.hasSuffix(RedactionPolicy.replacement) ? kept : kept + RedactionPolicy.replacement
+    }
 
     /// The text cut off after at most `limit` Unicode scalars, with `…` appended when it was cut.
     ///

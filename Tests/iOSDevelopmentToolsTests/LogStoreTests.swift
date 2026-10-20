@@ -71,6 +71,30 @@ struct LogStoreTests {
         #expect(entry.isTruncated == isTruncated)
     }
 
+    // Redaction runs on the thread that logs, in time that grows with the message: past a
+    // megabyte, the rest of a message is hidden instead of read.
+    @Test("A message longer than the longest redacted message is hidden from its last line break before that length")
+    func longestRedactedMessage() throws {
+        let limit = LogStore.maximumRedactedMessageLength
+        let line = "status=200\n"
+        let lines = String(repeating: line, count: limit / line.count + 10)
+        let redacted = LogStore.redacted(lines + "x=hunter2 password=hunter2", with: .default)
+        #expect(!redacted.contains("hunter2"))
+        #expect(redacted.hasSuffix(RedactionPolicy.replacement))
+        #expect(redacted.hasPrefix(String(repeating: line, count: limit / line.count)))
+        #expect(redacted.unicodeScalars.count <= limit + RedactionPolicy.replacement.count)
+        // A message of one line that long is hidden whole; one within the length is read whole.
+        #expect(LogStore.redacted(String(repeating: "a ", count: limit) + "hunter2", with: .default) == RedactionPolicy.replacement)
+        let fits = String(repeating: line, count: limit / line.count)
+        #expect(LogStore.redacted(fits, with: .default) == fits)
+        #expect(LogStore.redacted(lines + "hunter2", with: .disabled) == lines + "hunter2")
+        // The store keeps the start of it.
+        let logs = store(.init(maximumMessageLength: 64, systemLogSubsystem: nil))
+        logs.info(lines + "token=hunter2")
+        let entry = try #require(logs.entries.first)
+        #expect(entry.message.hasPrefix("status=200\nstatus=200\n") && entry.isTruncated && !entry.message.contains("hunter2"))
+    }
+
     @Test("A huge message costs only the kept characters")
     func hugeMessage() throws {
         let logs = store(.init(maximumMessageLength: 10, systemLogSubsystem: nil))
