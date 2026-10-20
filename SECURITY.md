@@ -12,8 +12,8 @@ documented rules is a vulnerability.
   handle, or a body that should have been omitted.
 - In a log message or other free text, anything after a trigger that the documentation names (a
   secret name, a key that is not on the allowed text keys, a character outside the safe alphabet,
-  an escape, a quote or bracket that does not close, a URL whose query, fragment or `;`
-  parameters are not all allowed and filled) that is stored.
+  an escape, a quote or bracket that does not close, a URL that is not clean) that is stored, a
+  value written inside such a URL included.
 - Input that makes the package crash, hang or use memory without bound (a request or response
   body, a header, a URL, a log message).
 - A `curl` command from `curlCommand()` that runs something other than `curl` when pasted into
