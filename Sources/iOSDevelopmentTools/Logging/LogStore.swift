@@ -10,7 +10,8 @@ import os
 /// ```
 ///
 /// Messages go through ``Configuration/redaction`` (see ``RedactionPolicy/redact(text:)``) before
-/// they are kept or passed on. That is a safety net: do not log secrets in the first place.
+/// they are kept or passed on: from the first secret name or other trigger in a message, the rest
+/// of the message is hidden. That is a safety net: do not log secrets in the first place.
 ///
 /// The store keeps at most ``Configuration/maximumEntries`` messages of at most
 /// ``Configuration/maximumMessageLength`` Unicode scalars, so its memory use has a fixed upper
