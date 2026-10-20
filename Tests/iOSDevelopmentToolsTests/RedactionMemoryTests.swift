@@ -26,7 +26,7 @@ struct RedactionMemoryTests {
     @Test("a megabyte of log lines with no trigger takes less than 16 MB beyond its input")
     func textWithoutTrigger() async {
         await #expect(processExitsWith: .success) {
-            let input = String(repeating: "status=200 user=bob path=/api/items count=3\n", count: RedactionMemoryTests.megabyte / 44)
+            let input = String(repeating: "status=200 method=GET path=/api/items count=3\n", count: RedactionMemoryTests.megabyte / 46)
             RedactionMemoryTests.exitWithPeak { _ = RedactionPolicy.default.redact(text: input) }
         }
     }
@@ -34,7 +34,7 @@ struct RedactionMemoryTests {
     @Test("a megabyte cut at its first line takes less than 16 MB beyond its input")
     func textCutEarly() async {
         await #expect(processExitsWith: .success) {
-            let input = "login password=hunter2\n" + String(repeating: "status=200 user=bob path=/api/items count=3\n", count: RedactionMemoryTests.megabyte / 44)
+            let input = "login password=hunter2\n" + String(repeating: "status=200 method=GET path=/api/items count=3\n", count: RedactionMemoryTests.megabyte / 46)
             RedactionMemoryTests.exitWithPeak { _ = RedactionPolicy.default.redact(text: input) }
         }
     }

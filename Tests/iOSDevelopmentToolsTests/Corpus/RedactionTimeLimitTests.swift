@@ -137,7 +137,7 @@ struct RedactionTimeLimitTests {
         }, redact: body("application/json")),
     ]
 
-    @Test("redacting a megabyte of an ordinary shape takes a 512 KiB thread less than a second", arguments: shapes + namesAsValues + nestedPayloads + namesInHiddenValues + oneStringPayloads)
+    @Test("redacting a megabyte of an ordinary shape takes a 512 KiB thread less than a second", arguments: ordinaryShapes)
     func shape(input: TimedInput) {
         let text = input.make()
         #expect(text.utf8.count >= Self.size * 9 / 10 && text.utf8.count <= Redactor.largeBodies.policy.maximumBodySize)
