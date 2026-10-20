@@ -121,8 +121,8 @@ struct TextRedactionTests {
 
     @Test("A colon that is not inside a time is a key's", arguments: [
         ("pin1:1234", "pin[REDACTED]"), ("localhost:8080", "localhost:[REDACTED]"), ("12:ab", "12:[REDACTED]"),
-        // Between two digits a `:` is a time or a ratio.
-        ("12:34hunter2", "12:34hunter2"), ("1:2:3", "1:2:3"), ("ratio 16:9", "ratio 16:9"),
+        // Between two digits a `:` is part of a number only when a whole time or port follows it.
+        ("12:34hunter2", "12:[REDACTED]"), ("1:2:3", "1:[REDACTED]"), ("ratio 16:9", "ratio 16:[REDACTED]"),
     ])
     func colonsThatAreKeys(text: String, expected: String) {
         #expect(policy.redact(text: text) == expected)
@@ -198,11 +198,14 @@ struct TextRedactionTests {
         #expect(policy.redact(text: spacedAts) == spacedAts)
         let times = String(repeating: "12:30:45 ", count: 20_000)
         #expect(policy.redact(text: times) == times)
-        // Between two digits a `:` is a time, so nothing is hidden.
+        // Between two digits a `:` that no whole time or port follows is a key's, so the first
+        // one cuts the text.
         let ratios = String(repeating: "1:", count: 50_000)
-        #expect(policy.redact(text: ratios) == redacted)
+        #expect(policy.redact(text: ratios) == "1:" + redacted)
         let spacedRatios = String(repeating: "1:2 ", count: 25_000)
-        #expect(policy.redact(text: spacedRatios) == spacedRatios)
+        #expect(policy.redact(text: spacedRatios) == "1:" + redacted)
+        let spacedTimes = String(repeating: "1:05 ", count: 20_000)
+        #expect(policy.redact(text: spacedTimes) == spacedTimes)
         let objects = String(repeating: #"{"count":1} "#, count: 10_000)
         #expect(policy.redact(text: objects) == objects)
         #expect(policy.redact(text: String(repeating: #"{""#, count: 50_000)) == redacted)
