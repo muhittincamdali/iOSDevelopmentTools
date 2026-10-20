@@ -110,7 +110,7 @@ struct PlainName {
         for start in letters.indices {
             for entry in table.candidates(at: start, in: letters) {
                 let ends = matchEnds(of: entry.letters, at: start)
-                for end in [ends.wildcardAsLetter, ends.wildcardAsNone] {
+                for end in [ends.whole, ends.wildcardAsLetter, ends.wildcardAsNone] {
                     guard let end, holds(entry.placement, start: start, end: end), accepts(start..<end) else { continue }
                     return start..<end
                 }
@@ -119,27 +119,33 @@ struct PlainName {
         return nil
     }
 
-    /// Where `word` ends when it is spelled at `start`, with at most one ``wildcard`` and a plural
-    /// `s` after it. The wildcard stands for one letter of the word or, between two of its letters,
-    /// for none (`passꞏword`, with a letter that has no ASCII form put in).
+    /// Where `word` ends when it is spelled at `start`, its plural `s` included, with at most one
+    /// ``wildcard``. The plural `s` is read as a letter of the word: the wildcard stands for one
+    /// letter of the word or of its plural, or, between two of their letters, for none
+    /// (`passꞏword`, `tokenꞏ` for `tokens`, `tokenꞏs`, with a letter that has no ASCII form put in).
     ///
     /// The letters before the first one that differs from the word are the word's own, so the
     /// wildcard can only be that letter: the word is read on from there twice at most, with the
-    /// wildcard as a letter and as none. Both readings are returned, because only one of them may
-    /// end where the word has to end: `tokeꞏn` read with the wildcard as the `n` ends before the
-    /// last letter, and only the reading with the wildcard as none ends the name.
-    private func matchEnds(of word: [UInt8], at start: Int) -> (wildcardAsLetter: Int?, wildcardAsNone: Int?) {
+    /// wildcard as a letter and as none. Every reading is returned, the word spelled without the
+    /// wildcard first, because only one of them may end where the word has to end: `tokeꞏn` read
+    /// with the wildcard as the `n` ends before the last letter, and `tokenꞏs` read as `token`
+    /// ends before two more letters; only the wildcard as none ends either name.
+    private func matchEnds(of word: [UInt8], at start: Int) -> (whole: Int?, wildcardAsLetter: Int?, wildcardAsNone: Int?) {
         var k = start
         var matched = 0
         while matched < word.count, k < letters.count, letters[k] == word[matched] {
             k += 1
             matched += 1
         }
-        if matched == word.count { return (withPlural(k), nil) }
-        guard k < letters.count, letters[k] == Self.wildcard else { return (nil, nil) }
+        guard k < letters.count, letters[k] == Self.wildcard else { return (matched == word.count ? withPlural(k) : nil, nil, nil) }
+        if matched == word.count {
+            // After the whole word, the wildcard is its plural `s` or stands for none before it.
+            let asNone = k + 1 < letters.count && letters[k + 1] == UInt8(ascii: "s") ? pluralEnd(at: k + 1) : nil
+            return (k, pluralEnd(at: k), asNone)
+        }
         let asLetter = spelledEnd(of: word, from: matched + 1, at: k + 1).map(withPlural)
         let asNone = matched > 0 ? spelledEnd(of: word, from: matched, at: k + 1).map(withPlural) : nil
-        return (asLetter, asNone)
+        return (nil, asLetter, asNone)
     }
 
     /// Where the letters of `word` from `index` on end when they are spelled exactly from letter
@@ -157,8 +163,15 @@ struct PlainName {
 
     /// `end`, or the letter after it when a plural `s` ends the word there.
     private func withPlural(_ end: Int) -> Int {
-        guard end < letters.count, letters[end] == UInt8(ascii: "s"), !startsWord[end], endsWord(end + 1) else { return end }
-        return end + 1
+        guard end < letters.count, letters[end] == UInt8(ascii: "s"), let plural = pluralEnd(at: end) else { return end }
+        return plural
+    }
+
+    /// The letter after letter `k` when a plural `s` read there ends the word: it does not start a
+    /// word, and a word or the name ends after it.
+    private func pluralEnd(at k: Int) -> Int? {
+        guard k < letters.count, !startsWord[k], endsWord(k + 1) else { return nil }
+        return k + 1
     }
 
     private func holds(_ placement: SecretNameTable.Placement, start: Int, end: Int) -> Bool {

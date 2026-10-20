@@ -127,8 +127,21 @@ private struct ReferenceMatch {
         return nil
     }
 
-    /// Every reading: the wildcard as a letter, then as no letter at each place in turn.
+    /// Every reading of the word, with a plural `s` after it when one ends it there, then every
+    /// reading of its plural, whose `s` the wildcard may stand for or come before (`tokenꞏ`,
+    /// `tokenꞏs`).
     private func matchEnds(of word: [UInt8], at start: Int) -> [Int] {
+        let singular = readings(of: word, at: start).map { end in
+            end < letters.count && letters[end] == UInt8(ascii: "s") && endsPlural(end + 1) ? end + 1 : end
+        }
+        return singular + readings(of: word + [UInt8(ascii: "s")], at: start).filter(endsPlural)
+    }
+
+    /// Whether the letter before `end`, read as a plural `s`, ends the word.
+    private func endsPlural(_ end: Int) -> Bool { !startsWord[end - 1] && endsWord(end) }
+
+    /// The wildcard as a letter, then as no letter at each place in turn.
+    private func readings(of word: [UInt8], at start: Int) -> [Int] {
         var ends = [spelledEnd(of: word, at: start, skipping: nil)]
         if word.count > 1 {
             for k in (start + 1)..<max(start + 1, min(start + word.count, letters.count)) where letters[k] == PlainName.wildcard {
@@ -139,7 +152,7 @@ private struct ReferenceMatch {
     }
 
     private func spelledEnd(of word: [UInt8], at start: Int, skipping skipped: Int?) -> Int? {
-        var end = start + word.count + (skipped == nil ? 0 : 1)
+        let end = start + word.count + (skipped == nil ? 0 : 1)
         guard end <= letters.count else { return nil }
         var usedWildcard = skipped != nil
         var k = start
@@ -151,7 +164,6 @@ private struct ReferenceMatch {
             }
             k += 1
         }
-        if end < letters.count, letters[end] == UInt8(ascii: "s"), !startsWord[end], endsWord(end + 1) { end += 1 }
         return end
     }
 
