@@ -32,10 +32,10 @@ extension FreeTextScanner {
 
     /// A quote or an opening bracket at the position. It is a trigger when it does not close: a
     /// double quote, plain or escaped (`\"`), with no other one of its kind after it, a single quote
-    /// or backtick that opens a value (`status='ok`) with no other one after it, and a bracket with
-    /// no closing one of its kind after it. A quote that closes is passed over and the text inside
-    /// it is read on, so a name in quotes is read too. Apostrophes inside words (`don't`) are not
-    /// quotes.
+    /// or backtick that opens a value or a word (`status='ok`, `login 'open …`) with no other one
+    /// after it, and a bracket with no closing one of its kind after it. A quote that closes is
+    /// passed over and the text inside it is read on, so a name in quotes is read too.
+    /// Apostrophes inside words (`don't`, `Ayşe'nin`) are not quotes.
     mutating func readMark() {
         let byte = text.bytes[position]
         if byte == UInt8(ascii: "\"") {
@@ -50,7 +50,7 @@ extension FreeTextScanner {
                 pendingCloses[kind] = close
             }
         } else if let kind = Self.simpleQuotes.firstIndex(of: byte) {
-            if opensValue(at: position), lastSimpleQuotes[kind] <= position {
+            if opensQuote(at: position), lastSimpleQuotes[kind] <= position {
                 cut(atByte: position)
                 return
             }
@@ -73,12 +73,10 @@ extension FreeTextScanner {
         return nil
     }
 
-    /// Whether a single quote or backtick at `k` opens a value: it follows a separator, with white
-    /// space between at most.
-    private func opensValue(at k: Int) -> Bool {
-        var j = k
-        while j > 0, text.isSpace(j - 1) { j -= 1 }
-        return j > 0 && isSeparator(j - 1)
+    /// Whether a single quote or backtick at `k` opens quoted text: it does not follow a letter or
+    /// digit of any script, as the apostrophe of `don't` does.
+    private func opensQuote(at k: Int) -> Bool {
+        k == 0 || !text.isAnyAlphanumeric(k - 1)
     }
 
     /// Notes where a tag starts (`<` before a letter of any script, or `/` and one) and where its

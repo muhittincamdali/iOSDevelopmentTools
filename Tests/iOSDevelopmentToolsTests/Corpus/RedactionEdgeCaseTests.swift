@@ -147,7 +147,7 @@ struct RedactionEdgeCaseTests {
         #expect(redactor.redact("\(name)=x") == "\(name)=[REDACTED]")
     }
 
-    @Test("leaves markup without a secret name or element text", arguments: ["</password>", "<private>", "<br/> <p>\n</p>", "if a<b"])
+    @Test("leaves markup without a secret name or element text", arguments: ["</status>", "<private>", "<br/> <p>\n</p>", "if a<b"])
     func markup(input: String) {
         #expect(redactor.redact(input) == input)
     }
@@ -156,6 +156,8 @@ struct RedactionEdgeCaseTests {
     @Test("the text of an element is kept only when its tag is allowed", arguments: [
         ("<br/> <p>hi</p>", "<br/> <p>[REDACTED]"), ("if a<b && c>d then", "if a<b && c>[REDACTED]"),
         ("<user>bob</user>", "<user>[REDACTED]"), ("<status>200</status> done", "<status>200</status> done"),
+        // The name of an end tag is a secret name like any other.
+        ("</password>", "</password[REDACTED]"), ("</pin 1234", "</pin [REDACTED]"), ("login </token SECRET", "login </token [REDACTED]"),
         ("<count>\n  3\n</count>", "<count>\n  3\n</count>"), ("Loaded Array<Item> in 3 ms", "Loaded Array<Item> [REDACTED]"),
     ])
     func elementText(input: String, expected: String) {

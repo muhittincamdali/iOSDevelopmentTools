@@ -229,6 +229,10 @@ struct RedactionRegressionTests {
         // The third review of 2.1.0: a key that is not on the allowed text keys showed its value.
         "x=hunter2", "creds=hunter2", "resp {\"x\":\"hunter2\",\"status\":200}", "note: hunter2", "Error: hunter2",
         "user=bob hunter2", "[\"user\",\"hunter2\"]", "user\u{FF1A}hunter2", "status\n=hunter2", "{\"status\":200,\"data\":[\"hunter2\"]}",
+        // The twelfth and thirteenth reviews of the shared rules: a secret name after `</`, and a
+        // quote that opens a word and never closes.
+        "</pin hunter2", "login </token hunter2", "</api_key>hunter2", "</password/> hunter2", "<//password> hunter2",
+        "\u{200B}</password> hunter2", "login 'open hunter2", "login `open hunter2",
     ])
     func freeTextCut(text: String) {
         #expect(!policy.redact(text: text).contains(Self.secret))

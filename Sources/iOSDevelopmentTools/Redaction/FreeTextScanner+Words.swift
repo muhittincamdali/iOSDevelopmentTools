@@ -60,14 +60,13 @@ extension FreeTextScanner {
         if let stop { cut(atByte: stop) }
     }
 
-    /// Whether a word that holds a secret name names no value after it: the name of an end tag
-    /// (`</password>`), whose value came before it, and the element name `key` in a start tag,
-    /// whose text the rule for the text of an element cuts where it starts (see
-    /// ``noteTag(_:at:)``).
+    /// Whether a word that holds a secret name names no value after it: the element name `key` in
+    /// a start tag, whose text the rule for the text of an element cuts where it starts (see
+    /// ``noteTag(_:at:)``). The name of an end tag is a secret name like any other: whether
+    /// `</password` ends an element or what follows it is a value cannot be told (`</pin 1234`).
     private func namesNoValue(_ word: Range<Int>) -> Bool {
         let start = word.lowerBound
         guard start >= 1, text.bytes[start - 1] == UInt8(ascii: "<") else { return false }
-        if text.bytes[start] == UInt8(ascii: "/") { return true }
         return word.count == 3 && text.bytes[word].map(ASCII.lowercased).elementsEqual("key".utf8)
     }
 
