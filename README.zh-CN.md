@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
+<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -52,7 +52,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 494 个 Swift Testing 测试，iOS 模拟器上有 491 个。请求从应用的会话
+- **经过测试** — macOS 上有 501 个 Swift Testing 测试，iOS 模拟器上有 498 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -199,11 +199,20 @@ func configureNetworkLogger() {
   会让其后的所有内容（包括下面的行）都被隐藏（`login password=hunter2 status=200` 会存储为
   `login password=[REDACTED]`，`x=hunter2` 会存储为 `x=[REDACTED]`）。没有触发点的消息会原样保留，
   只有检测到的令牌、卡号和电子邮件地址会被隐藏。
+- **日志消息中的 URL** 不是安全的孤岛。除非查询、片段和 `;` 参数中的每个参数都在允许列表中且
+  带有值，否则消息会从第一个 `?`、`#` 或 `;` 之后开始隐藏（`GET https://a.example/x?api_key= hunter2`
+  会存储为 `GET https://a.example/x?[REDACTED]`）；以 `=`、`:` 或秘密名称结尾的 URL 也会隐藏其后的
+  内容。
 
 脱敏只是一道安全网，而不是保证。它针对的是意外记录下来的秘密：结构化输入会用解析器读取，
 解析器不能完全理解的内容都会被隐藏；自由文本只能尽力而为，用相似字母伪装且不带 `=` 或 `:` 的
 秘密名称（`pɑsswoʀd hunter2`）不保证能被发现。从一开始就不要让秘密进入你记录的请求和日志消息，
 并优先使用结构化日志。
+
+这个模型还包括两个限制。**开销上限：** 一个输入中嵌套的所有文档（字符串中的 JSON、文本中的
+URL）合计最多读取输入长度的四倍；超出这个预算后，包含下一个文档的字符串会被整体隐藏。**多行布局**
+不需要特殊处理：单独一行的 property list `<key>`、分布在多行的 JSON 和以文本形式写出的 multipart
+消息体都会从第一个触发点隐藏到文本末尾，所以无论值写在哪里都会被隐藏。
 
 ### 记录日志消息
 

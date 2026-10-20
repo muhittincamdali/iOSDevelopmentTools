@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
+<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 494 tests Swift Testing sur macOS et 491 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 501 tests Swift Testing sur macOS et 498 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -221,6 +221,12 @@ func configureNetworkLogger() {
   forme `login password=[REDACTED]`, et `x=hunter2` sous la forme `x=[REDACTED]`). Un message sans
   déclencheur est conservé tel quel, hormis les jetons, numéros de carte et adresses e-mail
   détectés.
+- **Les URL dans les messages de log** ne sont pas un îlot sûr. Sauf si chaque paramètre de la
+  query, du fragment et des paramètres `;` figure dans la liste autorisée et a une valeur, le
+  message est masqué juste après le premier `?`, `#` ou `;`
+  (`GET https://a.example/x?api_key= hunter2` est enregistré comme
+  `GET https://a.example/x?[REDACTED]`), et une URL qui se termine par `=`, `:` ou un nom secret
+  masque ce qui la suit.
 
 Le masquage est un filet de sécurité, pas une garantie. Il est conçu pour les secrets enregistrés
 par accident : les entrées structurées sont analysées, et ce que l'analyseur ne comprend pas
@@ -228,6 +234,14 @@ entièrement est masqué ; le texte libre est traité au mieux, et un nom secret
 lettres qui se ressemblent et écrit sans `=` ni `:` (`pɑsswoʀd hunter2`) n'est pas forcément
 trouvé. Gardez les secrets hors des requêtes que vous enregistrez et des messages de journal dès
 le départ, et préférez une journalisation structurée.
+
+Deux autres limites font partie de ce modèle. **Borne de coût :** tous les documents imbriqués
+dans une même entrée (du JSON dans une chaîne, une URL dans un texte) lisent ensemble au plus quatre
+fois la longueur de l'entrée ; au-delà de ce budget, la chaîne qui contient le document suivant est
+masquée entièrement. **Les mises en page sur plusieurs lignes** ne demandent rien de particulier :
+un `<key>` de property list sur sa propre ligne, du JSON réparti sur plusieurs lignes et un corps
+multipart écrit comme du texte sont masqués du premier déclencheur jusqu'à la fin du texte, si bien
+que la valeur est masquée où qu'elle soit écrite.
 
 ### Journaliser des messages
 

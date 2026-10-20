@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
+<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -56,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 494개, iOS 시뮬레이터에서 491개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 501개, iOS 시뮬레이터에서 498개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -206,12 +206,22 @@ func configureNetworkLogger() {
   (`login password=hunter2 status=200`은 `login password=[REDACTED]`로, `x=hunter2`는
   `x=[REDACTED]`로 저장됩니다). 트리거가 없는 메시지는 감지된 토큰, 카드 번호, 이메일 주소를 빼고
   그대로 보관됩니다.
+- **로그 메시지 속 URL**은 안전한 섬이 아닙니다. 쿼리, 프래그먼트, `;` 파라미터의 모든
+  파라미터가 허용 목록에 있고 값을 가진 경우가 아니면 메시지는 첫 번째 `?`, `#`, `;` 바로 뒤부터
+  가려집니다(`GET https://a.example/x?api_key= hunter2`는 `GET https://a.example/x?[REDACTED]`로
+  저장됩니다). `=`, `:` 또는 비밀 이름으로 끝나는 URL도 그 뒤에 오는 내용을 가립니다.
 
 가리기는 안전망일 뿐 보장이 아닙니다. 실수로 기록된 비밀 값을 위해 만들어졌습니다. 구조화된
 입력은 파싱하고, 파서가 완전히 이해하지 못하는 부분은 가립니다. 자유 형식 텍스트는 최선의
 노력일 뿐이며, 비슷하게 생긴 글자로 위장하고 `=`나 `:` 없이 쓴 비밀 이름(`pɑsswoʀd hunter2`)은
 찾는다고 보장할 수 없습니다. 애초에 기록하는 요청과 로그 메시지에 비밀 값을 넣지 말고, 구조화된
 로깅을 쓰세요.
+
+이 모델에는 두 가지 한계가 더 있습니다. **비용 상한:** 한 입력 안에 중첩된 모든 문서(문자열 속
+JSON, 텍스트 속 URL)는 합쳐서 입력 길이의 최대 4배까지만 읽습니다. 이 예산을 넘으면 다음 문서를
+담은 문자열 전체를 가립니다. **여러 줄 레이아웃**에는 특별한 처리가 필요 없습니다. 한 줄에
+따로 쓴 property list `<key>`, 여러 줄에 걸친 JSON, 텍스트로 쓴 multipart 본문은 첫 번째
+트리거부터 텍스트 끝까지 가려지므로 값이 어디에 쓰였든 가려집니다.
 
 ### 메시지 로그 남기기
 

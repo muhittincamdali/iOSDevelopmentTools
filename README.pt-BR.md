@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
+<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 494 testes de Swift Testing no macOS e 491 em um simulador de iOS. As requisições vão de
+- **Testado** — 501 testes de Swift Testing no macOS e 498 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -216,6 +216,11 @@ func configureNetworkLogger() {
   (`login password=hunter2 status=200` é armazenada como `login password=[REDACTED]`, e
   `x=hunter2` como `x=[REDACTED]`). Uma mensagem sem gatilho é guardada como está, exceto os
   tokens, números de cartão e endereços de e-mail detectados.
+- **URLs em mensagens de log** não são uma ilha segura. A menos que cada parâmetro da query, do
+  fragmento e dos parâmetros `;` esteja na lista permitida e tenha um valor, a mensagem é ocultada
+  logo depois do primeiro `?`, `#` ou `;` (`GET https://a.example/x?api_key= hunter2` é guardado
+  como `GET https://a.example/x?[REDACTED]`), e uma URL que termina em `=`, `:` ou em um nome
+  secreto oculta o que vem depois dela.
 
 A ocultação é uma rede de segurança, não uma garantia. Ela foi feita para segredos registrados por
 acidente: a entrada estruturada é analisada, e o que o analisador não entende por completo é
@@ -223,6 +228,13 @@ ocultado; o texto livre é um melhor esforço, e não há garantia de encontrar 
 disfarçado com letras parecidas e escrito sem `=` ou `:` (`pɑsswoʀd hunter2`). Mantenha segredos
 fora das requisições que você registra e das mensagens de log desde o início, e prefira logs
 estruturados.
+
+Mais dois limites fazem parte desse modelo. **Limite de custo:** todos os documentos aninhados
+em uma entrada (JSON dentro de uma string, uma URL em um texto) leem juntos no máximo quatro vezes
+o tamanho da entrada; passado esse orçamento, a string que contém o próximo documento é ocultada
+inteira. **Layouts de várias linhas** não precisam de nada especial: um `<key>` de property list em
+sua própria linha, um JSON espalhado por várias linhas e um corpo multipart escrito como texto são
+ocultados do primeiro gatilho até o fim do texto, então o valor fica oculto onde quer que esteja.
 
 ### Registrar mensagens de log
 

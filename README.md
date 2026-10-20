@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 494 Swift Testing tests on macOS and 491 on an iOS simulator. Requests travel
+- **Tested** — 501 Swift Testing tests on macOS and 498 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -208,12 +208,24 @@ func configureNetworkLogger() {
   everything after it, the lines below too (`login password=hunter2 status=200` is stored as
   `login password=[REDACTED]`, `x=hunter2` as `x=[REDACTED]`). A message with no trigger is kept
   as it is, apart from detected tokens, card numbers and email addresses.
+- **URLs in log messages** are not a safe island. Unless every parameter of the query, the
+  fragment and `;` parameters is allowlisted and has a value, the message is hidden from right
+  after the first `?`, `#` or `;` (`GET https://a.example/x?api_key= hunter2` is stored as
+  `GET https://a.example/x?[REDACTED]`), and a URL that ends with `=`, `:` or a secret name hides
+  what follows it.
 
 Redaction is a safety net, not a guarantee. It is built for secrets recorded by accident:
 structured input is parsed, and what the parser does not fully understand is hidden; free text is
 a best effort, and a secret name disguised with look-alike letters and written without `=` or `:`
 (`pɑsswoʀd hunter2`) is not guaranteed to be found. Keep secrets out of the requests you record
 and out of log messages in the first place, and prefer structured logging.
+
+Two more limits belong to that model. **Cost bound:** all the documents nested in one input
+(JSON in a string, a URL in text) read at most four times the input's length together; past that
+budget, the string that holds the next document is hidden whole. **Multi-line layouts** need
+nothing special: a property list `<key>` on its own line, JSON spread over several lines and a
+multipart body written as text are hidden from the first trigger to the end of the text, so the
+value is hidden wherever it is written.
 
 ### Log messages
 

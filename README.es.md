@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
+<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 494 tests de Swift Testing en macOS y 491 en un simulador de iOS. Las solicitudes van
+- **Probado** — 501 tests de Swift Testing en macOS y 498 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -217,6 +217,12 @@ func configureNetworkLogger() {
   siguientes (`login password=hunter2 status=200` se guarda como `login password=[REDACTED]`, y
   `x=hunter2` como `x=[REDACTED]`). Un mensaje sin disparador se guarda tal cual, salvo los tokens,
   los números de tarjeta y las direcciones de correo detectados.
+- **Las URL en los mensajes de log** no son una isla segura. Salvo que cada parámetro de la
+  query, del fragmento y de los parámetros `;` esté en la lista permitida y tenga un valor, el
+  mensaje se oculta justo después del primer `?`, `#` o `;`
+  (`GET https://a.example/x?api_key= hunter2` se guarda como
+  `GET https://a.example/x?[REDACTED]`), y una URL que termina en `=`, `:` o en un nombre secreto
+  oculta lo que la sigue.
 
 La ocultación es una red de seguridad, no una garantía. Está pensada para secretos registrados por
 accidente: la entrada estructurada se analiza, y lo que el analizador no entiende del todo se
@@ -224,6 +230,14 @@ oculta; el texto libre es un mejor esfuerzo, y no se garantiza encontrar un nomb
 disfrazado con letras parecidas y escrito sin `=` ni `:` (`pɑsswoʀd hunter2`). Mantén los secretos
 fuera de las solicitudes que registras y de los mensajes de registro desde el principio, y
 prefiere el registro estructurado.
+
+Dos límites más forman parte de ese modelo. **Límite de coste:** todos los documentos anidados
+en una entrada (JSON dentro de una cadena, una URL en un texto) leen juntos como mucho cuatro veces
+la longitud de la entrada; pasado ese presupuesto, la cadena que contiene el siguiente documento se
+oculta entera. **Los formatos de varias líneas** no necesitan nada especial: un `<key>` de property
+list en su propia línea, un JSON repartido en varias líneas y un cuerpo multipart escrito como
+texto se ocultan desde el primer disparador hasta el final del texto, así que el valor queda oculto
+esté donde esté.
 
 ### Registrar mensajes
 
