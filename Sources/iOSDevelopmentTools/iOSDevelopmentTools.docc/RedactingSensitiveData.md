@@ -102,11 +102,19 @@ Some objects carry a field's name in one member and its value in another: HTTP a
 headers and `URLSearchParams` entries are pairs `[["Authorization","…"]]`. The value of a member
 that holds a name (`name`, `key`, `field`, `label`, `type`, `header`, `param`, `path` with every
 part between `/`, `id`, `k`, `n`) is read by the key rule: when it names a secret, or is not
-plain ASCII, or has no letter or digit at all (`Şifre`, `ⓟⓘⓝ`, `🔑`), the values of the other
-members are hidden whole, apart from the names of pairs and a JSON Patch or SCIM `op`. The second
-element of a two-element array whose first is such a name is hidden, and so is every element of
-an array after a string that names a secret (`["password","…"]`). Form fields, query parameters
-and multipart parts follow the same rule. `{"label":"Şifre","value":…}` is hidden on purpose.
+plain ASCII, or has no letter or digit at all (`Şifre`, `ⓟⓘⓝ`, `🔑`), the members that carry
+the value of the pair are hidden whole: `value`, `values`, `val`, `v`, `content`, `data`, `text`,
+`input`, `answer`, and any member with one of these as a word (`ParameterValue`, `userData`).
+When the name names a secret word, has no letter or digit, is written in symbols or styled letters
+(`ⓟ`, `𝐩`, `ｐ`), or is held by a member that only pairs use (`key`, `field`, `label`, `header`,
+`param`, `path`, `k`, `n`), every other member is hidden too, apart from the names of pairs and a
+JSON Patch or SCIM `op`. A `name`, `id` or `type` written in another script or with punctuation
+is as often a person, a place, a product or a media type, so the rest of the record stays:
+`{"id":42,"name":"Ayşe Yılmaz","price":12.5}` and `{"type":"image/png","size":12345}` are
+stored as they are, and `{"name":"Ayşe","value":"…"}` hides only `value`. The second element of a
+two-element array whose first is such a name is hidden, and so is every element of an array after
+a string that names a secret (`["password","…"]`). Form fields, query parameters and multipart
+parts follow the same rule. `{"label":"Şifre","value":…}` is hidden on purpose.
 
 ### Values
 
@@ -207,8 +215,10 @@ The triggers:
   the text is read on only after a key that is plain ASCII, names no secret and is on
   ``RedactionPolicy/allowedTextKeys``: `status`, `method`, `path`, `duration_ms` and `count` by
   default, and the keys you add. Any other key cuts the text at its value: `x=hunter2` is stored
-  as `x=[REDACTED]`, `curl -u bob:hunter2` as `curl -u bob:[REDACTED]`. A `:` between two digits,
-  as in `12:30`, is part of a time. JSON in the text follows the same rule member by member, a
+  as `x=[REDACTED]`, `curl -u bob:hunter2` as `curl -u bob:[REDACTED]`. A `:` between two digits
+  is part of a number only after a number: `12:30`, `2026-10-19T12:30:00Z` and `10.0.0.1:8080`
+  are kept, while after a key that ends in digits it is a separator (`user1:2345678901` is stored
+  as `user1:[REDACTED]`). JSON in the text follows the same rule member by member, a
   two-element array by its first string (`["user","bob"]`), and an element by its tag
   (`<user>bob</user>`).
 - **A secret name**, with or without a separator, quoted or not: `password=…`, `password …`,
@@ -245,21 +255,26 @@ The triggers:
 
 JSON in the text (`{"…`, `[{…`, `["…`, `[[…`) is parsed with a JSON parser and redacted by the
 key rule of structured input, as a body is; its strings are free text again, with this rule.
-A URL with a scheme and `//` is recorded as ``RedactionPolicy/redact(url:)`` records it, but it
-is not a safe island: its query, fragment and `;` path parameters may end with a name whose value
-the text after the URL holds (`?api_key= hunter2`). Unless every parameter in them is on
-``RedactionPolicy/allowedQueryParameters`` and has a value in the URL, the text is hidden from
-right after the first `?`, `#` or `;` that starts one; the path before it stays, redacted. A URL
-that ends with `=` or `:`, or whose last path segment names a secret, hides the text after it; a
-URL past the limits of segments or parameters hides the text after its host; one that does not
-parse hides the text from the URL, and one whose host is not written hides it from after the
-scheme. Line breaks are kept as they are written.
+A URL with a scheme and `//` has no island logic: it stays visible only when it is clean, and
+any other URL is a trigger that hides the text from where the URL starts. A clean URL is
+`scheme://host` with an optional path, written only in the ASCII letters, digits, `.`, `_`, `-`
+and `/` after the scheme (so no `?`, `#`, `;`, `%`, `=`, `:`, `@` or `\`, no port, no user info
+and no escape), with a host that is a host name or an IPv4 address and neither the host nor a
+path segment that names a secret or has no letter or digit, followed by white space, a line break
+or punctuation that ends a sentence (`.`, `,`, `!`, `)`, `]`, `}`, `>` or a quote). It is recorded
+as ``RedactionPolicy/redact(url:)`` records it, so an identifier in its path becomes `:id`.
+``RedactionPolicy/allowedQueryParameters`` applies to the URL of a request, not to a URL in text:
+`GET https://api.example.com/v1/items?page=2 done` is stored as `GET [REDACTED]` whatever the
+allowed parameters. Line breaks are kept as they are written.
 
 | Log message | Stored |
 | --- | --- |
 | `GET /v1/items status=200 duration_ms=35` | unchanged |
 | `password hunter2` | `password [REDACTED]` |
 | `login password=hunter2 status=200` and a line below | `login password=[REDACTED]` |
+| `GET https://api.example.com/v1/users/12345678 done` | `GET https://api.example.com/v1/users/:id done` |
+| `GET https://api.example.com/v1/items?page=2 done` | `GET [REDACTED]` |
+| `health http://localhost:8080/health ok` | `health [REDACTED]` |
 | `x=hunter2` | `x=[REDACTED]` |
 | `pаssword=hunter2` (Cyrillic `а`) | `[REDACTED]` |
 | `saved {"status":200,"name":"ada","card":"x"}` | `saved {"status":200,"name":[REDACTED]` |
@@ -343,13 +358,18 @@ Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
   it is.
 - A card number grouped with `+` or `.` (`4111+1111+1111+1111`).
 - A short secret in a path segment, such as `/reset/abc123`; only identifiers, tokens of the shapes
-  listed above and segments in which a rule finds something become `:id`.
+  listed above and segments in which a rule finds something become `:id`. In free text the same
+  holds for a clean URL (`see https://x.example/reset/abc123`).
+- Beside a `name`, `id` or `type` written in another script or with punctuation, the fields that
+  do not carry a value: `{"name":"Şifre","x":"hunter2"}` keeps `x`, since such a name is as often a
+  person, a place or a product (see "Names written as values").
 
 Where it cannot tell, it hides more than it has to: everything after the first trigger, the lines
 below included (`Payment failed: card declined` keeps only `Payment failed:`, and
 `заказ №42 отправлен` only `заказ`), a whole tag that holds a secret name, the rest of a text after
-a quote or bracket that does not close (`Order 1234 shipped :(`), and the value of a name that
-only describes a secret (`token_type`).
+a quote or bracket that does not close (`Order 1234 shipped :(`), the rest of a text after a URL
+that is not clean (`health http://localhost:8080/health ok` keeps only `health`), and the value of
+a name that only describes a secret (`token_type`).
 
 ## See Also
 
