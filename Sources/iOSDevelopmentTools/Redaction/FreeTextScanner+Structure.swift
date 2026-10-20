@@ -19,6 +19,11 @@ extension FreeTextScanner {
         return k < text.count && allowed.contains(text.bytes[k])
     }
 
+    /// The longest JSON in free text that is parsed, in scalars: 64 Ki. Its tree takes memory in
+    /// proportion to it, so longer JSON cuts the text at its first bracket, as JSON that does not
+    /// parse does. A body is read with its own limit (see ``RedactionPolicy/maximumBodySize``).
+    static let longestJSON = 65_536
+
     private static let objectStarts = ByteSet("\"}")
     private static let arrayStarts = ByteSet("{[\"]")
     private static let jsonWhitespace = ByteSet(" \t\n\r")
@@ -30,22 +35,24 @@ extension FreeTextScanner {
     /// not on it (`{"status":200,"user":"bob"}` keeps `"status":200`, `["user","bob"]` keeps
     /// `["user",`). JSON that holds a word that names a secret or cannot be read
     /// (`["password"] hunter2`) cuts the text after it. JSON that does not parse is a bracket that
-    /// does not close as JSON does, so it is a trigger: the text is hidden from its first bracket.
-    /// In a text inside a document, JSON one level too many, deeper than the depth left or longer
-    /// than the reading budget leaves (see ``ReadingBudget``) hides the whole text.
+    /// does not close as JSON does, so it is a trigger: the text is hidden from its first bracket,
+    /// and so is JSON longer than ``longestJSON``. In a text inside a document, JSON one level too
+    /// many, deeper than the depth left or longer than the reading budget leaves (see
+    /// ``ReadingBudget``) hides the whole text.
     mutating func embeddedJSON() {
         let start = text.offsets[position]
         guard let inner = nesting.enteringDocument() else {
             hideWholeText()
             return
         }
+        let budget = inner.lengthLeft
         let document: JSONDocument
         do {
-            document = try JSONDocument(source, at: start, nesting: inner, lengthLimit: inner.lengthLeft)
+            document = try JSONDocument(source, at: start, nesting: inner, lengthLimit: min(budget, Self.longestJSON))
         } catch .tooDeep where nesting.isEmbedded {
             hideWholeText()
             return
-        } catch .overBudget where nesting.isEmbedded {
+        } catch .overBudget where nesting.isEmbedded && budget <= Self.longestJSON {
             hideWholeText()
             return
         } catch {

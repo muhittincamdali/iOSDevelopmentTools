@@ -174,10 +174,10 @@ private struct SpanCollector {
     /// The members of an object, inside the objects and arrays that `nesting` counts. A value is
     /// hidden whole when its name hides it or when another member names a secret.
     private mutating func collectMembers(_ objectMembers: [JSONDocument.Member], nesting: Nesting) {
-        let naming = namingFields(objectMembers)
+        let naming = NamingFields(objectMembers.lazy.map(namingField), policy: policy, compatibility: compatibility)
         for (index, member) in objectMembers.enumerated() {
             spans += stringSpans(member.name, role: .name, nesting: nesting)
-            if policy.hidesValue(ofKey: text(of: member.name)) || naming.hidesValue(at: index) {
+            if policy.hidesValue(ofKey: text(of: member.name)) || naming.hidesValue(at: index, of: namingField(member)) {
                 spans.append(JSONDocument.hiding(member.value))
             } else {
                 collect(member.value, nesting: nesting)
@@ -185,15 +185,13 @@ private struct SpanCollector {
         }
     }
 
-    private func namingFields(_ objectMembers: [JSONDocument.Member]) -> NamingFields {
-        NamingFields(objectMembers.map { member in
-            let value: NamingFields.Value = switch member.value.value {
-            case .string(let token): .string(text(of: token))
-            case .object, .array: .structure
-            case .number, .boolean, .null: .other
-            }
-            return (text(of: member.name), value)
-        }, policy: policy, compatibility: compatibility)
+    private func namingField(_ member: JSONDocument.Member) -> NamingFields.Field {
+        let value: NamingFields.Value = switch member.value.value {
+        case .string(let token): .string(text(of: token))
+        case .object, .array: .structure
+        case .number, .boolean, .null: .other
+        }
+        return (text(of: member.name), value)
     }
 
     /// Whether the first element of a two-element array names its second: a string that the key

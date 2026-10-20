@@ -154,25 +154,36 @@ extension RedactionPolicy {
     /// A form body or query string split on `&`, with every name and value percent-decoded with
     /// the platform API; nil when it is not strict (see ``isStrictForm(_:)``) or a field does
     /// not decode. Fields are split scalar by scalar, as a server reads the bytes.
+    ///
+    /// The form is read twice, field by field: once for the fields that name a secret in their
+    /// value, as `label=Password&value=…` does (see ``NamingFields``), and once to write it, into
+    /// one string. No array of its fields is kept, so a form of many fields takes little more
+    /// memory than its text.
     func redact(form text: String, nesting: Nesting) -> String? {
         guard Self.isStrictForm(text) else { return nil }
-        var fields: [FormField] = []
-        for raw in text.unicodeScalars.split(separator: "&", omittingEmptySubsequences: false) {
+        let raws = text.unicodeScalars.split(separator: "&", omittingEmptySubsequences: false)
+        var decodes = true
+        let naming = NamingFields(raws.lazy.map { raw -> NamingFields.Field in
+            guard let field = FormField(raw) else {
+                decodes = false
+                return ([], .other)
+            }
+            return Self.namingField(name: field.name, value: field.value)
+        }, policy: self, compatibility: CompatibilityText())
+        guard decodes else { return nil }
+        var output = ""
+        output.reserveCapacity(text.utf8.count)
+        for (index, raw) in raws.enumerated() {
             guard let field = FormField(raw) else { return nil }
-            fields.append(field)
+            if index > 0 { output += "&" }
+            output += redact(field: field, hidesValue: naming.hidesValue(at: index, of: Self.namingField(name: field.name, value: field.value)), nesting: nesting)
         }
-        let naming = namingFields(fields.map { ($0.name, $0.value) })
-        return fields.indices.map { index in
-            redact(field: fields[index], hidesValue: naming.hidesValue(at: index), nesting: nesting)
-        }.joined(separator: "&")
+        return output
     }
 
-    /// The fields of a form or a URL query that name a secret in their value, as
-    /// `label=Password&value=…` does (see ``NamingFields``).
-    func namingFields(_ fields: [(name: String, value: String?)]) -> NamingFields {
-        NamingFields(fields.map { field in
-            (Array(field.name.unicodeScalars), field.value.map { .string(Array($0.unicodeScalars)) } ?? .other)
-        }, policy: self, compatibility: CompatibilityText())
+    /// A field of a form or a URL query as ``NamingFields`` reads it.
+    static func namingField(name: String, value: String?) -> NamingFields.Field {
+        (Array(name.unicodeScalars), value.map { .string(Array($0.unicodeScalars)) } ?? .other)
     }
 
     /// A form field, as sent and decoded: `+` is a space, then percent-decoding as UTF-8.

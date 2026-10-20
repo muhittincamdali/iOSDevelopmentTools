@@ -149,25 +149,33 @@ struct NamingFields {
         case other
     }
 
-    private let naming: [Int]
-    private let fields: [(name: [Unicode.Scalar], value: Value)]
+    /// A field: its name, and its value as the rule reads it.
+    typealias Field = (name: [Unicode.Scalar], value: Value)
 
-    init(_ fields: [(name: [Unicode.Scalar], value: Value)], policy: RedactionPolicy, compatibility: CompatibilityText) {
-        self.fields = fields
-        naming = fields.indices.filter { index in
-            let (name, value) = fields[index]
-            switch value {
-            case .string(let text): return WrittenName.namesSecret(text, in: .field(name), policy: policy, compatibility: compatibility)
-            case .structure: return WrittenName.holdsName(name)
-            case .other: return false
+    /// The positions of the fields that name a secret. Only these are kept, so a body of many
+    /// fields is not held a second time as Unicode scalars.
+    private let naming: [Int]
+
+    /// Reads the fields one at a time, in order.
+    init(_ fields: some Sequence<Field>, policy: RedactionPolicy, compatibility: CompatibilityText) {
+        var naming: [Int] = []
+        for (index, (name, value)) in fields.enumerated() {
+            let names: Bool = switch value {
+            case .string(let text): WrittenName.namesSecret(text, in: .field(name), policy: policy, compatibility: compatibility)
+            case .structure: WrittenName.holdsName(name)
+            case .other: false
             }
+            if names { naming.append(index) }
         }
+        self.naming = naming
     }
 
-    /// Whether the value of field `index` is hidden because another field names a secret.
-    func hidesValue(at index: Int) -> Bool {
+    /// Whether the value of field `index` is hidden because another field names a secret. The
+    /// field is made again only then.
+    func hidesValue(at index: Int, of field: @autoclosure () -> Field) -> Bool {
         guard naming.count > 1 || naming.first.map({ $0 != index }) == true else { return false }
-        guard case .string(let text) = fields[index].value else { return true }
-        return !WrittenName.staysBesideName(fields[index].name, value: text)
+        let (name, value) = field()
+        guard case .string(let text) = value else { return true }
+        return !WrittenName.staysBesideName(name, value: text)
     }
 }

@@ -22,7 +22,7 @@ extension RedactionPolicy {
             var lines = "--\(boundary)\r\n"
             lines += renderedHeaders(of: part, nesting: nesting).map { $0 + "\r\n" }.joined() + "\r\n"
             output.append(contentsOf: lines.utf8)
-            output.append(naming.hidesValue(at: index) ? Data(Self.replacement.utf8) : redactedContent(of: part, nesting: nesting))
+            output.append(naming.hidesValue(at: index, of: Self.namingField(part)) ? Data(Self.replacement.utf8) : redactedContent(of: part, nesting: nesting))
             output.append(contentsOf: "\r\n".utf8)
         }
         output.append(contentsOf: "--\(boundary)--".utf8)
@@ -79,10 +79,12 @@ extension RedactionPolicy {
     /// charset, as a file) cannot be read as one, so it counts as naming a secret, as an array or
     /// object does in JSON.
     private func namingParts(_ parts: [MultipartBody.Part]) -> NamingFields {
-        NamingFields(parts.map { part in
-            let value: NamingFields.Value = Self.plainText(of: part).map { .string(Array($0.unicodeScalars)) } ?? .structure
-            return (Array(part.name.unicodeScalars), value)
-        }, policy: self, compatibility: CompatibilityText())
+        NamingFields(parts.lazy.map(Self.namingField), policy: self, compatibility: CompatibilityText())
+    }
+
+    private static func namingField(_ part: MultipartBody.Part) -> NamingFields.Field {
+        let value: NamingFields.Value = plainText(of: part).map { .string(Array($0.unicodeScalars)) } ?? .structure
+        return (Array(part.name.unicodeScalars), value)
     }
 
     /// The content of a field sent as plain UTF-8 text without a transfer encoding; nil for a
