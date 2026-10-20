@@ -71,7 +71,7 @@ extension RedactionPolicy {
     ) -> [Span] {
         guard !scalars.isEmpty else { return [] }
         let whole = [Span(start: 0, end: scalars.count, replacement: Self.replacement)]
-        guard nesting.reads(scalars.count) else { return whole }
+        guard scalars.count <= Self.maximumTextLength, nesting.reads(scalars.count) else { return whole }
         var scanner = FreeTextScanner(source: scalars, text: text, policy: self, compatibility: compatibility, role: role, nesting: nesting)
         scanner.run()
         if scanner.hidesWholeText { return whole }
@@ -79,9 +79,15 @@ extension RedactionPolicy {
         // JSON and URLs were redacted by their own rules; the detectors do not read them again.
         // A finding that runs into the cut is merged with it.
         let regions = scanner.regions
-        guard !regions.isEmpty, !detectsInRegions else { return Self.merged(scanner.spans + detectorSpans(in: text) + cut) }
-        let outside = detectorSpans(in: NormalizedText(scalars, compatibility: compatibility, masked: regions))
-        return Self.merged(scanner.spans + outside + Self.crossing(detectorSpans(in: text), regions) + cut)
+        var found = detectorSpans(in: text)
+        if !regions.isEmpty, !detectsInRegions {
+            let crossing = Self.crossing(found, regions)
+            found = detectorSpans(in: NormalizedText(scalars, compatibility: compatibility, masked: regions))
+            found += crossing
+        }
+        found += scanner.spans
+        found += cut
+        return Self.merged(found)
     }
 
     /// The findings that run over the edge of a JSON or URL region, hidden whole. A URL ends
@@ -106,6 +112,10 @@ extension RedactionPolicy {
         }
     }
 
+    /// The longest text that is read: one of more scalars than 32 bits count is hidden whole (see
+    /// ``ScalarOffsets``).
+    static let maximumTextLength = Int(UInt32.max)
+
     /// The longest text ``isQuietWord(_:)`` takes: the shortest card number has 13 digits, an
     /// IBAN 15 characters and a long token 32.
     static let quietWordLength = 12
@@ -128,9 +138,20 @@ extension RedactionPolicy {
     /// The findings of the value detectors: the password in `user:password@host`, bearer tokens,
     /// JWTs, email addresses, card numbers, IBANs and long hex or Base64 strings.
     func detectorSpans(in text: NormalizedText) -> [Span] {
-        text.userInfoPasswordSpans() + text.bearerSpans() + text.jsonWebTokenSpans() + text.emailSpans() + text.cardSpans()
-            + text.ibanSpans() + text.longTokenSpans()
+        // Joined one detector at a time, so that a text of many findings holds one list of them
+        // and the findings of one detector at most.
+        var spans: [Span] = []
+        for detect in Self.detectors {
+            let found = detect(text)()
+            if spans.isEmpty { spans = found } else if !found.isEmpty { spans += found }
+        }
+        return spans
     }
+
+    private static let detectors: [@Sendable (NormalizedText) -> () -> [Span]] = [
+        NormalizedText.userInfoPasswordSpans, NormalizedText.bearerSpans, NormalizedText.jsonWebTokenSpans, NormalizedText.emailSpans,
+        NormalizedText.cardSpans, NormalizedText.ibanSpans, NormalizedText.longTokenSpans,
+    ]
 
     /// The text redacted as free text; nil when nothing changed.
     func redactedText(

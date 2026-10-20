@@ -11,8 +11,7 @@ import Foundation
 struct NormalizedText {
     let bytes: [UInt8]
     /// The offset in the original scalars of the scalar a byte came from.
-    let offsets: [Int]
-    let isUppercase: [Bool]
+    let offsets: ScalarOffsets
     /// The original scalars.
     let source: [Unicode.Scalar]
     /// The number of original scalars.
@@ -25,8 +24,20 @@ struct NormalizedText {
     /// - Parameter masked: Ranges of original scalars to read as ``masked``, so that no finding
     ///   starts, ends or runs inside them.
     init(_ scalars: [Unicode.Scalar], compatibility: CompatibilityText, masked: [Range<Int>] = []) {
+        // Most log text is plain ASCII: each byte is the scalar at its own offset, so no offsets
+        // are stored.
+        if scalars.allSatisfy({ $0.isASCII && !ASCII.isHidingControl(UInt8($0.value)) }) {
+            var bytes = scalars.map { UInt8($0.value) }
+            for range in masked {
+                for k in range.clamped(to: bytes.indices) { bytes[k] = Self.masked }
+            }
+            self.bytes = bytes
+            offsets = .identity
+            source = scalars
+            return
+        }
         var bytes: [UInt8] = []
-        var offsets: [Int] = []
+        var offsets: [UInt32] = []
         bytes.reserveCapacity(scalars.count)
         offsets.reserveCapacity(scalars.count)
         var mask = masked.sorted { $0.lowerBound < $1.lowerBound }.makeIterator()
@@ -35,25 +46,24 @@ struct NormalizedText {
             while let range = nextMask, range.upperBound <= offset { nextMask = mask.next() }
             if let range = nextMask, range.contains(offset) {
                 bytes.append(Self.masked)
-                offsets.append(offset)
+                offsets.append(UInt32(truncatingIfNeeded: offset))
                 continue
             }
             if scalar.isASCII {
                 // Control characters other than tab and line terminators hide like format ones.
                 guard !ASCII.isHidingControl(UInt8(scalar.value)) else { continue }
                 bytes.append(UInt8(scalar.value))
-                offsets.append(offset)
+                offsets.append(UInt32(truncatingIfNeeded: offset))
                 continue
             }
             guard !ScalarClass.isInvisible(scalar) else { continue }
             for byte in compatibility.ascii(scalar) {
                 bytes.append(byte)
-                offsets.append(offset)
+                offsets.append(UInt32(truncatingIfNeeded: offset))
             }
         }
         self.bytes = bytes
-        self.offsets = offsets
-        self.isUppercase = bytes.map(ASCII.isUppercase)
+        self.offsets = .stored(offsets)
         self.source = scalars
     }
 
@@ -99,6 +109,8 @@ struct NormalizedText {
 
     func isDigit(_ i: Int) -> Bool { ASCII.isDigit(bytes[i]) }
 
+    func isUppercase(_ i: Int) -> Bool { ASCII.isUppercase(bytes[i]) }
+
     func isLetter(_ i: Int) -> Bool { ASCII.isLetter(bytes[i]) }
 
     func isAlphanumeric(_ i: Int) -> Bool { isDigit(i) || isLetter(i) }
@@ -133,7 +145,7 @@ struct NormalizedText {
     func isWordStart(_ i: Int) -> Bool {
         guard i > 0 else { return true }
         if !gluesToWord(i - 1) { return true }
-        return isUppercase[i] && isLetter(i - 1) && !isUppercase[i - 1]
+        return isUppercase(i) && isLetter(i - 1) && !isUppercase(i - 1)
     }
 
     /// Whether byte `i` is a letter or digit written in ASCII, which makes the digits or the token
@@ -150,6 +162,22 @@ struct NormalizedText {
             return false
         }
         return true
+    }
+}
+
+/// The offset in the original scalars of each byte of a scanning copy: none stored for plain
+/// ASCII, where each byte is the scalar at its own offset, and 32 bits each otherwise, since the
+/// copy of a megabyte of text holds a million of them. A text of more scalars than 32 bits count
+/// is hidden whole before a copy is made (see ``RedactionPolicy/maximumTextLength``).
+enum ScalarOffsets {
+    case identity
+    case stored([UInt32])
+
+    subscript(i: Int) -> Int {
+        switch self {
+        case .identity: i
+        case .stored(let storage): Int(storage[i])
+        }
     }
 }
 
