@@ -153,7 +153,11 @@ struct TextRedactionTests {
         }
     }
 
-    @Test("Long and hostile lines are scanned in linear time")
+    // The corpus's scaling and time-limit suites check that time grows linearly and that a
+    // megabyte takes less than a second in a release build. This only catches a quadratic slip:
+    // the lines take about 3 seconds in a debug build alone, and several times that while the
+    // other suites run on the same cores.
+    @Test("Long and hostile lines are read in bounded time")
     func longLines() {
         // CPU time of this thread, so that other tests running at the same time do not count.
         let start = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
@@ -175,7 +179,7 @@ struct TextRedactionTests {
         #expect(policy.redact(text: urls) == urls)
         let word = String(repeating: "\u{043E}", count: 200_000) + "o hunter2"
         #expect(policy.redact(text: word) == redacted)
-        #expect(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - start < 20_000_000_000)
+        #expect(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - start < 120_000_000_000)
     }
 
     @Test("Log messages are redacted before they are kept and passed on")
