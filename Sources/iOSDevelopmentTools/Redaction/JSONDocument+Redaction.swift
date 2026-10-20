@@ -43,24 +43,58 @@ extension JSONDocument {
         )
     }
 
-    /// The text as the content of a JSON string.
+    /// The text as the content of a JSON string: `"`, `\` and control characters escaped.
+    ///
+    /// The UTF-8 is counted first and written into the string once, as
+    /// ``RedactionPolicy/replacing(_:in:)`` writes its text. Appending each escape to a
+    /// `String.UnicodeScalarView` copied what was already written every time, so a string full of
+    /// quotes or line breaks took quadratic time: a megabyte of JSON written in one JSON string
+    /// took two seconds, two megabytes six. Only ASCII bytes are escaped; the bytes of other
+    /// scalars are copied as they are.
     static func escaped(_ text: String) -> String {
-        var output = String.UnicodeScalarView()
-        for scalar in text.unicodeScalars {
-            switch scalar {
-            case "\"": output.append(contentsOf: "\\\"".unicodeScalars)
-            case "\\": output.append(contentsOf: "\\\\".unicodeScalars)
-            case "\n": output.append(contentsOf: "\\n".unicodeScalars)
-            case "\r": output.append(contentsOf: "\\r".unicodeScalars)
-            case "\t": output.append(contentsOf: "\\t".unicodeScalars)
-            case _ where scalar.value < 0x20:
-                let hex = String(scalar.value, radix: 16)
-                output.append(contentsOf: ("\\u" + String(repeating: "0", count: 4 - hex.count) + hex).unicodeScalars)
-            default: output.append(scalar)
+        var count = 0
+        for byte in text.utf8 { count += escapedLength(byte) }
+        guard count != text.utf8.count else { return text }
+        return String(unsafeUninitializedCapacity: count) { buffer in
+            var written = 0
+            func write(_ byte: UInt8) {
+                buffer[written] = byte
+                written += 1
             }
+            func write(escape letter: Unicode.Scalar) {
+                write(UInt8(ascii: "\\"))
+                write(UInt8(ascii: letter))
+            }
+            for byte in text.utf8 {
+                switch byte {
+                case UInt8(ascii: "\""), UInt8(ascii: "\\"):
+                    write(UInt8(ascii: "\\"))
+                    write(byte)
+                case UInt8(ascii: "\n"): write(escape: "n")
+                case UInt8(ascii: "\r"): write(escape: "r")
+                case UInt8(ascii: "\t"): write(escape: "t")
+                case ..<0x20:
+                    for escape in "\\u00".utf8 { write(escape) }
+                    write(hexDigits[Int(byte >> 4)])
+                    write(hexDigits[Int(byte & 0x0F)])
+                default:
+                    write(byte)
+                }
+            }
+            return written
         }
-        return String(output)
     }
+
+    /// The bytes that the UTF-8 byte `byte` takes in a JSON string.
+    private static func escapedLength(_ byte: UInt8) -> Int {
+        switch byte {
+        case UInt8(ascii: "\""), UInt8(ascii: "\\"), UInt8(ascii: "\n"), UInt8(ascii: "\r"), UInt8(ascii: "\t"): 2
+        case ..<0x20: 6
+        default: 1
+        }
+    }
+
+    private static let hexDigits = Array("0123456789abcdef".utf8)
 }
 
 /// Walks a document once and collects its replacements.
