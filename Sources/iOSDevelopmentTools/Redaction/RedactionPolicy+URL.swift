@@ -7,6 +7,12 @@ extension RedactionPolicy {
     /// The URL is read with `URLComponents`:
     ///
     /// - The user name and password (`user:password@`) and the fragment (`#…`) are never written.
+    /// - **Host:** the host is a key of the URL. It is written only when it is a name of ASCII
+    ///   letters, digits and `-` in labels separated by `.`, an IPv4 address or an IPv6 address in
+    ///   brackets, and the value detectors find nothing in it (a card number, a run of 32 hex
+    ///   digits, a token). Any other host, such as `password=hunter2` in
+    ///   `myapp://password=hunter2` or a host with `_`, `%` or letters outside ASCII, is written as
+    ///   ``replacement`` after the scheme, with nothing after it.
     /// - **Query:** a parameter keeps its value only when its name, decoded, is plain ASCII and on
     ///   ``allowedQueryParameters``, which is empty by default; any other value is `[REDACTED]`,
     ///   and so is a parameter without `=` that is not on the list. A name that is not plain
@@ -31,7 +37,7 @@ extension RedactionPolicy {
         guard isEnabled else { return url.absoluteString }
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             guard let scheme = url.scheme, let host = url.host(percentEncoded: true) else { return Self.unparsedURL }
-            return "\(scheme)://\(host)"
+            return "\(scheme)://" + (showsHost(host) ? host : Self.replacement)
         }
         return redacted(components, nesting: .document(length: url.absoluteString.unicodeScalars.count))
     }
@@ -54,6 +60,7 @@ extension RedactionPolicy {
     private func redacted(_ components: URLComponents, nesting: Nesting) -> String {
         var result = components.scheme.map { "\($0):" } ?? ""
         if let host = components.percentEncodedHost {
+            guard showsHost(host) else { return result + "//" + Self.replacement }
             result += "//" + host
             if let port = components.port { result += ":\(port)" }
         }
@@ -69,6 +76,49 @@ extension RedactionPolicy {
             result += "?" + parameters.joined(separator: "&")
         }
         return result
+    }
+
+    /// Whether a host is written: empty, as in `file:///…`, or a host name or an address in which
+    /// the value detectors find nothing.
+    private func showsHost(_ host: String) -> Bool {
+        guard !host.isEmpty else { return true }
+        let bytes = Array(host.utf8)
+        guard Self.isHostName(bytes) || Self.isIPv4Address(bytes) || Self.isIPv6Literal(bytes) else { return false }
+        return detectorSpans(in: NormalizedText(Array(host.unicodeScalars), compatibility: CompatibilityText())).isEmpty
+    }
+
+    /// The longest host name, in bytes, and the longest label in it (RFC 1035).
+    private static let longestHostName = 253
+    private static let longestLabel = 63
+
+    /// Whether a host is a name of labels of ASCII letters, digits and `-` that neither starts nor
+    /// ends a label, separated by `.`, with an optional `.` at the end.
+    static func isHostName(_ bytes: [UInt8]) -> Bool {
+        guard bytes.count <= longestHostName else { return false }
+        var labels = bytes.split(separator: UInt8(ascii: "."), omittingEmptySubsequences: false)
+        if labels.count > 1, labels.last?.isEmpty == true { labels.removeLast() }
+        return labels.allSatisfy { label in
+            guard let first = label.first, let last = label.last, label.count <= longestLabel else { return false }
+            return first != UInt8(ascii: "-") && last != UInt8(ascii: "-") && label.allSatisfy { ASCII.isAlphanumeric($0) || $0 == UInt8(ascii: "-") }
+        }
+    }
+
+    /// Whether a host is four decimal numbers from 0 to 255 separated by `.`.
+    static func isIPv4Address(_ bytes: [UInt8]) -> Bool {
+        let parts = bytes.split(separator: UInt8(ascii: "."), omittingEmptySubsequences: false)
+        return parts.count == 4 && parts.allSatisfy { part in
+            (1...3).contains(part.count) && part.allSatisfy(ASCII.isDigit) && Int(String(decoding: part, as: UTF8.self)).map { $0 <= 255 } == true
+        }
+    }
+
+    /// Whether a host is an IPv6 address in brackets: hex digits, `:` and the `.` of an IPv4 tail,
+    /// without a zone (`%25en0`).
+    static func isIPv6Literal(_ bytes: [UInt8]) -> Bool {
+        guard bytes.count > 2, bytes.first == UInt8(ascii: "["), bytes.last == UInt8(ascii: "]") else { return false }
+        let inside = bytes.dropFirst().dropLast()
+        return inside.contains(UInt8(ascii: ":")) && inside.allSatisfy { byte in
+            ASCII.isDigit(byte) || (UInt8(ascii: "a")...UInt8(ascii: "f")).contains(byte | 0x20) || byte == UInt8(ascii: ":") || byte == UInt8(ascii: ".")
+        }
     }
 
     /// Whether the path has more than ``maximumPathSegments`` segments, or the path or the query

@@ -64,7 +64,9 @@ struct RedactionURLTests {
         #expect(redactor.redact("go https://exa%ZZmple.com/?code=1") == "go \(RedactionPolicy.unparsedURL)")
         #expect(redactor.redact("go https://x.com:abc/?code=1") == "go \(RedactionPolicy.unparsedURL)")
         #expect(redactor.redact("go https://example.com/%ZZ?code=1") == "go https://example.com/%25ZZ?code=[REDACTED]")
-        #expect(redactor.redact("go https://例え.jp/パス?code=1") == "go https://%E4%BE%8B%E3%81%88.jp/%E3%83%91%E3%82%B9?code=[REDACTED]")
+        // URLComponents writes an internationalized host percent-encoded, which is no host name.
+        #expect(redactor.redact("go https://例え.jp/パス?code=1") == "go https://[REDACTED]")
+        #expect(redactor.redact("go https://example.jp/パス?code=1") == "go https://example.jp/%E3%83%91%E3%82%B9?code=[REDACTED]")
     }
 
     @Test("the user info and fragment are dropped and the detectors run on the path")
@@ -105,5 +107,33 @@ struct RedactionURLTests {
     func repeatedSegments() throws {
         let url = try #require(URL(string: "https://example.com/pin/pin/users/4831/users/pin/4831/a%40b.com/a%40b.com/users"))
         #expect(redactor.redact(url: url) == "https://example.com/pin/:id/:id/4831/users/pin/:id/:id/:id/users")
+    }
+}
+
+/// The host of a URL is a key of the URL (section 6 of the redaction rules): written only when it
+/// is a host name or an address in which no value detector finds anything.
+@Suite("Redaction corpus: URL hosts")
+struct RedactionURLHostTests {
+    let redactor = Redactor()
+
+    @Test("a host that is not a host name or an address, or holds a finding, is hidden with the rest of the URL", arguments: [
+        ("myapp://password=hunter2", "myapp://[REDACTED]"), ("myapp://token;hunter2/x", "myapp://[REDACTED]"),
+        ("https://my_host.local/x", "https://[REDACTED]"), ("https://4111111111111111.example.com/a", "https://[REDACTED]"),
+        ("https://0123456789abcdef0123456789abcdef.example.com/", "https://[REDACTED]"), ("https://-x.example.com/", "https://[REDACTED]"),
+        ("https://a..b/", "https://[REDACTED]"), ("https://[fe80::1%25en0]/x", "https://[REDACTED]"),
+        ("https://xn--mnchen-3ya.de/", "https://[REDACTED]"),
+    ])
+    func hiddenHosts(url: String, expected: String) throws {
+        #expect(redactor.redact(url: try #require(URL(string: url))) == expected)
+        #expect(redactor.redact("see \(url) now") == "see \(expected) now")
+    }
+
+    @Test("host names and addresses are written", arguments: [
+        ("https://api.example.com:8443/a", "https://api.example.com:8443/a"), ("https://127.0.0.1/x", "https://127.0.0.1/x"),
+        ("https://[::1]:8080/x", "https://[::1]:8080/x"), ("https://[2001:db8::1]/", "https://[2001:db8::1]/"),
+        ("file:///tmp/a", "file:///tmp/a"), ("https://localhost./", "https://localhost./"),
+    ])
+    func shownHosts(url: String, expected: String) throws {
+        #expect(redactor.redact(url: try #require(URL(string: url))) == expected)
     }
 }
