@@ -64,6 +64,14 @@ out of logs in the first place.
   holds an invisible character; a quote or bracket that does not close; and JSON that does not
   parse. A trigger inside a tag hides the tag from its `<`. Text with no trigger is kept as it is,
   apart from the value detectors, and JSON in it is read by the key rule of structured input.
+- A URL in free text is not a safe island. Unless every parameter of its query, fragment and `;`
+  path parameters is on `allowedQueryParameters` and has a value in the URL, the text is hidden
+  from right after the first `?`, `#` or `;` that starts one, so a value written after an empty
+  parameter (`GET https://a.example/x?api_key= hunter2`) is hidden; before, the URL was redacted
+  and the text after it read on. A URL that ends with `=` or `:` or whose last path segment names
+  a secret hides the text after it, one past the limits of segments or parameters hides the text
+  after its host, one that does not parse hides the text from the URL, and one whose host is not
+  written hides it from after the scheme.
 - Multipart part headers keep their names only when they are on the header allowlist; any other
   is written as `[REDACTED]: [REDACTED]`.
 - A `LogStore` message is redacted up to 1 MiB of Unicode scalars, on the thread that logs it; a
