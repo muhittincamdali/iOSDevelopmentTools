@@ -137,14 +137,6 @@ struct FreeTextScanner {
 
     static let quotes = ByteSet("\"'`")
 
-    /// `=` and `:`; a `:` between two digits is part of a time (`12:30`).
-    func isSeparator(_ i: Int) -> Bool {
-        let byte = text.bytes[i]
-        if byte == UInt8(ascii: "=") { return true }
-        guard byte == UInt8(ascii: ":") else { return false }
-        return !(i > 0 && i + 1 < text.count && text.isDigit(i - 1) && text.isDigit(i + 1))
-    }
-
     /// A run of `=`, `:` and `>` (`:=`, `==`, `=>`) after a key. In a name every separator starts
     /// a value. In text, the value is read on only after a key on ``allowedKeys``: plain ASCII,
     /// naming no secret, on the same line as its separator, which is written in ASCII. Any other

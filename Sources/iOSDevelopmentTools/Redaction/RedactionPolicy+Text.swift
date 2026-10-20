@@ -15,8 +15,10 @@ extension RedactionPolicy {
     ///   and is on ``allowedTextKeys`` (`status`, `method`, `path`, `duration_ms` and `count` by
     ///   default), written on the line of its separator, which is `=`, `:` or a run of them
     ///   (`:=`, `==`, `=>`) in ASCII. Any other key cuts the text at its value: `x=hunter2` becomes
-    ///   `x=[REDACTED]` and `Error: …` becomes `Error: [REDACTED]`. A `:` between two digits, as in
-    ///   `12:30`, is part of a time. JSON in the text follows the same rule member by member, and
+    ///   `x=[REDACTED]` and `Error: …` becomes `Error: [REDACTED]`. A `:` between two digits is
+    ///   part of a number only after a number (`12:30`, `2026-10-19T12:30:00Z`, `10.0.0.1:8080`);
+    ///   after a key that ends in digits it is a separator (`user1:2345678901` becomes
+    ///   `user1:[REDACTED]`). JSON in the text follows the same rule member by member, and
     ///   a two-element array by its first string (`["user","bob"]`); the tag of an element is the
     ///   key of its text (`<user>bob</user>`).
     /// - **A secret name** (see ``secretNames``), with or without a separator, quoted or not:
