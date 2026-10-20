@@ -184,7 +184,7 @@ extension FreeTextScanner {
         }
     }
 
-    private static let valueEnds: Set<UInt8> = Set(",;&|)]}>".utf8)
+    private static let valueEnds = ByteSet(",;&|)]}>")
 
     // MARK: Quotes
 
