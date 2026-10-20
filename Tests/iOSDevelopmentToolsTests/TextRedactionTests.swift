@@ -132,13 +132,15 @@ struct TextRedactionTests {
         #expect(policy.redact(text: "status:\n  200\ncount = 3") == "status:\n  200\ncount = 3")
     }
 
-    @Test("U+2028, U+2029, U+0085, VT, FF, CR and CRLF are kept as they are, and the cut runs over them")
+    @Test("LF, CR and CRLF are kept as they are; U+2028, U+2029, U+0085, VT and FF are triggers")
     func lineBreaks() {
-        let text = "a=1\r\nb=2\u{2028}c=3\u{2029}d=4\u{85}e=5\u{0B}f=6\u{0C}g=7\rh=8\n"
-        let allowing = RedactionPolicy(allowedTextKeys: ["a", "b", "c", "d", "e", "f", "g", "h"])
+        let text = "a=1\r\nb=2\rc=3\nd=4\n"
+        let allowing = RedactionPolicy(allowedTextKeys: ["a", "b", "c", "d"])
         #expect(Array(allowing.redact(text: text).unicodeScalars) == Array(text.unicodeScalars))
-        #expect(policy.redact(text: "ok\u{2028}token=hunter2\u{2029}after") == "ok\u{2028}token=\(redacted)")
-        #expect(policy.redact(text: "ok\u{2028}token=hunter2\nafter") == "ok\u{2028}token=\(redacted)")
+        #expect(allowing.redact(text: "a=1\u{2028}b=2\u{2029}c=3") == "a=1\(redacted)")
+        #expect(allowing.redact(text: "a=1\u{85}b=2\u{0B}c=3\u{0C}d=4") == "a=1\(redacted)")
+        #expect(policy.redact(text: "ok\u{2028}token=hunter2\u{2029}after") == "ok\(redacted)")
+        #expect(policy.redact(text: "ok\ntoken=hunter2\nafter") == "ok\ntoken=\(redacted)")
     }
 
     @Test("JWTs, bearer tokens, long hex and Base64, card numbers, IBANs and emails are found anywhere", arguments: [

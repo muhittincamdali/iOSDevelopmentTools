@@ -96,13 +96,16 @@ struct FreeTextScanner {
             cut(atOffset: control, trigger: position)
             return
         }
+        // A character outside ASCII that the scanning copy reads as a space, a quote, a bracket or
+        // a boundary (the blank Braille pattern, `（`, `，`) is judged as the character it is; a
+        // separator written outside ASCII (`＝`, `：`) hides the text after it, and ``word()``
+        // judges a character inside a word.
+        if !isSeparator(position), isOutsideSafeAlphabet(position), firstText(from: scalarEnd(position)) != nil {
+            cut(atByte: position)
+            return
+        }
         let byte = text.bytes[position]
         if text.isSpace(position) || text.isLineTerminator(position) {
-            // The blank Braille pattern is read as a space, but it is a symbol.
-            if isOutsideSafeAlphabet(position), firstText(from: position + 1) != nil {
-                cut(atByte: position)
-                return
-            }
             position += 1
         } else if isSeparator(position) {
             separator()

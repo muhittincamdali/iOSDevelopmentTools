@@ -35,7 +35,7 @@ struct RedactionProbeTests {
         ("pa\u{FE0F}ssword=hunter2", "pa\u{FE0F}ssword=[REDACTED]"),
         ("password\u{301}=hunter2", "password\u{301}=[REDACTED]"),
         ("\u{1D429}\u{1D41A}\u{1D42C}\u{1D42C}\u{1D430}\u{1D428}\u{1D42B}\u{1D41D}=hunter2", "\u{1D429}\u{1D41A}\u{1D42C}\u{1D42C}\u{1D430}\u{1D428}\u{1D42B}\u{1D41D}=[REDACTED]"),
-        ("\u{24DF}assword=hunter2", "\u{24DF}assword=[REDACTED]"),
+        ("\u{24DF}assword=hunter2", "[REDACTED]"),
         ("{\"user\":{\"password\":\"hunter2\"}}", "{\"user\":[REDACTED]"),
         ("[{\"password\":\"hunter2\"},{\"password\":\"hunter2\"}]", "[{\"password\":[REDACTED]"),
         ("password=hunter2&password=hunter2", "password=[REDACTED]"),

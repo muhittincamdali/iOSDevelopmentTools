@@ -92,7 +92,7 @@ struct RedactionCutPropertyTests {
         "Order 1234 shipped to Istanbul at 12:30",
         "Request finished in 12 ms",
         "Kullan\u{131}c\u{131} giri\u{15F} yapt\u{131} status=200",
-        "status=200\r\ncount=2\u{2028}path=/a\u{2029}method=GET\u{85}count=5\u{0B}status=6\u{0C}count=7\rpath=/b\n",
+        "status=200\r\ncount=2\npath=/a\rmethod=GET\n\ncount=5\r\n",
         "loaded (3 items) [cache] {hit}",
         "status=\"it's done\" method='GET' path=`x`",
     ])
@@ -104,7 +104,7 @@ struct RedactionCutPropertyTests {
         "status=200 user=bob path=/api/items",
         "retry attempt=2 limit=50 offset=100 page=3 level=info",
         "login user=bob region=eu-west-1 build_number=512",
-        "a=1\r\nb=2\u{2028}c=3\u{2029}d=4\u{85}e=5\u{0B}f=6\u{0C}g=7\rh=8\n",
+        "a=1\r\nb=2\rc=3\nd=4\r\n",
         "msg=\"it's done\" ok='yes' code=`x`",
         "{\"user\":\"bob\",\"list\":[[\"region\",\"eu\"]]}",
     ])

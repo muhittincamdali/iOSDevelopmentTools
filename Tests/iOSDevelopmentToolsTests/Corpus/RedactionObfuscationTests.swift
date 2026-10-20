@@ -16,7 +16,7 @@ struct RedactionObfuscationTests {
         ("t\u{0254}ken=hunter2", "t\u{0254}ken=[REDACTED]"),
         ("\u{1D429}\u{1D41A}\u{1D42C}\u{1D42C}\u{1D430}\u{1D428}\u{1D42B}\u{1D41D}=hunter2",
          "\u{1D429}\u{1D41A}\u{1D42C}\u{1D42C}\u{1D430}\u{1D428}\u{1D42B}\u{1D41D}=[REDACTED]"),
-        ("\u{24DF}assword=hunter2", "\u{24DF}assword=[REDACTED]"),
+        ("\u{24DF}assword=hunter2", "[REDACTED]"),
         ("\u{FF50}\u{FF41}\u{FF53}\u{FF53}\u{FF57}\u{FF4F}\u{FF52}\u{FF44}=hunter2", "\u{FF50}\u{FF41}\u{FF53}\u{FF53}\u{FF57}\u{FF4F}\u{FF52}\u{FF44}=[REDACTED]"),
         ("p\u{00E1}ssword=hunter2", "p\u{00E1}ssword=[REDACTED]"),
         ("pa\u{00DF}word=hunter2", "pa\u{00DF}word=[REDACTED]"),

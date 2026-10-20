@@ -44,8 +44,9 @@ struct RedactionHeldNameTests {
     func symbolNameInAnyMember() {
         // `ParameterKey` ends in the secret word `key`, so its own value is hidden too.
         #expect(json(#"{"ParameterKey":"ⓣⓞⓚⓔⓝ","ParameterValue":"S3CR3Tq"}"#) == #"{"ParameterKey":"[REDACTED]","ParameterValue":"[REDACTED]"}"#)
-        #expect(json(#"{"Parameter":"ⓣⓞⓚⓔⓝ","ParameterValue":"S3CR3Tq"}"#) == #"{"Parameter":"ⓣⓞⓚⓔⓝ","ParameterValue":"[REDACTED]"}"#)
-        #expect(json(#"{"title":"ⓟⓘⓝ:","x":"S3CR3Tq"}"#) == #"{"title":"ⓟⓘⓝ:","x":"[REDACTED]"}"#)
+        // A circled letter is a symbol, so the string that holds the name is cut as free text too.
+        #expect(json(#"{"Parameter":"ⓣⓞⓚⓔⓝ","ParameterValue":"S3CR3Tq"}"#) == #"{"Parameter":"[REDACTED]","ParameterValue":"[REDACTED]"}"#)
+        #expect(json(#"{"title":"ⓟⓘⓝ:","x":"S3CR3Tq"}"#) == #"{"title":"[REDACTED]","x":"[REDACTED]"}"#)
         #expect(WrittenName.isName(Array("ⓟⓘⓝ".unicodeScalars), compatibility: CompatibilityText()))
         #expect(WrittenName.isName(Array("ⒶⓅⒾ ⓀⒺⓎ".unicodeScalars), compatibility: CompatibilityText()))
         #expect(!WrittenName.isName(Array("🔑".unicodeScalars), compatibility: CompatibilityText()))
@@ -135,7 +136,7 @@ struct RedactionHeldNameTests {
     @Test("the logging guide's examples of names held by fields")
     func guideExamples() {
         let fields = #"[{"label":"Şifre","value":"hunter2"},{"label":"ⓟⓘⓝ","value":"1234"},{"label":"status","value":"ok"}]"#
-        #expect(json(fields) == #"[{"label":"Şifre","value":"[REDACTED]"},{"label":"ⓟⓘⓝ","value":"[REDACTED]"},{"label":"status","value":"ok"}]"#)
+        #expect(json(fields) == #"[{"label":"Şifre","value":"[REDACTED]"},{"label":"[REDACTED]","value":"[REDACTED]"},{"label":"status","value":"ok"}]"#)
         #expect(json(#"{"name":"Ayşe","role":"admin"}"#) == #"{"name":"Ayşe","role":"[REDACTED]"}"#)
         #expect(redactor.redact("<string name=\"password\" />\nhunter2") == "[REDACTED]")
     }

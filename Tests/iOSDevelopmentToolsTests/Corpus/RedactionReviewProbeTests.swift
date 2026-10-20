@@ -9,7 +9,7 @@ struct RedactionReviewProbeTests {
         var limitations: [Int: String] = [:]
         let byReason: [(String, [Int])] = [
             ("a name wholly in another script that only looks Latin, with no = or :", [17, 18, 19, 20, 21, 22, 169, 236, 257]),
-            ("a name in letters without an ASCII form throughout, with no = or :", [23, 24, 28, 29]),
+            ("a name in letters without an ASCII form throughout, with no = or :", [23, 24]),
             ("a name spelled with ASCII digits and symbols, with no = or :", [30, 31, 32]),
             ("the value of `status`, which free text reads on by default", [134]),
             ("the value of an allowed query parameter, also repeated or in another case", [379, 381]),

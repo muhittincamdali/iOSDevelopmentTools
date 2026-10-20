@@ -2,21 +2,26 @@
 /// is a trigger, without a list of the ones that look like separators.
 extension FreeTextScanner {
     /// Whether the character of byte `i` is outside the safe alphabet: letters, marks and digits
-    /// of any script, white space, line breaks and ASCII. A character that compatibility
-    /// normalization reads as ASCII (`＝`, `…`, `™`, `ｐ`) is read as that ASCII. Any other
-    /// punctuation mark or symbol is outside (`꞉`, `≔`, `→`, `·`, `’`, `€`, `、`), and so is an
-    /// emoji, a skin tone, a private-use or unassigned code point, a dash outside ASCII (`—`,
-    /// `゠`), which the scanning copy reads as `-`, and a space that compatibility normalization
-    /// does not read as an ASCII space (U+1680, the blank Braille pattern), which it reads as one. A modifier letter (`ʻ`, `ː`) is written as a separator as often as a letter,
-    /// so it is outside too, apart from those of East Asian text (`ー`), unless one is glued to
+    /// of any script, the ASCII space, tab, LF and CR, the rest of printable ASCII, and a space
+    /// that compatibility normalization reads as an ASCII space (U+00A0, U+3000). Any other
+    /// character is judged by its own general category, not by the ASCII that compatibility
+    /// normalization makes of it, so every punctuation mark and symbol outside ASCII is outside:
+    /// `꞉`, `≔`, `→`, `·`, `’`, `€`, `、`, and also `＝`, `…`, `‥`, `︰`, `™`, `ⓟ` and `¨`. So is
+    /// an emoji, a skin tone, a private-use or unassigned code point, a dash outside ASCII (`—`,
+    /// `゠`), the blank Braille pattern and U+1680, a line break other than LF and CR (VT, FF,
+    /// U+0085, U+2028, U+2029), and a modifier letter (`ʻ`, `ː`), which is written as a separator
+    /// as often as a letter, apart from those of East Asian text (`ー`) that are not glued to
     /// ASCII.
     func isOutsideSafeAlphabet(_ i: Int) -> Bool {
-        let byte = text.bytes[i]
-        guard byte == CompatibilityText.unreadable || byte == UInt8(ascii: "-") || byte == UInt8(ascii: " ") else { return false }
         let scalar = source[text.offsets[i]]
-        guard !scalar.isASCII else { return false }
-        if byte == UInt8(ascii: " ") { return !compatibility.foldsToASCII(scalar) }
-        if byte == UInt8(ascii: "-") { return !compatibility.foldsToASCII(scalar) }
+        // Of the line breaks, only LF and CR are text: VT, FF, U+0085, U+2028 and U+2029 end a line
+        // too, but they are control characters and separators outside ASCII.
+        if scalar.isASCII { return scalar.value == 0x0B || scalar.value == 0x0C }
+        if text.isLineTerminator(i) { return true }
+        if text.bytes[i] == UInt8(ascii: " ") {
+            // A spacing accent (`¨`, `´`, `‾`) is read as a space and a mark, but it is a symbol.
+            return scalar.properties.generalCategory != .spaceSeparator || !compatibility.foldsToASCII(scalar)
+        }
         switch scalar.properties.generalCategory {
         case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .otherLetter, .nonspacingMark, .spacingMark, .enclosingMark,
              .decimalNumber, .letterNumber, .otherNumber:

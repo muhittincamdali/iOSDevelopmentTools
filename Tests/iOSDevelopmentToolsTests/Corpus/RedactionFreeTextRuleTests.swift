@@ -214,14 +214,21 @@ struct RedactionFreeTextRuleTests {
         #expect(redactor.redact(input) == input)
     }
 
-    @Test("U+2028, U+2029, U+0085, VT and FF end a line and are kept as they are, and the cut runs over them")
+    // The thirteenth review of the shared rules: a name split by U+0085 (`tok\u{85}en`) and card
+    // digits grouped by VT or U+2028 were read as lines of text.
+    @Test("U+2028, U+2029, U+0085, VT and FF are outside the safe alphabet; CR and CRLF end a line, and the cut runs over them")
     func lineSeparators() {
         #expect(redactor.redact("password\u{2028}=hunter2") == "password\u{2028}=[REDACTED]")
-        #expect(redactor.redact("user\u{2028}=bob") == "user\u{2028}=[REDACTED]")
-        #expect(redactor.redact("a\u{2029}b\u{85}c\u{0B}d\u{0C}e") == "a\u{2029}b\u{85}c\u{0B}d\u{0C}e")
+        #expect(redactor.redact("user\u{2028}=bob") == "user[REDACTED]")
+        #expect(redactor.redact("a\u{2029}b\u{85}c\u{0B}d\u{0C}e") == "a[REDACTED]")
+        for separator in ["\u{2028}", "\u{2029}", "\u{85}", "\u{0B}", "\u{0C}"] {
+            #expect(redactor.redact("login tok\(separator)en Zk422Hv3m") == "login tok[REDACTED]")
+            #expect(redactor.redact("paid 4111\(separator)1111\(separator)1111\(separator)1111") == "paid 4111[REDACTED]")
+            #expect(redactor.redact("done\(separator)") == "done\(separator)")
+        }
         #expect(redactor.redact("status=1\r\nuser=bob\r\nstatus=2") == "status=1\r\nuser=[REDACTED]")
         #expect(Redactor(allowedTextKeys: ["user"]).redact("status=1\r\nuser=bob\r\nstatus=2") == "status=1\r\nuser=bob\r\nstatus=2")
-        #expect(redactor.redact("status=1\u{2029}count=2\u{85}path=/a") == "status=1\u{2029}count=2\u{85}path=/a")
+        #expect(redactor.redact("status=1\u{2029}count=2\u{85}path=/a") == "status=1[REDACTED]")
         #expect(redactor.redact("status=1\r\ntoken=abc\rstatus=2") == "status=1\r\ntoken=[REDACTED]")
         #expect(redactor.redact("password=hunter\u{2028}2") == "password=[REDACTED]")
         #expect(redactor.redact("password=hunter\u{0B}2\nstatus=3") == "password=[REDACTED]")

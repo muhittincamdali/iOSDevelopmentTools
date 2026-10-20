@@ -22,20 +22,20 @@ struct RedactionSafeAlphabetTests {
         return [policy.redact(text: text), store.entries.first?.message ?? "", plain, jsonBody, header]
     }
 
-    /// Punctuation marks and symbols outside ASCII that compatibility normalization does not read
-    /// as ASCII, from the blocks of general punctuation, arrows, mathematical operators, technical
-    /// and miscellaneous symbols, dingbats, CJK punctuation, small and full-width forms, and emoji.
+    /// Punctuation marks and symbols outside ASCII, from the blocks of general punctuation, arrows,
+    /// mathematical operators, technical and miscellaneous symbols, dingbats, CJK punctuation,
+    /// vertical, small and full-width forms, and emoji; also those that compatibility normalization
+    /// reads as ASCII (`‥`, `︰`, `＝`, `（`).
     static let unsafeScalars: [Unicode.Scalar] = {
         let blocks: [ClosedRange<UInt32>] = [
             0x00A1...0x00BF, 0x2010...0x205E, 0x2190...0x23FF, 0x2500...0x27BF, 0x2900...0x2BFF, 0x3001...0x303F,
             0xA700...0xA71F, 0xA789...0xA78A, 0xFE30...0xFE4F, 0xFE50...0xFE6B, 0xFF5F...0xFF65, 0x1F300...0x1F64F,
         ]
-        let compatibility = CompatibilityText()
         return blocks.flatMap { $0 }.compactMap(Unicode.Scalar.init).filter { scalar in
             switch scalar.properties.generalCategory {
             case .connectorPunctuation, .dashPunctuation, .openPunctuation, .closePunctuation, .initialPunctuation, .finalPunctuation,
                  .otherPunctuation, .mathSymbol, .currencySymbol, .modifierSymbol, .otherSymbol:
-                return !compatibility.foldsToASCII(scalar)
+                return true
             default:
                 return false
             }
@@ -59,8 +59,21 @@ struct RedactionSafeAlphabetTests {
         }
     }
 
+    // The thirteenth review of the shared rules: two dots, a vertical colon and an ellipsis that
+    // compatibility normalization reads as ASCII dots were read as dots, which are text.
+    @Test("a mark that compatibility normalization reads as ASCII is judged as itself", arguments: [
+        "\u{FE30}", "\u{FE19}", "\u{2025}", "\u{2026}", "\u{FE13}", "\u{FF1D}", "\u{FF0C}", "\u{FF08}", "\u{FE63}", "\u{FF0D}", "\u{2122}",
+    ])
+    func compatibilityPunctuation(mark: String) {
+        for text in ["user\(mark)Zk069Hv3m", "user\(mark) Zk069Hv3m", "ok \(mark)Zk069Hv3m", "status=200 \(mark) Zk069Hv3m"] {
+            for output in stored(text) {
+                #expect(!output.contains("Zk069Hv3m"), "\(text.debugDescription) -> \(output.debugDescription)")
+            }
+        }
+    }
+
     @Test("letters, marks and digits of any script are text", arguments: [
-        "Kullanıcı İstanbul'da giriş yaptı", "Straße naïve café", "Zaloguj się, użytkownik", "заказ №42 отправлен", "张伟 登录成功",
+        "Kullanıcı İstanbul'da giriş yaptı", "Straße naïve café", "Zaloguj się, użytkownik", "заказ 42 отправлен", "张伟 登录成功",
         "ユーザー登録", "Γειά σου κόσμε", "שלום עולם", "مرحبا بالعالم", "١٢٣ ٤٥٦", "½ cup, x² + y²", "took 120µs", "ｆｕｌｌ ｗｉｄｔｈ",
         "done \u{1F44D}", "status=200 \u{2026}", "a\u{A0}b\u{3000}c\u{2003}d",
     ])
