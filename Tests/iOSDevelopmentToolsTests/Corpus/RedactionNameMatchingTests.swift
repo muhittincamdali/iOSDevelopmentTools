@@ -12,6 +12,8 @@ struct RedactionNameMatchingTests {
     @Test("one letter without an ASCII form stands for a letter or for none", arguments: [
         "pɑssword hunter2", "passwıord hunter2", "passꞏword hunter2", "ıd_token hunter2", "tokɛns hunter2", "ɑpi_key hunter2",
         "Authorizɑtion hunter2", "user_pın hunter2", "sɛcret hunter2",
+        // Before the last letter of a short word, read as no letter (the sixth review of the spec branch).
+        "tokeꞏn hunter2", "piın hunter2", "secreꞏt hunter2", "keıy hunter2", "userPiłn hunter2", "my piꞏn is hunter2",
     ])
     func oneWildcard(line: String) {
         #expect(!redactor.redact(line).contains("hunter2"), "\(line)")
@@ -117,21 +119,23 @@ private struct ReferenceMatch {
         for start in letters.indices {
             let entries = SecretNameTable.defaultEntries.filter { letters[start] == PlainName.wildcard || $0.letters[0] == letters[start] }
             for entry in entries {
-                guard let end = matchEnd(of: entry.letters, at: start), holds(entry.placement, start: start, end: end), accepts(start..<end)
-                else { continue }
-                return start..<end
+                for end in matchEnds(of: entry.letters, at: start) where holds(entry.placement, start: start, end: end) && accepts(start..<end) {
+                    return start..<end
+                }
             }
         }
         return nil
     }
 
-    private func matchEnd(of word: [UInt8], at start: Int) -> Int? {
-        if let end = spelledEnd(of: word, at: start, skipping: nil) { return end }
-        guard letters.contains(PlainName.wildcard), word.count > 1 else { return nil }
-        for k in (start + 1)..<max(start + 1, min(start + word.count, letters.count)) where letters[k] == PlainName.wildcard {
-            if let end = spelledEnd(of: word, at: start, skipping: k) { return end }
+    /// Every reading: the wildcard as a letter, then as no letter at each place in turn.
+    private func matchEnds(of word: [UInt8], at start: Int) -> [Int] {
+        var ends = [spelledEnd(of: word, at: start, skipping: nil)]
+        if word.count > 1 {
+            for k in (start + 1)..<max(start + 1, min(start + word.count, letters.count)) where letters[k] == PlainName.wildcard {
+                ends.append(spelledEnd(of: word, at: start, skipping: k))
+            }
         }
-        return nil
+        return ends.compactMap { $0 }
     }
 
     private func spelledEnd(of word: [UInt8], at start: Int, skipping skipped: Int?) -> Int? {

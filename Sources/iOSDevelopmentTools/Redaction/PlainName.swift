@@ -109,10 +109,11 @@ struct PlainName {
     func firstSecret(in table: SecretNameTable, where accepts: (Range<Int>) -> Bool) -> Range<Int>? {
         for start in letters.indices {
             for entry in table.candidates(at: start, in: letters) {
-                guard let end = matchEnd(of: entry.letters, at: start), holds(entry.placement, start: start, end: end),
-                      accepts(start..<end)
-                else { continue }
-                return start..<end
+                let ends = matchEnds(of: entry.letters, at: start)
+                for end in [ends.wildcardAsLetter, ends.wildcardAsNone] {
+                    guard let end, holds(entry.placement, start: start, end: end), accepts(start..<end) else { continue }
+                    return start..<end
+                }
             }
         }
         return nil
@@ -124,19 +125,21 @@ struct PlainName {
     ///
     /// The letters before the first one that differs from the word are the word's own, so the
     /// wildcard can only be that letter: the word is read on from there twice at most, with the
-    /// wildcard as a letter and as none.
-    private func matchEnd(of word: [UInt8], at start: Int) -> Int? {
+    /// wildcard as a letter and as none. Both readings are returned, because only one of them may
+    /// end where the word has to end: `tokeꞏn` read with the wildcard as the `n` ends before the
+    /// last letter, and only the reading with the wildcard as none ends the name.
+    private func matchEnds(of word: [UInt8], at start: Int) -> (wildcardAsLetter: Int?, wildcardAsNone: Int?) {
         var k = start
         var matched = 0
         while matched < word.count, k < letters.count, letters[k] == word[matched] {
             k += 1
             matched += 1
         }
-        if matched == word.count { return withPlural(k) }
-        guard k < letters.count, letters[k] == Self.wildcard else { return nil }
-        if let end = spelledEnd(of: word, from: matched + 1, at: k + 1) { return withPlural(end) }
-        guard matched > 0, let end = spelledEnd(of: word, from: matched, at: k + 1) else { return nil }
-        return withPlural(end)
+        if matched == word.count { return (withPlural(k), nil) }
+        guard k < letters.count, letters[k] == Self.wildcard else { return (nil, nil) }
+        let asLetter = spelledEnd(of: word, from: matched + 1, at: k + 1).map(withPlural)
+        let asNone = matched > 0 ? spelledEnd(of: word, from: matched, at: k + 1).map(withPlural) : nil
+        return (asLetter, asNone)
     }
 
     /// Where the letters of `word` from `index` on end when they are spelled exactly from letter
