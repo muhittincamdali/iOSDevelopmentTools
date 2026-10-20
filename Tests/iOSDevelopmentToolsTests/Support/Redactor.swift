@@ -12,8 +12,8 @@ struct Redactor: Sendable {
         self.policy = policy
     }
 
-    init(allowedTextKeys: [String] = [], allowedQueryParameters: [String] = [], urlDetail: RedactionPolicy.URLDetail = .full) {
-        policy = RedactionPolicy(allowedQueryParameters: allowedQueryParameters, allowedTextKeys: allowedTextKeys, urlDetail: urlDetail)
+    init(allowedQueryParameters: [String] = [], urlDetail: RedactionPolicy.URLDetail = .full) {
+        policy = RedactionPolicy(allowedQueryParameters: allowedQueryParameters, urlDetail: urlDetail)
     }
 
     /// Free text, as ``RedactionPolicy/redact(text:)`` stores it.

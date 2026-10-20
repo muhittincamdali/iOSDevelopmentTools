@@ -97,11 +97,11 @@ struct RedactionSymbolNamePropertyTests {
             let field = Self.holdingFields.randomElement(using: &random)!
             let object = #"{"\#(field)":"\#(name)","value":"\#(value)"}"#
             #expect(redactor.redact(body: Data(object.utf8), contentType: "application/json") == object)
-            // Free text (a text/plain body, a log line) keeps a JSON member only under an allowed key.
+            // A text/plain body and a log line read the JSON by the key rule too.
             for (index, output) in outputs(of: object).enumerated() where ![1, 2].contains(index) {
                 #expect(output.contains(value), "\(object.debugDescription) -> \(output.debugDescription)")
             }
-            #expect(Redactor(allowedTextKeys: [field, "value"]).redact("status=200 \(object) done").contains(value))
+            #expect(Redactor().redact("status=200 \(object) done").contains(value))
             #expect(redactor.redact(body: Data(#"[["\#(name)","\#(value)"]]"#.utf8), contentType: "application/json").contains(value))
             #expect(redactor.redact("label=\"\(name)\" \(value)").contains(value))
         }

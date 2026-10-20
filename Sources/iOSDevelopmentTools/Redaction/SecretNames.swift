@@ -36,7 +36,7 @@ struct SecretNameTable: Sendable, Hashable {
             "apikey", "credential", "signature", "cookie", "pincode", "otpcode", "securitycode", "verificationcode",
             "authcode", "cardnumber",
         ]
-        let wordOrEnd = ["token", "secret", "pwd", "key", "pin", "otp", "cvv", "cvc", "ssn", "iban", "card", "auth"]
+        let wordOrEnd = ["token", "secret", "pwd", "key", "pin", "otp", "cvv", "cvc", "ssn", "iban", "card", "auth", "bearer"]
         return anywhere.map { Entry(letters: Array($0.utf8), placement: .anywhere) }
             + wordOrEnd.map { Entry(letters: Array($0.utf8), placement: .wordOrEnd) }
             + ["pass", "sid", "pw"].map { Entry(letters: Array($0.utf8), placement: .word) }

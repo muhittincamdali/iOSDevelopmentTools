@@ -28,8 +28,8 @@ struct RedactionDetectorTests {
     @Test("finds runs of 32 or more hex digits and base64 strings", arguments: [
         ("commit 2c73d1a49804c8035388364230944e541f8e6e2c", "commit [REDACTED]"),
         ("fingerprint 0123456789abcdef0123456789abcdef ok", "fingerprint [REDACTED] ok"),
-        // The `==` that pads base64 is also read as a separator, so the rest of the line goes.
-        ("b64 dGhpcyBpcyBhIHNlY3JldCB2YWx1ZSAxMjM0NTY3OA== end", "b64 [REDACTED] [REDACTED]"),
+        // The `==` that pads base64 is a separator after a plain key, so only the token goes.
+        ("b64 dGhpcyBpcyBhIHNlY3JldCB2YWx1ZSAxMjM0NTY3OA== end", "b64 [REDACTED] end"),
         ("{\"note\":\"sk_live_" + "51HxQ2wErTyUiOpAsDfGhJkLzXcVbNm1234\"}", "{\"note\":\"[REDACTED]\"}"),
     ])
     func longTokens(input: String, expected: String) {

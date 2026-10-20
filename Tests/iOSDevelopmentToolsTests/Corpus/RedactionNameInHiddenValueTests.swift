@@ -2,11 +2,11 @@ import Foundation
 import Testing
 @testable import iOSDevelopmentTools
 
-/// A secret name written as a value names what follows it wherever it is written on its line, also
-/// inside the value of another key that is hidden already: in a multipart body written to a log,
-/// `Content-Disposition: form-data; name="pin"` hides the value of `Content-Disposition`, and the
-/// name in it still hides the part's value on the lines below. The names are found in a second
-/// pass over the text that the first pass hid without reading it.
+/// A secret name written as a value names what follows it wherever it is written, also inside the
+/// value of another key: in a multipart body written to a log,
+/// `Content-Disposition: form-data; name="pin"` hides the part's value on the lines below, since
+/// everything after the name is hidden. These probes were written when a value was hidden to the
+/// end of its line and the names in it were read in a second pass; the cut needs no second pass.
 @Suite("Redaction corpus: secret names inside hidden values")
 struct RedactionNameInHiddenValueTests {
     let redactor = Redactor()
@@ -48,17 +48,17 @@ struct RedactionNameInHiddenValueTests {
     func reviewJSONBody() {
         let body = #"{"msg":"--B\r\nContent-Disposition: form-data; name=\"pin\"\r\n\r\nQz213Wk7r\r\n--B--"}"#
         let output = redactor.redact(body: Data(body.utf8), contentType: "application/json")
-        #expect(output == #"{"msg":"--B\r\nContent-Disposition: [REDACTED]\r\n\r\n[REDACTED]\r\n--B--"}"#)
+        #expect(output == #"{"msg":"--B\r\nContent-Disposition: form-data; name=\"[REDACTED]"}"#)
     }
 
     @Test("what a name inside a hidden value hides", arguments: [
-        ("Content-Disposition: form-data; name=\"pin\"\r\n\r\nHUNTER2XY", "Content-Disposition: [REDACTED]\r\n\r\n[REDACTED]"),
-        ("note: a name=\"pin\"\nHUNTER2XY", "note: [REDACTED]\n[REDACTED]"),
-        ("token: |\n  name=\"pin\"\n\nHUNTER2XY", "token: [REDACTED]\n  [REDACTED]\n\n[REDACTED]"),
-        ("msg=\"name=\\\"pin\\\"\" HUNTER2XY", "msg=\"[REDACTED]\"[REDACTED]"),
-        ("msg='label=\u{15E}ifre' HUNTER2XY", "msg='[REDACTED]'[REDACTED]"),
-        ("status=name=\"pin\"\n\nHUNTER2XY", "status=name=\"[REDACTED]\"\n\n[REDACTED]"),
-        ("x: name=[\n\"x\"\n] HUNTER2XY", "x: [REDACTED]\n[REDACTED]\n[REDACTED]"),
+        ("Content-Disposition: form-data; name=\"pin\"\r\n\r\nHUNTER2XY", "Content-Disposition: form-data; name=\"[REDACTED]"),
+        ("note: a name=\"pin\"\nHUNTER2XY", "note: a name=\"[REDACTED]"),
+        ("token: |\n  name=\"pin\"\n\nHUNTER2XY", "token: [REDACTED]"),
+        ("msg=\"name=\\\"pin\\\"\" HUNTER2XY", "msg=\"name=[REDACTED]"),
+        ("msg='label=\u{15E}ifre' HUNTER2XY", "msg='label=[REDACTED]"),
+        ("status=name=\"pin\"\n\nHUNTER2XY", "status=name=\"[REDACTED]"),
+        ("x: name=[\n\"x\"\n] HUNTER2XY", "x: name=[REDACTED]"),
     ])
     func exactOutput(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -98,14 +98,15 @@ struct RedactionNameInHiddenValueTests {
         expectHidden(input, secrets)
     }
 
-    @Test("the parts after the one with the secret name keep their values")
+    // Free text has one cut point, so the parts after the one with the secret name are hidden too.
+    @Test("the parts after the one with the secret name are hidden with it")
     func followingParts() {
         let body = "--B\r\nContent-Disposition: form-data; name=\"pin\"\r\n\r\nHUNTER2XY\r\n--B\r\n"
             + "Content-Disposition: form-data; name=\"note\"\r\n\r\nVISIBLE1\r\n--B--"
         for output in outputs(body) {
-            #expect(!output.contains(Self.secret) && output.contains("VISIBLE1"), "\(output.debugDescription)")
+            #expect(!output.contains(Self.secret) && !output.contains("VISIBLE1"), "\(output.debugDescription)")
         }
-        #expect(redactor.redact("Content-Disposition: form-data; name=\"pin\"\n\nHUNTER2XY\n\nVISIBLE1").hasSuffix("\n\nVISIBLE1"))
+        #expect(redactor.redact("Content-Disposition: form-data; name=\"pin\"\n\nHUNTER2XY\n\nVISIBLE1") == "Content-Disposition: form-data; name=\"[REDACTED]")
     }
 
     @Test("names held by other keys inside a hidden value", arguments: [
@@ -135,21 +136,21 @@ struct RedactionNameInHiddenValueTests {
     }
 
     @Test("an unquoted name after a key that holds one names what follows it", arguments: [
-        ("name=password\n\nHUNTER2XY", "name=[REDACTED]\n\n[REDACTED]"),
-        ("type=password\nHUNTER2XY", "type=[REDACTED]\n[REDACTED]"),
-        ("name=status\nVISIBLE1", "name=[REDACTED]\nVISIBLE1"),
+        ("name=password\n\nHUNTER2XY", "name=[REDACTED]"),
+        ("type=password\nHUNTER2XY", "type=[REDACTED]"),
+        ("name=status\nVISIBLE1", "name=status\nVISIBLE1"),
     ])
     func unquotedNames(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
     }
 
     @Test("names that are not secret keep what follows them", arguments: [
-        ("Content-Disposition: form-data; name=\"status\"\r\n\r\nVISIBLE1", "Content-Disposition: [REDACTED]\r\n\r\nVISIBLE1"),
-        ("x: name=\"status\"\nVISIBLE1", "x: [REDACTED]\nVISIBLE1"),
-        ("--B\nContent-Disposition: form-data; name=\"note\"\n\nVISIBLE1\n--B--", "--B\nContent-Disposition: [REDACTED]\n\nVISIBLE1\n--B--"),
-        ("msg: wrong password\nstatus=200", "msg: [REDACTED]\nstatus=200"),
-        ("Content-Disposition: attachment\nstatus=200", "Content-Disposition: [REDACTED]\nstatus=200"),
-        ("<key>user</key>\n<string>bob</string>\nstatus=200", "<key>[REDACTED]\n<string>bob</string>\nstatus=200"),
+        ("Content-Disposition: form-data; name=\"status\"\r\n\r\nVISIBLE1", "Content-Disposition: form-data; name=\"status\"\r\n\r\nVISIBLE1"),
+        ("x: name=\"status\"\nVISIBLE1", "x: name=\"status\"\nVISIBLE1"),
+        ("--B\nContent-Disposition: form-data; name=\"note\"\n\nVISIBLE1\n--B--", "--B\nContent-Disposition: form-data; name=\"note\"\n\nVISIBLE1\n--B--"),
+        ("msg: wrong password\nstatus=200", "msg: wrong password\n[REDACTED]"),
+        ("Content-Disposition: attachment\nstatus=200", "Content-Disposition: attachment\nstatus=200"),
+        ("<key>user</key>\n<string>bob</string>\nstatus=200", "<key>user</key>\n<string>bob</string>\nstatus=200"),
     ])
     func plainNames(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -164,6 +165,6 @@ struct RedactionNameInHiddenValueTests {
 
     @Test("the logging guide's example of a name inside a hidden value")
     func guideExample() {
-        #expect(redactor.redact("Content-Disposition: form-data; name=\"pin\"\r\n\r\n4831") == "Content-Disposition: [REDACTED]\r\n\r\n[REDACTED]")
+        #expect(redactor.redact("Content-Disposition: form-data; name=\"pin\"\r\n\r\n4831") == "Content-Disposition: form-data; name=\"[REDACTED]")
     }
 }

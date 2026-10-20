@@ -143,7 +143,7 @@ struct RedactionScalingTests {
         func replaceEveryFinding(length: Int) -> () -> Void {
             let scalars = Array(String(repeating: "pwd=x ", count: length / 6).unicodeScalars)
             let spans = stride(from: 4, to: scalars.count, by: 6).map {
-                RedactionPolicy.Span(start: $0, end: $0 + 1, isFinding: true, replacement: RedactionPolicy.replacement)
+                RedactionPolicy.Span(start: $0, end: $0 + 1, replacement: RedactionPolicy.replacement)
             }
             return { _ = RedactionPolicy.replacing(spans, in: scalars) }
         }

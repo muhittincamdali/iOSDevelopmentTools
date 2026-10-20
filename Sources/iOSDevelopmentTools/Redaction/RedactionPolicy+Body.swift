@@ -115,7 +115,7 @@ extension RedactionPolicy {
         let isUTF8 = encoding == .utf8
         let scalars = Array(text.unicodeScalars)
         guard let document = try? JSONDocument(scalars, allowsFragments: true, nesting: nesting) else { return nil }
-        let spans = Self.merged(document.secretSpans(using: self, members: .keyRule, compatibility: CompatibilityText()))
+        let spans = Self.merged(document.secretSpans(using: self, compatibility: CompatibilityText()))
         guard !spans.isEmpty || !isUTF8 else { return (body, false) }
         return (Data(Self.replacing(spans, in: scalars).utf8), true)
     }

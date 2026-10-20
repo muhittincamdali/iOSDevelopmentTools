@@ -4,9 +4,6 @@ extension RedactionPolicy {
     struct Span {
         var start: Int
         var end: Int
-        /// Whether the span hides something. A span that is no finding writes a line separator
-        /// as a line feed.
-        var isFinding: Bool
         var replacement: String
     }
 
@@ -40,12 +37,12 @@ extension RedactionPolicy {
                 continue
             }
             guard span.end > last.end else {
-                if last.replacement != replacement, span.isFinding, span.replacement != last.replacement {
-                    result[result.count - 1] = Span(start: last.start, end: last.end, isFinding: true, replacement: replacement)
+                if last.replacement != replacement, span.replacement != last.replacement {
+                    result[result.count - 1] = Span(start: last.start, end: last.end, replacement: replacement)
                 }
                 continue
             }
-            result[result.count - 1] = Span(start: last.start, end: span.end, isFinding: last.isFinding || span.isFinding, replacement: replacement)
+            result[result.count - 1] = Span(start: last.start, end: span.end, replacement: replacement)
         }
         return result
     }

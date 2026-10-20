@@ -55,7 +55,8 @@ struct BodyRedactionTests {
         #expect(outcome == .redacted)
         let object = try json(data)
         #expect(object["query"] as? String == "{ me }")
-        #expect(object["note"] as? String == "[not json")
+        // A bracket that does not close is a trigger in text.
+        #expect(object["note"] as? String == redacted)
         let variables = try #require((object["variables"] as? String).map { Data($0.utf8) })
         let input = try #require(try json(variables)["input"] as? [String: Any])
         #expect(input["password"] as? String == redacted)
@@ -121,7 +122,7 @@ struct BodyRedactionTests {
         let body = Data("status=ok\npassword: hunter2\nnext line".utf8)
         let (data, outcome) = policy.redact(body: body, contentType: "text/plain; charset=utf-8")
         #expect(outcome == .redacted)
-        #expect(text(data) == "status=ok\npassword: \(redacted)\nnext line")
+        #expect(text(data) == "status=ok\npassword: \(redacted)")
         #expect(policy.redact(body: Data(), contentType: "application/json") == (Data(), .unchanged))
     }
 

@@ -119,7 +119,7 @@ struct RedactionPolicyTests {
             HTTPHeader(name: "X-Upstream", value: "charset=utf-8; max-age=60"),
         ]
         #expect(lenient.redact(headers: headers).map(\.value) == [
-            redacted, redacted, "\"\(redacted)\"", "W/\"v7\"", "route=\(redacted)", "charset=utf-8; max-age=60",
+            redacted, redacted, "\"\(redacted)\"", "W/\"v7\"", "route=eu, user=ada", "charset=utf-8; max-age=60",
         ])
     }
 

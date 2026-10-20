@@ -3,72 +3,58 @@
 extension RedactionPolicy {
     /// The text with its secrets replaced by ``replacement``.
     ///
-    /// Free text has no grammar, so its keys are read the other way round from those of
-    /// structured input, with an allowlist. The text is read on a scanning copy without invisible
-    /// characters (format characters, marks, default-ignorable code points such as U+3164, control
-    /// characters) and in Unicode compatibility form:
+    /// Free text has no grammar, so the rule does not try to tell where a value ends. It has one
+    /// cut point: from the first trigger, everything to the end of the text is hidden, the lines
+    /// below included. Hiding more than the secret is how the rule is meant to work. The text is
+    /// read once, on a scanning copy without invisible characters (format characters, marks,
+    /// default-ignorable code points such as U+3164, control characters), in Unicode compatibility
+    /// form, with U+2028, U+2029, U+0085, vertical tab and form feed read as line breaks. The
+    /// triggers are:
     ///
-    /// - **Pairs.** In `key=value`, `key: value`, `key = value` and `"key":"value"` the value is
-    ///   kept only when the key is plain ASCII and on ``allowedTextKeys``. Any other value is
-    ///   replaced: a quoted one (`"`, `'` or a backtick) up to its closing quote, a JSON object or
-    ///   array whole, anything else with the rest of its line, because where it ends cannot be
-    ///   told. The separators are `=` and `:`, also as characters whose compatibility form is one
-    ///   (`＝`, `：`, `︓`) and as escapes (`%3D`, `&#61;`); a `:` between two digits, as in
-    ///   `12:30`, is part of a time. Punctuation and math symbols outside ASCII (`≔`, `꞉`, `→`,
-    ///   `·`) separate too, where they follow other text.
-    /// - **Secret names without a separator.** A word that holds a secret name hides the rest of
-    ///   its line: `password hunter2`, `PIN 1234`, `export AWS_SECRET_ACCESS_KEY …`. Words are read
-    ///   after their escapes are decoded, with punctuation inside them (`pass~word`) and a space or
-    ///   `|` between two of them (`pass word`) read as a separator, and one letter that has no
-    ///   ASCII form (`ɑ`, `ı`) read as any letter or, between two letters, as none (`passꞏword`).
-    ///   This is a best effort: a name disguised with two or more such letters and written
-    ///   without a separator (`pɑsswoʀd hunter2`) is not found.
-    /// - **Ambiguity.** A word that mixes scripts (`pаssword` with a Cyrillic `а`) or holds an
-    ///   invisible character other than a mark (`pa\u{115F}ssword`, a zero-width space, a control
-    ///   character) hides itself and the rest of its line.
-    /// - **Values that go on.** A quote that does not close on its line hides the lines up to the
-    ///   one where it closes, and that line whole. After a value hidden to the end of its line, the
-    ///   lines indented more and the line after a trailing `\` are hidden; so is the next line with
-    ///   text when nothing but punctuation followed the name, the line ends open (`(`, `:`, `<key>`,
-    ///   `"""`) or it ends at a break other than LF and CRLF.
-    /// - **Secret names written as values.** A quoted value that names a secret or cannot be read
-    ///   (`name="password"`, `<string name="api_key">`) hides the rest of its line after the
-    ///   closing quote. After a key that holds a name (`name=`, `key=`, `label=`, `id=`, … but not
-    ///   `path=`, the route of a request) a name that is not plain ASCII counts as secret, as in
-    ///   JSON (`label="Пароль"`), and so does JSON there (`name=["pin"]`), to the end of the line
-    ///   where it closes when it spans lines. In XML and HTML the other attribute values of its
-    ///   start tag are hidden too, and the lines below up to the end of the element and the rest of
-    ///   the line where it ends; a secret name in an element's text (`<key>password</key>`) names
-    ///   the element after it, also on the lines below, as a property list writes them. An element
-    ///   that holds nothing (`<string/>`, `<string></string>`) holds no value, so the text after
-    ///   it, or the next line with text that is not markup, is hidden too. A name that is plain
-    ///   and not secret keeps what follows it. An unquoted name after such a key
-    ///   (`name=password`) names what follows it as a quoted one does.
-    /// - **Names inside hidden values.** Each line is read a second time for the names written as
-    ///   values in what the first reading hid without reading it, and in quoted values, so a name
-    ///   hides what follows it wherever it is on its line: `Content-Disposition: form-data;
-    ///   name="pin"` hides the value of `Content-Disposition`, and the name in it the part's value
-    ///   below. A secret name in a header of a multipart part written into text hides the part's
-    ///   other headers and its value, up to the delimiter line written before the header, or,
-    ///   without one, up to a blank line or a line that starts with `--`.
-    /// - **Embedded JSON.** JSON in a line (`{"…`, `[{…`, `["…`, `[[…`) is parsed with a JSON
-    ///   parser, within the limits of ``maximumJSONDepth`` and ``maximumNestedDocuments``. Its
-    ///   members are pairs too: a member keeps its value only when its name is plain ASCII and on
-    ///   ``allowedTextKeys``; every other value is hidden whole, whatever its type. JSON that does
-    ///   not parse hides the rest of the line, and the lines below until its brackets close.
-    /// - **URLs** with a scheme and `//` are recorded as ``redact(url:)`` records them.
-    /// - **Values** are scanned for JWTs, bearer tokens, long hex or Base64 strings, card numbers,
-    ///   IBANs and email addresses everywhere.
+    /// - **A secret name** (see ``secretNames``), with or without a separator, quoted or not:
+    ///   `password=hunter2`, `password hunter2`, `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`.
+    ///   The text is hidden from the value after the name. Words are read after their escapes are
+    ///   decoded, with punctuation inside them (`pass~word`) and a space or `|` between two of them
+    ///   (`pass word`) read as a separator, and one letter that has no ASCII form (`ɑ`, `ı`) read
+    ///   as any letter or, between two letters, as none (`passꞏword`). This is a best effort: a
+    ///   name disguised with two or more such letters and written without a separator
+    ///   (`pɑsswoʀd hunter2`) is not found.
+    /// - **A secret name written as a value.** After a key that holds a name (`name=`, `key=`,
+    ///   `label=`, `id=`, … but not `path=`, the route of a request), a name that names a secret,
+    ///   is not plain ASCII or is JSON: `name="password"`, `key='token'`, `label="Пароль"`,
+    ///   `name=["pin"]`, `Content-Disposition: form-data; name="pin"`. In markup the text of a
+    ///   property list's `<key>` element is such a name (`<key>password</key>`,
+    ///   `<key>Şifre</key>`), and a trigger inside a tag hides the tag from its `<`, so the
+    ///   attributes written before the name are hidden too (`<input value="…" name="password">`).
+    ///   The element name `key` and the name of an end tag (`</password>`) name no value after
+    ///   them.
+    /// - **A key that is not plain ASCII** or has no letter or digit, or no key at all, before
+    ///   `=` or `:` (`pаssword=…` with a Cyrillic `а`, `🔑=…`, `user[name]=…`, `=…`), and the last
+    ///   words of a key that, read as one name, name a secret (`pass word=…`, `c v v: …`).
+    /// - **A separator that is escaped or only looks like one** after other text: `%3D`, `&#61;`,
+    ///   `%u003D`, `\=`, `꞉`, `≔`. A character whose compatibility form is `=` or `:` (`＝`, `：`)
+    ///   is read as that character.
+    /// - **An ambiguous token**: a word that mixes scripts (`pаssword` with a Cyrillic `а`) or
+    ///   holds an invisible character other than a mark (a zero-width space, `pa\u{115F}ssword`,
+    ///   a control character), a quote or bracket that does not close, and JSON that does not
+    ///   parse. The text is hidden from there.
     ///
-    /// U+2028, U+2029, U+0085, vertical tab and form feed end a line and are written as line feeds,
-    /// so the result breaks lines where the rule did; CR and CRLF end a line too and are kept.
+    /// Text with no trigger is kept as it is (`status=200 user=bob path=/api/items`), except for
+    /// what the value detectors find: JWTs, bearer tokens, long hex or Base64 strings, card
+    /// numbers, IBANs and email addresses. JSON in the text (`{"…`, `[{…`, `["…`, `[[…`) is parsed
+    /// with a JSON parser, within the limits of ``maximumJSONDepth`` and
+    /// ``maximumNestedDocuments``, and redacted by the key rule of structured input; its strings
+    /// are free text again, with this rule. URLs with a scheme and `//` are recorded as
+    /// ``redact(url:)`` records them.
     public func redact(text: String) -> String {
         guard isEnabled else { return text }
         return redact(text, nesting: .text(length: text.unicodeScalars.count))
     }
 
-    /// The findings in free text, in order and without overlaps. `nesting` says which documents
-    /// the text is in; a text inside one whose JSON or URL goes past a limit is one finding.
+    /// The findings in free text, in order and without overlaps: those of the JSON and URLs and of
+    /// the value detectors, and the cut, from the first trigger to the end of the text. `nesting`
+    /// says which documents the text is in; a text inside one whose JSON or URL goes past a limit
+    /// is one finding.
     func textSpans(in scalars: [Unicode.Scalar], compatibility: CompatibilityText, role: FreeTextScanner.Role = .text, nesting: Nesting) -> [Span] {
         guard !scalars.isEmpty, !isQuietWord(scalars) else { return [] }
         return textSpans(in: scalars, text: NormalizedText(scalars, compatibility: compatibility), compatibility: compatibility, role: role, nesting: nesting)
@@ -84,17 +70,18 @@ extension RedactionPolicy {
         nesting: Nesting, detectsInRegions: Bool = false
     ) -> [Span] {
         guard !scalars.isEmpty else { return [] }
-        let whole = [Span(start: 0, end: scalars.count, isFinding: true, replacement: Self.replacement)]
+        let whole = [Span(start: 0, end: scalars.count, replacement: Self.replacement)]
         guard nesting.reads(scalars.count) else { return whole }
         var scanner = FreeTextScanner(source: scalars, text: text, policy: self, compatibility: compatibility, role: role, nesting: nesting)
         scanner.run()
         if scanner.hidesWholeText { return whole }
+        let cut = scanner.cut.flatMap { $0 < scalars.count ? [Span(start: $0, end: scalars.count, replacement: Self.replacement)] : nil } ?? []
         // JSON and URLs were redacted by their own rules; the detectors do not read them again.
+        // A finding that runs into the cut is merged with it.
         let regions = scanner.regions
-        let folds = Self.lineSeparatorFolds(in: scalars, outside: regions)
-        guard !regions.isEmpty, !detectsInRegions else { return Self.merged(scanner.spans + detectorSpans(in: text) + folds) }
+        guard !regions.isEmpty, !detectsInRegions else { return Self.merged(scanner.spans + detectorSpans(in: text) + cut) }
         let outside = detectorSpans(in: NormalizedText(scalars, compatibility: compatibility, masked: regions))
-        return Self.merged(scanner.spans + outside + Self.crossing(detectorSpans(in: text), regions) + folds)
+        return Self.merged(scanner.spans + outside + Self.crossing(detectorSpans(in: text), regions) + cut)
     }
 
     /// The findings that run over the edge of a JSON or URL region, hidden whole. A URL ends
@@ -115,7 +102,7 @@ extension RedactionPolicy {
             guard low > 0 else { return nil }
             let last = regions[low - 1]
             let crosses = last.lowerBound > span.start || (last.upperBound > span.start && span.end > last.upperBound)
-            return crosses ? Span(start: span.start, end: span.end, isFinding: true, replacement: replacement) : nil
+            return crosses ? Span(start: span.start, end: span.end, replacement: replacement) : nil
         }
     }
 
@@ -145,14 +132,13 @@ extension RedactionPolicy {
             + text.ibanSpans() + text.longTokenSpans()
     }
 
-    /// The text redacted as free text, and whether anything was hidden in it (rather than only
-    /// line separators written as line feeds); nil when nothing changed.
+    /// The text redacted as free text; nil when nothing changed.
     func redactedText(
         _ scalars: [Unicode.Scalar], compatibility: CompatibilityText, role: FreeTextScanner.Role = .text, nesting: Nesting
-    ) -> (text: String, hidesSomething: Bool)? {
+    ) -> String? {
         let spans = textSpans(in: scalars, compatibility: compatibility, role: role, nesting: nesting)
         guard !spans.isEmpty else { return nil }
-        return (Self.replacing(spans, in: scalars), spans.contains(where: \.isFinding))
+        return Self.replacing(spans, in: scalars)
     }
 
     /// A text inside a document (a form value, a query value, a header value) or passed in on its
@@ -166,22 +152,6 @@ extension RedactionPolicy {
     /// A key that is written out (a form or multipart field name, a query parameter name) read as
     /// free text in the ``FreeTextScanner/Role/name`` role.
     func redactedName(_ name: String, nesting: Nesting) -> String {
-        redactedText(Array(name.unicodeScalars), compatibility: CompatibilityText(), role: .name, nesting: nesting)?.text ?? name
+        redactedText(Array(name.unicodeScalars), compatibility: CompatibilityText(), role: .name, nesting: nesting) ?? name
     }
-
-    /// U+2028, U+2029, U+0085, vertical tab and form feed, written as line feeds, since the
-    /// free-text rule ends a line at them. Inside JSON they are kept: a JSON string may hold them.
-    private static func lineSeparatorFolds(in scalars: [Unicode.Scalar], outside regions: [Range<Int>]) -> [Span] {
-        var folds: [Span] = []
-        let sortedRegions = regions.sorted { $0.lowerBound < $1.lowerBound }
-        var regionIndex = 0
-        for (offset, scalar) in scalars.enumerated() where foldedLineSeparators.contains(scalar) {
-            while regionIndex < sortedRegions.count, sortedRegions[regionIndex].upperBound <= offset { regionIndex += 1 }
-            if regionIndex < sortedRegions.count, sortedRegions[regionIndex].contains(offset) { continue }
-            folds.append(Span(start: offset, end: offset + 1, isFinding: false, replacement: "\n"))
-        }
-        return folds
-    }
-
-    private static let foldedLineSeparators: Set<Unicode.Scalar> = ["\u{0B}", "\u{0C}", "\u{85}", "\u{2028}", "\u{2029}"]
 }

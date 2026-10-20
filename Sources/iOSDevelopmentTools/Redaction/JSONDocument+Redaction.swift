@@ -1,19 +1,9 @@
 extension JSONDocument {
-    /// Which members of the document's objects keep their values.
-    enum MemberRule {
-        /// Structured input (a body, a form or query value read as JSON): a member keeps its value
-        /// unless its name hides it by the key rule (see ``RedactionPolicy/hidesValue(ofKey:)``).
-        case keyRule
-        /// JSON written in free text, where every member is a pair of free text: a member keeps
-        /// its value only when its name is plain ASCII, names no secret and is on
-        /// ``RedactionPolicy/allowedTextKeys``.
-        case allowedTextKeys
-    }
-
     /// The replacements that redact the document. Every replacement covers one whole token or
     /// value and is valid JSON in its place, so the redacted document is still JSON:
     ///
-    /// - The value of every member whose name hides it (see `members`), at any depth, inside
+    /// - The value of every member whose name hides it (see ``RedactionPolicy/hidesValue(ofKey:)``),
+    ///   at any depth, inside
     ///   arrays and for every repetition of a name, becomes the string `"[REDACTED]"`, whatever its
     ///   type.
     /// - **Names written as values** (see ``WrittenName``). In an object with a member whose value
@@ -40,8 +30,8 @@ extension JSONDocument {
     ///   read with the document's ``nesting`` and the objects and arrays around them, so JSON in
     ///   them that goes past a limit of the budget hides the whole string.
     /// - A number that holds a card number or a long token becomes the string `"[REDACTED]"`.
-    func secretSpans(using policy: RedactionPolicy, members: MemberRule, compatibility: CompatibilityText) -> [RedactionPolicy.Span] {
-        var collector = SpanCollector(document: self, policy: policy, members: members, compatibility: compatibility)
+    func secretSpans(using policy: RedactionPolicy, compatibility: CompatibilityText) -> [RedactionPolicy.Span] {
+        var collector = SpanCollector(document: self, policy: policy, compatibility: compatibility)
         collector.collect(root, nesting: nesting)
         return collector.spans
     }
@@ -49,7 +39,7 @@ extension JSONDocument {
     /// Any value, quotes and brackets included, becomes the string `"[REDACTED]"`.
     static func hiding(_ node: Node) -> RedactionPolicy.Span {
         RedactionPolicy.Span(
-            start: node.range.lowerBound, end: node.range.upperBound, isFinding: true, replacement: "\"\(RedactionPolicy.replacement)\""
+            start: node.range.lowerBound, end: node.range.upperBound, replacement: "\"\(RedactionPolicy.replacement)\""
         )
     }
 
@@ -77,14 +67,12 @@ extension JSONDocument {
 private struct SpanCollector {
     let document: JSONDocument
     let policy: RedactionPolicy
-    let members: JSONDocument.MemberRule
     let compatibility: CompatibilityText
     private(set) var spans: [RedactionPolicy.Span] = []
 
-    init(document: JSONDocument, policy: RedactionPolicy, members: JSONDocument.MemberRule, compatibility: CompatibilityText) {
+    init(document: JSONDocument, policy: RedactionPolicy, compatibility: CompatibilityText) {
         self.document = document
         self.policy = policy
-        self.members = members
         self.compatibility = compatibility
     }
 
@@ -126,18 +114,11 @@ private struct SpanCollector {
         let naming = namingFields(objectMembers)
         for (index, member) in objectMembers.enumerated() {
             spans += stringSpans(member.name, role: .name, nesting: nesting)
-            if hidesValue(ofName: text(of: member.name)) || naming.hidesValue(at: index) {
+            if policy.hidesValue(ofKey: text(of: member.name)) || naming.hidesValue(at: index) {
                 spans.append(JSONDocument.hiding(member.value))
             } else {
                 collect(member.value, nesting: nesting)
             }
-        }
-    }
-
-    private func hidesValue(ofName name: [Unicode.Scalar]) -> Bool {
-        switch members {
-        case .keyRule: policy.hidesValue(ofKey: name)
-        case .allowedTextKeys: policy.allowableFold(name).map { !policy.allowedTextKeys.contains($0) } ?? true
         }
     }
 
@@ -161,11 +142,11 @@ private struct SpanCollector {
 
     /// A name or string whose decoded text the free-text rule changes is written again, escaped.
     private func stringSpans(_ token: JSONDocument.StringToken, role: FreeTextScanner.Role, nesting: Nesting) -> [RedactionPolicy.Span] {
-        guard let (redacted, hidesSomething) = policy.redactedText(text(of: token), compatibility: compatibility, role: role, nesting: nesting) else {
+        guard let redacted = policy.redactedText(text(of: token), compatibility: compatibility, role: role, nesting: nesting) else {
             return []
         }
         return [RedactionPolicy.Span(
-            start: token.content.lowerBound, end: token.content.upperBound, isFinding: hidesSomething, replacement: JSONDocument.escaped(redacted))]
+            start: token.content.lowerBound, end: token.content.upperBound, replacement: JSONDocument.escaped(redacted))]
     }
 
     /// A number with a card number or a long token in it becomes the string `"[REDACTED]"`, since
@@ -176,6 +157,6 @@ private struct SpanCollector {
         guard !found.isEmpty else { return [] }
         let replaced = RedactionPolicy.replacing(found, in: digits)
         return [RedactionPolicy.Span(
-            start: node.range.lowerBound, end: node.range.upperBound, isFinding: true, replacement: "\"\(JSONDocument.escaped(replaced))\"")]
+            start: node.range.lowerBound, end: node.range.upperBound, replacement: "\"\(JSONDocument.escaped(replaced))\"")]
     }
 }

@@ -62,7 +62,7 @@ struct NormalizedText {
     /// A finding over bytes `range`, as a span of the original scalars hidden whole.
     func span(_ range: Range<Int>) -> RedactionPolicy.Span {
         RedactionPolicy.Span(
-            start: offsets[range.lowerBound], end: offsets[range.upperBound - 1] + 1, isFinding: true, replacement: RedactionPolicy.replacement)
+            start: offsets[range.lowerBound], end: offsets[range.upperBound - 1] + 1, replacement: RedactionPolicy.replacement)
     }
 
     /// The offset in the original scalars where byte `i` starts; the end of the text for

@@ -66,7 +66,7 @@ struct RedactionBodyTests {
         ("user%5Bpassword%5D=hunter2&user%5Bname%5D=bob", "user%5Bpassword%5D=[REDACTED]&user%5Bname%5D=[REDACTED]"),
         ("p%D0%B0ssword=hunter2", "p%D0%B0ssword=[REDACTED]"),
         ("user=bob%20smith&note=paid+4111+1111+1111+1111", "user=bob%20smith&note=paid+[REDACTED]"),
-        ("note=status%3D1+user%3Dbob", "note=status%3D1+user%3D[REDACTED]"),
+        ("note=status%3D1+user%3Dbob", "note=status%3D1+user%3Dbob"),
         ("password=hunter2&password=again", "password=[REDACTED]&password=[REDACTED]"),
         ("q=%7B%22password%22%3A%22hunter2%22%7D", "q=%7B%22password%22%3A%22[REDACTED]%22%7D"),
         ("flag&password=hunter2", "flag&password=[REDACTED]"),

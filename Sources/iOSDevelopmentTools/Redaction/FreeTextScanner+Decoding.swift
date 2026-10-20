@@ -57,6 +57,19 @@ extension FreeTextScanner {
         let decoded = hasEscapes ? EscapeDecoder.decode(scalars).scalars : scalars
         if ScriptMix.mixesScripts(decoded) { return true }
         let text = hasEscapes ? NormalizedText(decoded, compatibility: compatibility) : plainText
+        return wordsNameSecret(text, decoded: decoded, endingInLastWord: false, policy: policy)
+    }
+
+    /// Whether words, with their escapes decoded, read as one name name a secret, as the words
+    /// of a key are read; with `endingInLastWord`, only a secret that ends in the last word counts.
+    static func wordsNameSecret(_ scalars: [Unicode.Scalar], endingInLastWord: Bool, policy: RedactionPolicy, compatibility: CompatibilityText) -> Bool {
+        let hasEscapes = scalars.contains(where: EscapeDecoder.startsEscape)
+        let decoded = hasEscapes ? EscapeDecoder.decode(scalars).scalars : scalars
+        let text = NormalizedText(decoded, compatibility: compatibility)
+        return wordsNameSecret(text, decoded: decoded, endingInLastWord: endingInLastWord, policy: policy)
+    }
+
+    private static func wordsNameSecret(_ text: NormalizedText, decoded: [Unicode.Scalar], endingInLastWord: Bool, policy: RedactionPolicy) -> Bool {
         var words: [Range<Int>] = []
         var k = 0
         while k < text.count {
@@ -68,7 +81,9 @@ extension FreeTextScanner {
             while k < text.count, !text.isSpace(k), !text.isLineTerminator(k) { k += 1 }
             words.append(start..<k)
         }
-        return LooseReading(text, words, source: decoded, names: policy.secretNameTable)?.secretEnd { _ in true } != nil
+        guard let last = words.last, let reading = LooseReading(text, words, source: decoded, names: policy.secretNameTable) else { return false }
+        let lastStart = endingInLastWord ? reading.letterCount(before: last.lowerBound) : 0
+        return reading.secretEnd { $0.upperBound > lastStart } != nil
     }
 
     /// ``mentionsSecret(_:policy:compatibility:)`` on a scanning copy that is already made.

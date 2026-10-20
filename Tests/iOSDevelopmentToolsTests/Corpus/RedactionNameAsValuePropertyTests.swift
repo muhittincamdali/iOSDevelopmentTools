@@ -68,7 +68,7 @@ struct RedactionNameAsValuePropertyTests {
         var random = SeededRandom(seed: 0xA1_2B_0091)
         var checked = 0
         for _ in 0..<4_000 {
-            let name = RedactionAllowlistPropertyTests.key(using: &random)
+            let name = RedactionCutPropertyTests.name(using: &random)
             guard let plain = PlainName(name.unicodeScalars), !plain.namesSecret(in: .standard),
                   !FreeTextScanner.mentionsSecret(Array(name.unicodeScalars), policy: .default, compatibility: CompatibilityText())
             else { continue }

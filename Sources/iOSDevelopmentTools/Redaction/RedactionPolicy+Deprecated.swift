@@ -18,7 +18,7 @@ extension RedactionPolicy {
     ///
     /// `withholdsUncheckedBodies` is ignored: a body that cannot be parsed is always omitted. Use
     /// ``disabled`` to store everything unchanged.
-    @available(*, deprecated, renamed: "init(additionalSecretNames:allowedHeaders:allowedQueryParameters:allowedTextKeys:urlDetail:)")
+    @available(*, deprecated, renamed: "init(additionalSecretNames:allowedHeaders:allowedQueryParameters:urlDetail:)")
     public init(nameFragments: some Sequence<String>, withholdsUncheckedBodies: Bool = true) {
         self.init(additionalSecretNames: Array(nameFragments))
     }

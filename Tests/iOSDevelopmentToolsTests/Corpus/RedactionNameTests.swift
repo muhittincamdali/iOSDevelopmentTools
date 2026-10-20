@@ -61,8 +61,8 @@ struct RedactionNameTests {
     @Test("the inputs that got past the first fix after 2.0.0", arguments: [
         ("{\"otp\":\"123456\",\"cvv\":\"123\",\"ssn\":\"078-05-1120\",\"auth\":\"a\",\"key\":\"k\",\"signature\":\"s\"}",
          "{\"otp\":\"[REDACTED]\",\"cvv\":\"[REDACTED]\",\"ssn\":\"[REDACTED]\",\"auth\":\"[REDACTED]\",\"key\":\"[REDACTED]\",\"signature\":\"[REDACTED]\"}"),
-        // In free text an unquoted value goes to the end of its line: `;`, `&` and spaces do not
-        // end it, so the pairs after it are hidden with it.
+        // In free text everything after a secret name is hidden: `;`, `&` and spaces do not end
+        // a value, so the pairs after it are hidden with it.
         ("Cookie: session=x; sid=SECRET", "Cookie: [REDACTED]"),
         ("Set-Cookie: sid=SECRET", "Set-Cookie: [REDACTED]"),
         ("otp=123456&cvv=123", "otp=[REDACTED]"),
@@ -81,7 +81,7 @@ struct RedactionNameTests {
     }
 
     // Short secret words count as a word or at the end of a name, not inside a longer word.
-    @Test("names that only hold the letters of a secret word keep their value in structured input", arguments: [
+    @Test("names that only hold the letters of a secret word keep their value in structured input and in text", arguments: [
         "keyboard", "pinned", "spinner", "author", "authenticated", "inside", "president",
         "sidebar", "description", "bypass", "passport", "tokenizer", "secretary", "discard_count",
     ])
@@ -89,9 +89,7 @@ struct RedactionNameTests {
         #expect(redactor.redact(body: Data("{\"\(name)\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(name)\":\"bob\"}")
         let form = Data("\(name)=bob".utf8)
         #expect(redactor.redact(body: form, contentType: "application/x-www-form-urlencoded") == "\(name)=bob")
-        // Free text keeps a value only after an allowed key.
-        #expect(redactor.redact("\(name)=bob") == "\(name)=[REDACTED]")
-        #expect(Redactor(allowedTextKeys: [name]).redact("\(name)=bob") == "\(name)=bob")
+        #expect(redactor.redact("\(name)=bob") == "\(name)=bob")
     }
 
     // A name that holds a secret word as a word may only describe the secret, but telling the
@@ -104,7 +102,8 @@ struct RedactionNameTests {
         #expect(redactor.redact("{\"\(name)\":\"bob\"}") == "{\"\(name)\":\"[REDACTED]\"}")
         let form = Data("\(name)=bob".utf8)
         #expect(redactor.redact(body: form, contentType: "application/x-www-form-urlencoded") == "\(name)=[REDACTED]")
-        #expect(Redactor(allowedTextKeys: [name]).redact("\(name)=bob") == "\(name)=[REDACTED]")
+        // In text the secret word is the trigger: the rest is hidden from the end of the word.
+        #expect(!redactor.redact("\(name)=bob").contains("bob"))
     }
 
     @Test("a long name is compared in time linear in its length and hidden past 256 characters")
@@ -112,7 +111,7 @@ struct RedactionNameTests {
         let plain = String(repeating: "user", count: 64)
         #expect(redactor.redact(body: Data("{\"\(plain)\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(plain)\":\"bob\"}")
         #expect(redactor.redact(body: Data("{\"\(plain)x\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(plain)x\":\"[REDACTED]\"}")
-        #expect(Redactor(allowedTextKeys: [plain]).redact("\(plain)=bob") == "\(plain)=bob")
-        #expect(Redactor(allowedTextKeys: [plain + "x"]).redact("\(plain)x=bob") == "\(plain)x=[REDACTED]")
+        #expect(Redactor().redact("\(plain)=bob") == "\(plain)=bob")
+        #expect(Redactor().redact("\(plain)x=bob") == "\(plain)x=[REDACTED]")
     }
 }

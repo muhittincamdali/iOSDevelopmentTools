@@ -152,7 +152,7 @@ extension ReviewProbeSet {
 
     }
 
-    /// F. Allowed keys, repeated keys
+    /// F. Plain keys, repeated keys
     func addA6() {
         cat("allowed-key-smuggle")
         p("status=ok status=ok password {S}")

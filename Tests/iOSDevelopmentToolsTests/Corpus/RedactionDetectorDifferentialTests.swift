@@ -3,13 +3,13 @@ import Testing
 @testable import iOSDevelopmentTools
 
 /// Every value detector gives the same result on every path: the same text as a log line, after a
-/// key on the allowlist, as a text/plain body, as a JSON string, name or array element, inside JSON
+/// plain key, as a text/plain body, as a JSON string, name or array element, inside JSON
 /// in a line, as a form value or name, as a multipart part, as a query value on the allowlist, as
 /// a path segment and inside a URL in a line, with the punctuation that ends a sentence after it.
 @Suite("Redaction corpus: detector differential")
 struct RedactionDetectorDifferentialTests {
-    /// Keys on the allowlists, so the detectors and not the key rule decide.
-    let redactor = Redactor(allowedTextKeys: ["note"], allowedQueryParameters: ["note"])
+    /// A query parameter on the allowlist, so the detectors and not the query rule decide.
+    let redactor = Redactor(allowedQueryParameters: ["note"])
 
     /// A value for each detector, and part of it that must never show.
     static let samples: [(value: String, part: String)] = [
@@ -55,7 +55,7 @@ struct RedactionDetectorDifferentialTests {
         let multipart = "--B0und\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\n\(text)\r\n--B0und--\r\n"
         var paths: [(String, String)] = [
             ("text", redactor.redact(text)),
-            ("allowed key", redactor.redact("note=" + text)),
+            ("plain key", redactor.redact("note=" + text)),
             ("text body", redactor.redact(body: Data(text.utf8), contentType: "text/plain")),
             ("JSON string", redactor.redact(body: Self.json(["note": text]), contentType: "application/json")),
             ("JSON name", redactor.redact(body: Self.json([text: 1]), contentType: "application/json")),

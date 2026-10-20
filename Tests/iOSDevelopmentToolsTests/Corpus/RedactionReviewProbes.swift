@@ -11,7 +11,6 @@ final class ReviewProbeSet {
         case rawBody([UInt8], String?)
         case url
         case urlAllowing([String])
-        case textAllowing([String])
     }
 
     struct Probe {
@@ -96,7 +95,6 @@ extension ReviewProbeSet.Probe {
     func redacted() -> String {
         switch mode {
         case .text: Redactor().redact(input)
-        case .textAllowing(let keys): Redactor(allowedTextKeys: keys).redact(input)
         case .body(let type): Redactor().redact(body: Data(input.utf8), contentType: type)
         case .rawBody(let bytes, let type): Redactor().redact(body: Data(bytes + Array(input.utf8)), contentType: type)
         case .url: URL(string: input).map { Redactor().redact(url: $0) } ?? "<URL(string:) nil>"

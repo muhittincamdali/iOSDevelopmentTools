@@ -7,8 +7,6 @@ import Testing
 @Suite("Redaction corpus: nesting budget")
 struct RedactionNestingTests {
     let redactor = Redactor()
-    /// In a log line a JSON member keeps its value only under an allowed key.
-    let noting = Redactor(allowedTextKeys: ["note"])
 
     private func redact(_ body: String, _ contentType: String = "application/json") -> String {
         redactor.redact(body: Data(body.utf8), contentType: contentType)
@@ -46,10 +44,10 @@ struct RedactionNestingTests {
     func depthAcrossStrings() {
         let fits = Self.noted(Self.brackets(63, around: "\"status=ok\""))
         #expect(redact(fits) == fits)
-        #expect(noting.redact("log " + fits) == "log " + fits)
+        #expect(redactor.redact("log " + fits) == "log " + fits)
         let tooDeep = Self.noted(Self.brackets(64, around: "\"status=ok\""))
         #expect(redact(tooDeep) == #"{"note":"[REDACTED]"}"#)
-        #expect(noting.redact("log " + tooDeep) == #"log {"note":"[REDACTED]"}"#)
+        #expect(redactor.redact("log " + tooDeep) == #"log {"note":"[REDACTED]"}"#)
     }
 
     @Test("reads four documents one inside another and hides the string that holds a fifth")
@@ -57,11 +55,11 @@ struct RedactionNestingTests {
         let innermost = #"{"status":"ok"}"#
         let four = Self.noted(innermost, times: 3)
         #expect(redact(four) == four)
-        #expect(noting.redact("log " + four) == "log " + four)
+        #expect(redactor.redact("log " + four) == "log " + four)
         let five = Self.noted(innermost, times: 4)
         let fifthHidden = Self.noted(#"{"note":"[REDACTED]"}"#, times: 3)
         #expect(redact(five) == fifthHidden)
-        #expect(noting.redact("log " + five) == "log " + fifthHidden)
+        #expect(redactor.redact("log " + five) == "log " + fifthHidden)
     }
 
     @Test("a URL counts as a document")
@@ -96,9 +94,9 @@ struct RedactionNestingTests {
         #expect(redact(note) == #"{"note":"[REDACTED]"}"#)
     }
 
-    @Test("JSON deeper than the limit in a log line hides the line from its first bracket")
+    @Test("JSON deeper than the limit in a log line hides the text from its first bracket")
     func deepJSONInFreeText() {
         let line = "note " + Self.brackets(65, around: "\"status=ok\"") + " status=200\nstatus=200"
-        #expect(redactor.redact(line) == "note [REDACTED]\nstatus=200")
+        #expect(redactor.redact(line) == "note [REDACTED]")
     }
 }

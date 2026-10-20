@@ -62,13 +62,13 @@ struct RedactionPropertyTests {
         ]
     }
 
-    @Test("No value under a random key that is not allowlisted is stored from free text")
+    @Test("No value under a random key that is not plain ASCII or names a secret is stored from free text")
     func randomKeysInFreeText() throws {
         var generator = Obfuscator(seed: 6)
         var checked = 0
         while checked < 1_500 {
             let key = generator.randomKey()
-            guard !(policy.allowableFold(key.unicodeScalars).map(policy.allowedTextKeys.contains) ?? false) else { continue }
+            guard policy.isSensitive(name: key) else { continue }
             let value = generator.secret()
             for line in try freeTextLines(key: key, value: value) {
                 let stored = policy.redact(text: line)
@@ -78,18 +78,16 @@ struct RedactionPropertyTests {
         }
     }
 
-    @Test("Allowlisted keys stay readable in free text, the default ones and the app's own")
-    func allowlistedKeysInFreeText() throws {
+    @Test("Plain keys that name no secret stay readable in free text")
+    func plainKeysInFreeText() throws {
         var generator = Obfuscator(seed: 7)
-        let appKeys = ["order_id", "screen", "retryCount"]
-        let lenient = RedactionPolicy(allowedTextKeys: appKeys)
-        for key in RedactionPolicy.defaultAllowedTextKeys + appKeys {
+        for key in ["status", "method", "path", "duration_ms", "count", "user", "region", "order_id", "screen", "retryCount"] {
             for _ in 0..<20 {
                 let (value, other) = (generator.harmlessValue(), generator.harmlessValue())
                 let data = try JSONSerialization.data(withJSONObject: [key: value], options: .withoutEscapingSlashes)
                 let json = String(decoding: data, as: UTF8.self)
                 for line in ["\(key)=\(value)", "\(key): \(value)", "done \(key)=\(value) count=\(other)", json, "got \(json) in 3 ms"] {
-                    #expect(lenient.redact(text: line) == line, "\(line.debugDescription)")
+                    #expect(policy.redact(text: line) == line, "\(line.debugDescription)")
                 }
             }
         }

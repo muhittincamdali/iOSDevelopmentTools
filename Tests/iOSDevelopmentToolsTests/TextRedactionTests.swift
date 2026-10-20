@@ -7,42 +7,41 @@ struct TextRedactionTests {
     let policy = RedactionPolicy.default
     let redacted = RedactionPolicy.replacement
 
-    @Test("key=value, key: value and \"key\":\"value\" keep a value only under an allowlisted key", arguments: [
-        ("user=ada password=hunter2 status=200", "user=[REDACTED]"),
+    @Test("key=value, key: value and \"key\":\"value\" keep the value of a plain key that names no secret", arguments: [
+        ("user=ada password=hunter2 status=200", "user=ada password=[REDACTED]"),
         ("status=200 method=GET path=/v1/items duration_ms=35 count=3", "status=200 method=GET path=/v1/items duration_ms=35 count=3"),
-        ("status=200 user=ada", "status=200 user=[REDACTED]"),
+        ("status=200 user=ada", "status=200 user=ada"),
         ("Response took 1.2s, size: 1234 bytes", "Response took 1.2s, size: 1234 bytes"),
         ("password = hunter2", "password = [REDACTED]"),
-        (#"api_key: 'hunter2' ok"#, #"api_key: '[REDACTED]' ok"#),
-        (#"note: "a b" status=ok"#, #"note: "[REDACTED]" status=ok"#),
-        (#"payload {\"token\":\"hunter2\"} sent"#, #"payload {\"token\":\"[REDACTED]\"} sent"#),
+        (#"api_key: 'hunter2' ok"#, #"api_key: '[REDACTED]"#),
+        (#"note: "a b" status=ok"#, #"note: "a b" status=ok"#),
+        (#"payload {\"token\":\"hunter2\"} sent"#, "payload {\\\"token[REDACTED]"),
         ("Authorization: Bearer abc", "Authorization: [REDACTED]"), ("Bearer: abc", "Bearer: [REDACTED]"),
-        ("data[password]=hunter2", "data[password]=[REDACTED]"),
+        ("data[password]=hunter2", "data[password[REDACTED]"),
         ("api key: hunter2", "api key: [REDACTED]"),
         ("Kullanıcı: ada", "Kullanıcı: [REDACTED]"),
-        ("user：ada", "user：[REDACTED]"),
-        ("Payment failed: card declined", "Payment failed: [REDACTED]"),
+        ("user：ada", "user：ada"),
+        ("Payment failed: card declined", "Payment failed: card [REDACTED]"),
     ])
     func keyedValues(text: String, expected: String) {
         #expect(policy.redact(text: text) == expected)
     }
 
-    @Test("Keys the app allowlists keep their values; secret names stay hidden when listed")
-    func appAllowlist() {
-        let policy = RedactionPolicy(allowedTextKeys: ["user", "order-id", "password"])
-        #expect(policy.redact(text: "user=ada orderID: 42 password=hunter2") == "user=ada orderID: 42 password=\(redacted)")
+    @Test("Text with no trigger is kept exactly; from the first trigger the rest of the text is hidden, the lines below too")
+    func cutPoint() {
+        #expect(policy.redact(text: "status=200 user=bob path=/api/items") == "status=200 user=bob path=/api/items")
+        #expect(policy.redact(text: "user=ada orderID: 42 password=hunter2 status=200\nnext line") == "user=ada orderID: 42 password=\(redacted)")
         #expect(policy.redact(text: #"{"user":"ada","password":"hunter2"}"#) == #"{"user":"ada","password":"[REDACTED]"}"#)
-        #expect(policy.allowedTextKeys.isSuperset(of: ["status", "durationms", "user", "orderid"]))
-        #expect(RedactionPolicy.default.redact(text: "user=ada") == "user=\(redacted)")
+        #expect(policy.redact(text: "ok\nlabel=\u{41F}\u{430}\u{440}\u{43E}\u{43B}\u{44C} value=hunter2\nlast") == "ok\nlabel=\(redacted)")
     }
 
-    @Test("JSON in a line is parsed; a member keeps its value only under an allowlisted key; JSON that does not parse hides the rest", arguments: [
+    @Test("JSON in a line is parsed and read by the key rule; JSON that does not parse hides the rest", arguments: [
         (#"payload {"status":200,"pass":"hunter2"} done"#, #"payload {"status":200,"pass":"[REDACTED]"} done"#),
-        (#"{"user":"ada","password":"hun\"ter2","time":"12:30"}"#, #"{"user":"[REDACTED]","password":"[REDACTED]","time":"[REDACTED]"}"#),
+        (#"{"user":"ada","password":"hun\"ter2","time":"12:30"}"#, #"{"user":"ada","password":"[REDACTED]","time":"12:30"}"#),
         (#"payload {"a": "hunter2""#, "payload [REDACTED]"),
         (#"payload {"a": hunter2} done"#, "payload [REDACTED]"),
         (#"["token","hunter2","x"] done"#, #"["token","[REDACTED]","[REDACTED]"] done"#),
-        (#"got [{"count":2,"items":["a"]}]"#, #"got [{"count":2,"items":"[REDACTED]"}]"#),
+        (#"got [{"count":2,"items":["a"]}]"#, #"got [{"count":2,"items":["a"]}]"#),
         (#"dict ["token": "hunter2"]"#, "dict [REDACTED]"),
         ("[INFO] started {0} of [1/3]", "[INFO] started {0} of [1/3]"),
         ("{\n  \"status\": 200,\n  \"token\": \"hunter2\"\n}", "{\n  \"status\": 200,\n  \"token\": \"[REDACTED]\"\n}"),
@@ -65,13 +64,13 @@ struct TextRedactionTests {
         #expect(policy.redact(text: "see https://e.com/a,token:hunter2/b,password=x/oauth/token") == "see https://e.com/:id/:id/:id/:id")
     }
 
-    @Test("A line that cannot be read with certainty is hidden from the ambiguity on", arguments: [
-        (#"msg="unterminated hunter2"#, #"msg="[REDACTED]"#),
-        ("status='ok hunter2", "status='[REDACTED]"),
+    @Test("Text that cannot be read with certainty is hidden from the ambiguity on", arguments: [
+        (#"msg="unterminated hunter2"#, #"msg=[REDACTED]"#),
+        ("status='ok hunter2", "status=[REDACTED]"),
         (#"said "hello" and 5" of hunter2"#, #"said "hello" and 5[REDACTED]"#),
         ("ok t\u{043E}ken hunter2", "ok [REDACTED]"),
         ("p\u{0430}ssword hunter2", "[REDACTED]"),
-        ("t\u{03BF}ken=1 status=2", "t\u{03BF}ken=[REDACTED]"),
+        ("t\u{03BF}ken=1 status=2", "[REDACTED]"),
         ("ok creds%3Dhunter2 x", "ok creds[REDACTED]"), ("status=ok path=%2Fcb%3Ftoken%3Dhunter2", "status=ok path=%2Fcb%3Ftoken[REDACTED]"),
         ("ok creds\\u003ahunter2", "ok creds[REDACTED]"),
         ("Signed in with token abc123 for ada", "Signed in with token [REDACTED]"),
@@ -95,7 +94,7 @@ struct TextRedactionTests {
     }
 
     @Test("A colon that is not inside a time is a key's", arguments: [
-        ("pin1:1234", "pin[REDACTED]"), ("localhost:8080", "localhost:[REDACTED]"), ("12:ab", "12:[REDACTED]"),
+        ("pin1:1234", "pin[REDACTED]"), ("localhost:8080", "localhost:8080"), ("12:ab", "12:ab"),
         // Between two digits a `:` is a time or a ratio.
         ("12:34hunter2", "12:34hunter2"), ("1:2:3", "1:2:3"), ("ratio 16:9", "ratio 16:9"),
     ])
@@ -103,30 +102,28 @@ struct TextRedactionTests {
         #expect(policy.redact(text: text) == expected)
     }
 
-    @Test("A hidden key at the end of a line hides the next line with text")
+    @Test("A secret name at the end of a line hides the lines below")
     func valueOnNextLine() {
-        #expect(policy.redact(text: "password:\n\n  hunter2\nnext") == "password:\n\n  \(redacted)\nnext")
-        #expect(policy.redact(text: "note:\nhello") == "note:\n\(redacted)")
-        #expect(policy.redact(text: "password\n= hunter2\nnext") == "password\n= \(redacted)\nnext")
+        #expect(policy.redact(text: "password:\n\n  hunter2\nnext") == "password:\n\n  \(redacted)")
+        #expect(policy.redact(text: "note:\nhello") == "note:\nhello")
+        #expect(policy.redact(text: "password\n= hunter2\nnext") == "password\n= \(redacted)")
         #expect(policy.redact(text: "status:\n  200\ncount = 3") == "status:\n  200\ncount = 3")
     }
 
-    @Test("U+2028, U+2029, U+0085, VT and FF are folded to LF; CR and CRLF end a line and are kept")
+    @Test("U+2028, U+2029, U+0085, VT, FF, CR and CRLF are kept as they are, and the cut runs over them")
     func lineBreaks() {
-        let lenient = RedactionPolicy(allowedTextKeys: ["a", "b", "c", "d", "e", "f", "g", "h"])
         let text = "a=1\r\nb=2\u{2028}c=3\u{2029}d=4\u{85}e=5\u{0B}f=6\u{0C}g=7\rh=8\n"
-        #expect(Array(lenient.redact(text: text).unicodeScalars) == Array("a=1\r\nb=2\nc=3\nd=4\ne=5\nf=6\ng=7\rh=8\n".unicodeScalars))
-        // A value hidden to a line separator may go on after it, so the next line is hidden too.
-        #expect(policy.redact(text: "ok\u{2028}token=hunter2\u{2029}after") == "ok\ntoken=\(redacted)\n\(redacted)")
-        #expect(policy.redact(text: "ok\u{2028}token=hunter2\nafter") == "ok\ntoken=\(redacted)\nafter")
+        #expect(Array(policy.redact(text: text).unicodeScalars) == Array(text.unicodeScalars))
+        #expect(policy.redact(text: "ok\u{2028}token=hunter2\u{2029}after") == "ok\u{2028}token=\(redacted)")
+        #expect(policy.redact(text: "ok\u{2028}token=hunter2\nafter") == "ok\u{2028}token=\(redacted)")
     }
 
     @Test("JWTs, bearer tokens, long hex and Base64, card numbers, IBANs and emails are found anywhere", arguments: [
         ("jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl end", "jwt [REDACTED] end"),
-        ("got Bearer abc.DEF-123_x here", "got Bearer [REDACTED] here"),
-        ("got Bearer abc.DEF-123_x= here", "got Bearer [REDACTED] [REDACTED]"),
+        ("got Bearer abc.DEF-123_x here", "got Bearer [REDACTED]"),
+        ("got Bearer abc.DEF-123_x= here", "got Bearer [REDACTED]"),
         ("hash 0123456789abcdef0123456789abcdef end", "hash [REDACTED] end"),
-        // The key ends in `KEY`, a secret word, so the rest of the line goes too.
+        // The key ends in `KEY`, a secret word, so the rest of the text goes too.
         ("aws wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY end", "aws [REDACTED] [REDACTED]"),
         ("paid with 4111 1111 1111 1111 today", "paid with [REDACTED] today"),
         ("paid with 4111-1111-1111-1112 today", "paid with 4111-1111-1111-1112 today"),
@@ -188,7 +185,7 @@ struct TextRedactionTests {
         store.info("login password=hunter2 for ada")
         store.info("Order E621E1F8-C36C-495A-93FC-0C247A3E6E5F placed")
         store.info("login user=ada")
-        #expect(store.entries.map(\.message) == ["login password=\(redacted)", "Order E621E1F8-C36C-495A-93FC-0C247A3E6E…", "login user=\(redacted)"])
+        #expect(store.entries.map(\.message) == ["login password=\(redacted)", "Order E621E1F8-C36C-495A-93FC-0C247A3E6E…", "login user=ada"])
         let raw = LogStore(configuration: .init(systemLogSubsystem: nil, redaction: .disabled))
         raw.info("password=hunter2")
         #expect(raw.entries.first?.message == "password=hunter2")
@@ -208,8 +205,8 @@ struct TextRedactionTests {
         #expect(!policy.redact(text: text).contains("hunter2"))
     }
 
-    @Test("An allowed value in single quotes or backticks that does not close hides the rest of the line", arguments: [
-        ("status='ok hunter2", "status='[REDACTED]"), ("status=`ok hunter2", "status=`[REDACTED]"),
+    @Test("A value in single quotes or backticks that does not close hides the rest of the text", arguments: [
+        ("status='ok hunter2", "status=[REDACTED]"), ("status=`ok hunter2", "status=[REDACTED]"),
         ("status='ok' done", "status='ok' done"), ("status=\"ok hunter2", "status=[REDACTED]"),
     ])
     func allowedQuotedValues(text: String, expected: String) {
@@ -226,14 +223,14 @@ struct TextRedactionTests {
         #expect(policy.redact(text: "paid 4111-1111-1111-1111 ok") == "paid \(redacted) ok")
     }
 
-    @Test("JSON in a log line keeps a member only under an allowlisted key; JSON in a string of a body follows the key rule")
+    @Test("JSON in a log line, in a string of a body and in a text/plain body follows the key rule")
     func jsonInTextAndInBodies() {
-        #expect(policy.redact(text: #"saved {"status":200,"name":"ada","card":"x"}"#) == #"saved {"status":200,"name":"[REDACTED]","card":"[REDACTED]"}"#)
+        #expect(policy.redact(text: #"saved {"status":200,"name":"ada","card":"x"}"#) == #"saved {"status":200,"name":"ada","card":"[REDACTED]"}"#)
         let body = Data(#"{"note":"{\"name\":\"ada\",\"card\":\"x\"}"}"#.utf8)
         #expect(String(decoding: policy.redact(body: body, contentType: "application/json").body, as: UTF8.self)
             == #"{"note":"{\"name\":\"ada\",\"card\":\"[REDACTED]\"}"}"#)
         // A text/plain body is free text, like a log message.
         #expect(String(decoding: policy.redact(body: Data(#"{"name":"ada"}"#.utf8), contentType: "text/plain").body, as: UTF8.self)
-            == #"{"name":"[REDACTED]"}"#)
+            == #"{"name":"ada"}"#)
     }
 }

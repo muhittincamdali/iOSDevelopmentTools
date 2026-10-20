@@ -33,7 +33,9 @@ struct RedactionURLTests {
         let url = try #require(URL(string: "https://example.com/a?page=2&sort=name%20asc&token=abc&q=x&note=user%3Dbob"))
         #expect(custom.redact(url: url) == "https://example.com/a?page=2&sort=name%20asc&token=[REDACTED]&q=[REDACTED]&note=[REDACTED]")
         let pageNote = try #require(URL(string: "https://example.com/a?page=user%3Dbob"))
-        #expect(custom.redact(url: pageNote) == "https://example.com/a?page=user%3D[REDACTED]")
+        #expect(custom.redact(url: pageNote) == "https://example.com/a?page=user%3Dbob")
+        let pageToken = try #require(URL(string: "https://example.com/a?page=token%3Dabc"))
+        #expect(custom.redact(url: pageToken) == "https://example.com/a?page=token%3D[REDACTED]")
     }
 
     @Test("host only records the scheme, host and port")
@@ -46,7 +48,7 @@ struct RedactionURLTests {
     @Test("a URL in text ends at white space, quotes and closing punctuation")
     func urlsInText() {
         #expect(redactor.redact("(see https://example.com/r?code=1).") == "(see https://example.com/r?code=[REDACTED]).")
-        #expect(redactor.redact("url=\"https://example.com/r?code=1\" ok") == "url=\"[REDACTED]\" ok")
+        #expect(redactor.redact("url=\"https://example.com/r?code=1\" ok") == "url=\"https://example.com/r?code=[REDACTED]\" ok")
         #expect(redactor.redact("path=https://example.com/r?code=1 ok") == "path=https://example.com/r?code=[REDACTED] ok")
         #expect(redactor.redact("redis://:hunter2@cache.local:6379/0 up") == "redis://cache.local:6379/0 up")
         #expect(redactor.redact("git clone https://bob:hunter2@github.com/x/y.git") == "git clone https://github.com/x/y.git")

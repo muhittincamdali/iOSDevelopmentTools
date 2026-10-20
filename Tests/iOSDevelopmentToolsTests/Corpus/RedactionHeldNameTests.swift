@@ -137,15 +137,14 @@ struct RedactionHeldNameTests {
         let fields = #"[{"label":"Şifre","value":"hunter2"},{"label":"ⓟⓘⓝ","value":"1234"},{"label":"status","value":"ok"}]"#
         #expect(json(fields) == #"[{"label":"Şifre","value":"[REDACTED]"},{"label":"ⓟⓘⓝ","value":"[REDACTED]"},{"label":"status","value":"ok"}]"#)
         #expect(json(#"{"name":"Ayşe","role":"admin"}"#) == #"{"name":"Ayşe","role":"[REDACTED]"}"#)
-        #expect(redactor.redact("<string name=\"password\" />\nhunter2") == "<string name=\"[REDACTED]\"[REDACTED]\n[REDACTED]")
+        #expect(redactor.redact("<string name=\"password\" />\nhunter2") == "[REDACTED]")
     }
 
-    @Test("an allowed key that holds a name is read too, and a route under path stays")
-    func allowedKeys() {
-        let allowing = Redactor(allowedTextKeys: ["type"])
-        #expect(allowing.redact("type=Пароль S3CR3Tq") == "type=[REDACTED]")
-        #expect(allowing.redact("type=status kept") == "type=status kept")
+    @Test("a plain key that holds a name is read for the name, and a route under path stays")
+    func keysThatHoldNames() {
+        #expect(redactor.redact("type=Пароль S3CR3Tq") == "type=[REDACTED]")
+        #expect(redactor.redact("type=status kept") == "type=status kept")
         #expect(redactor.redact("method=GET path=/v1/users/me status=200") == "method=GET path=/v1/users/me status=200")
-        #expect(redactor.redact(#"name="status" kept"#) == #"name="[REDACTED]" kept"#)
+        #expect(redactor.redact(#"name="status" kept"#) == #"name="status" kept"#)
     }
 }

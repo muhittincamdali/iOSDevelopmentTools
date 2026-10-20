@@ -23,14 +23,12 @@ extension FreeTextScanner {
     private static let arrayStarts = ByteSet("{[\"]")
     private static let jsonWhitespace = ByteSet(" \t\n\r")
 
-    /// JSON in a line, parsed and redacted. In free text that is not inside a document (a log
-    /// message, an error description, a header value, a `text/plain` body) its members are pairs
-    /// of that text, so a member keeps its value only under an allowed key; in a string, value or
-    /// part of a document it follows the key rule for structured input. JSON that does not parse
-    /// cannot be read with certainty and is hidden. In a text inside a document, JSON
-    /// one level too many, deeper than the depth left or longer than the reading budget leaves
-    /// (see ``ReadingBudget``) hides the whole text.
-    mutating func embeddedJSON(lineEnd: Int) {
+    /// JSON in free text, parsed with the JSON parser and redacted by the key rule for structured
+    /// input; its strings are free text again. JSON that does not parse is a bracket that does not
+    /// close as JSON does, so it is a trigger: the text is hidden from its first bracket. In a text
+    /// inside a document, JSON one level too many, deeper than the depth left or longer than the
+    /// reading budget leaves (see ``ReadingBudget``) hides the whole text.
+    mutating func embeddedJSON() {
         let start = text.offsets[position]
         guard let inner = nesting.enteringDocument() else {
             hideWholeText()
@@ -46,49 +44,14 @@ extension FreeTextScanner {
             hideWholeText()
             return
         } catch {
-            hideUnparsedJSON(from: position, lineEnd: lineEnd)
+            cut(atByte: position)
             return
         }
         let region = start..<document.root.range.upperBound
         // The reader stopped within what the budget leaves, so this always fits.
         _ = inner.reads(region.count)
-        let members: JSONDocument.MemberRule = nesting.isEmbedded ? .keyRule : .allowedTextKeys
-        record(spans: document.secretSpans(using: policy, members: members, compatibility: compatibility), region: region)
+        record(spans: document.secretSpans(using: policy, compatibility: compatibility), region: region)
         position = text.byteIndex(atOrAfter: region.upperBound)
-    }
-
-    /// Hides JSON that does not parse: to the end of its line, and on over the lines below until
-    /// its brackets close, outside strings, or to the end of the text.
-    mutating func hideUnparsedJSON(from start: Int, lineEnd: Int) {
-        let end = max(bracketsClose(from: start), lineEnd)
-        let stopsOnLine = end == lineEnd
-        hide(text.offset(at: start)..<text.offset(at: end))
-        position = stopsOnLine ? lineEnd : end
-        guard stopsOnLine else { return }
-        carry = carryAfterHiding(from: start, valueStart: start, lineEnd: lineEnd, indent: lineIndent)
-    }
-
-    /// The byte after the bracket that closes the one at `start`, counting brackets outside
-    /// double-quoted strings; a string ends at its closing quote or its line.
-    private func bracketsClose(from start: Int) -> Int {
-        var depth = 0
-        var inString = false
-        var k = start
-        while k < text.count {
-            let byte = text.bytes[k]
-            if inString {
-                if byte == UInt8(ascii: "\"") && !isEscaped(k) || text.isLineTerminator(k) { inString = false }
-            } else if byte == UInt8(ascii: "\"") {
-                inString = true
-            } else if byte == UInt8(ascii: "{") || byte == UInt8(ascii: "[") {
-                depth += 1
-            } else if byte == UInt8(ascii: "}") || byte == UInt8(ascii: "]") {
-                depth -= 1
-                if depth == 0 { return k + 1 }
-            }
-            k += 1
-        }
-        return text.count
     }
 
     // MARK: URLs
@@ -117,7 +80,7 @@ extension FreeTextScanner {
     }
 
     /// A URL, recorded as ``RedactionPolicy/redact(url:)`` records it. A URL one level too
-    /// many, or longer than the reading budget leaves, hides the whole text it is in; in a line
+    /// many, or longer than the reading budget leaves, hides the whole text it is in; in a text
     /// that is not inside a document, only the URL is hidden then.
     mutating func url(to end: Int) {
         let region = text.original(position..<end)
@@ -125,14 +88,14 @@ extension FreeTextScanner {
             if nesting.isEmbedded {
                 hideWholeText()
             } else {
-                record(spans: [RedactionPolicy.Span(start: region.lowerBound, end: region.upperBound, isFinding: true, replacement: RedactionPolicy.replacement)], region: region)
+                record(spans: [RedactionPolicy.Span(start: region.lowerBound, end: region.upperBound, replacement: RedactionPolicy.replacement)], region: region)
                 position = end
             }
             return
         }
         let written = String(String.UnicodeScalarView(source[region]))
         let redacted = policy.redactedURL(written, nesting: inner)
-        let span = RedactionPolicy.Span(start: region.lowerBound, end: region.upperBound, isFinding: true, replacement: redacted)
+        let span = RedactionPolicy.Span(start: region.lowerBound, end: region.upperBound, replacement: redacted)
         record(spans: redacted == written ? [] : [span], region: region)
         position = end
     }

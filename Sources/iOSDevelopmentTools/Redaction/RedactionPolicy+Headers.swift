@@ -7,14 +7,11 @@ extension RedactionPolicy {
     /// header with a secret name and a header whose name is not an ASCII token of letters, digits,
     /// `-`, `_` and `.` are hidden even when listed. So is a kept value that starts with an
     /// authentication scheme and credentials (`Bearer …`, `Basic …`, `Token …`, as 2.0.0 hid
-    /// them). Other kept values go through the free-text rule (``redact(text:)``), with the
-    /// parameters of the default allowed headers, such as `charset`, `boundary`, `q` and
-    /// `max-age`, allowlisted too.
+    /// them). Other kept values go through the free-text rule (``redact(text:)``).
     public func redact(headers: [HTTPHeader]) -> [HTTPHeader] {
         guard isEnabled else { return headers }
-        let valuePolicy = allowingTextKeys(headerValueKeys)
         return headers.map { header in
-            HTTPHeader(name: header.name, value: valuePolicy.redactedHeaderValue(name: header.name, value: header.value))
+            HTTPHeader(name: header.name, value: redactedHeaderValue(name: header.name, value: header.value))
         }
     }
 

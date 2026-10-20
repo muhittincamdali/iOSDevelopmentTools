@@ -176,8 +176,8 @@ struct Obfuscator {
         return word
     }
 
-    /// A random value that the allowlist keeps and that holds nothing the detectors or the secret
-    /// words find: digits, a short word or a path.
+    /// A random value that free text keeps under a plain key and that holds nothing the detectors
+    /// or the secret words find: digits, a short word or a path.
     mutating func harmlessValue() -> String {
         switch number(below: 3) {
         case 0: String(number(below: 100_000))

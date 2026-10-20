@@ -4,7 +4,7 @@ import Testing
 
 /// Layouts that spread a name and its value over lines: a property list writes `<key>password</key>`
 /// and its value on lines of their own, and JSON after `name=` may span lines. Once a name hides
-/// what follows it, the value is hidden until it closes and to the end of the line where it closes.
+/// what follows it, everything after it is hidden, on every line below.
 @Suite("Redaction corpus: values over several lines")
 struct RedactionMultiLineTests {
     static let secret = "Xq7Secret"
@@ -57,7 +57,7 @@ struct RedactionMultiLineTests {
     }
 
     // Review probes 328, 329, 382 and 383 of the eleventh review.
-    @Test("JSON over several lines after a key that holds a name hides the rest of the line where it closes", arguments: [
+    @Test("JSON over several lines after a key that holds a name hides everything after the key", arguments: [
         "name=[\n\"pin\"\n] S",
         "name={\"a\":\n\"pin\"} S",
         "key=[\n\"x\",\n] S",
@@ -70,15 +70,13 @@ struct RedactionMultiLineTests {
 
     @Test("names that are not secret keep what follows them over lines")
     func usefulness() {
-        // `<key>` is itself the secret word `key`, so the rest of its line goes; an element with a
-        // name that is not secret in it is no empty value, and the lines below stay.
-        #expect(redactor.redact("<key>CFBundleName</key>\n<string/>\nMyApp") == "<key>[REDACTED]\n<string/>\nMyApp")
-        #expect(redactor.redact("<key>user</key>\n<string>bob</string>\nstatus=200") == "<key>[REDACTED]\n<string>bob</string>\nstatus=200")
+        // The element `key` holds the name of the element after it, so only a name in it that names
+        // a secret, is not plain ASCII or has no letter hides what follows.
+        #expect(redactor.redact("<key>CFBundleName</key>\n<string/>\nMyApp") == "<key>CFBundleName</key>\n<string/>\nMyApp")
+        #expect(redactor.redact("<key>user</key>\n<string>bob</string>\nstatus=200") == "<key>user</key>\n<string>bob</string>\nstatus=200")
         #expect(redactor.redact("status=[\n1,\n2\n] ok") == "status=[\n1,\n2\n] ok")
-        // The value of `name=` is hidden by the allowlist; the name is not secret, so the next
-        // line stays.
-        #expect(redactor.redact("<string name=\"title\"></string>\nHello") == "<string name=\"[REDACTED]\"></string>\nHello")
-        #expect(redactor.redact("<key>password</key>\n<string>k-1</string>\nnext") == "<key>[REDACTED]\n[REDACTED]</string>\nnext")
+        #expect(redactor.redact("<string name=\"title\"></string>\nHello") == "<string name=\"title\"></string>\nHello")
+        #expect(redactor.redact("<key>password</key>\n<string>k-1</string>\nnext") == "<key>[REDACTED]")
     }
 
     /// Generated layouts of a property list and of JSON after `name=`, with names that are secret

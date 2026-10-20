@@ -9,7 +9,6 @@ import Foundation
 final class TenthReviewProbeSet {
     enum Mode {
         case text
-        case textAllowing([String])
         case body(String?)
         case bytes([UInt8], String?)
         case encoded(String.Encoding, String?)
@@ -32,7 +31,6 @@ final class TenthReviewProbeSet {
         func redacted() -> String {
             switch mode {
             case .text: return Redactor().redact(input)
-            case .textAllowing(let keys): return Redactor(allowedTextKeys: keys).redact(input)
             case .body(let type): return Redactor().redact(body: Data(input.utf8), contentType: type)
             case .bytes(let prefix, let type): return Redactor().redact(body: Data(prefix + Array(input.utf8)), contentType: type)
             case .encoded(let encoding, let type):
