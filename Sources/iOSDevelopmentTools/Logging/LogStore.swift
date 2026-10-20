@@ -201,12 +201,11 @@ public final class LogStore: Sendable {
 
     // MARK: Internals
 
-    /// The most Unicode scalars of a message that are redacted: 1 MiB, as for a body (see
-    /// ``RedactionPolicy/maximumCheckedBodySize``). Redaction runs on the thread that logs and takes
-    /// time in proportion to what it reads, while no message is kept longer than
-    /// ``Configuration/messageLengthLimit``. A longer message is redacted up to its last line break
-    /// before this length, and the rest of it is hidden; one with no line break there is hidden
-    /// whole.
+    /// The most Unicode scalars of a message that are redacted: 1 MiB. Redaction runs on the thread
+    /// that logs and takes time in proportion to what it reads, while no message is kept longer
+    /// than ``Configuration/messageLengthLimit``. A longer message is redacted up to its last line
+    /// break before this length, and the rest of it is hidden; one with no line break there is
+    /// hidden whole.
     public static let maximumRedactedMessageLength = 1_048_576
 
     /// The message as it is kept before it is cut off: redacted with `policy`, and past

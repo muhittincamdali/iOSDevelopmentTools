@@ -10,7 +10,7 @@ public enum RedactionOutcome: String, Sendable, Hashable, Codable {
     case redacted
     /// The body was not stored: it could not be parsed fully, its content type is not one that
     /// is parsed, it was cut off, or it was larger than
-    /// ``RedactionPolicy/maximumCheckedBodySize``. The stored bytes are a note such as
+    /// ``RedactionPolicy/maximumBodySize``. The stored bytes are a note such as
     /// `[body omitted: 512 bytes, application/xml]`.
     case omitted
 }
@@ -47,7 +47,7 @@ extension RedactionPolicy {
     ///
     /// Anything else is omitted: no content type, another content type (XML, HTML, binary data),
     /// a charset other than UTF-8 (or UTF-16 and UTF-32 for JSON), a body larger than
-    /// ``maximumCheckedBodySize``, a body that was cut off or cannot be parsed completely —
+    /// ``maximumBodySize`` (256 KiB by default), a body that was cut off or cannot be parsed completely —
     /// malformed, nested deeper than ``maximumJSONDepth`` — and a body that a common server parser
     /// (PHP, Werkzeug, Rack, Go, busboy) could split into fields differently, such as a multipart
     /// body with `--boundary` after a bare LF or CR, or a form with a `;`. The result is then a
@@ -68,7 +68,7 @@ extension RedactionPolicy {
         // A plain-text body is free text, as a log message is; other bodies are documents.
         let length = Self.scalarCount(body)
         let nesting = mediaType?.isPlainText == true ? Nesting.text(length: length) : .document(length: length)
-        guard isComplete, body.count <= Self.maximumCheckedBodySize, let mediaType,
+        guard isComplete, body.count <= maximumBodySize, let mediaType,
               let (checked, changed) = redact(body: body, as: mediaType, nesting: nesting)
         else {
             return (Data(Self.omissionNote(byteCount: byteCount, mediaType: mediaType).utf8), .omitted)

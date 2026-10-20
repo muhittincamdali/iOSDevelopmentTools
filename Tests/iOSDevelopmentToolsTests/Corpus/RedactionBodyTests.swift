@@ -107,7 +107,7 @@ struct RedactionBodyTests {
 
     @Test("omits a body larger than the maximum size without parsing it")
     func oversized() {
-        let body = Data(("{\"a\":\"" + String(repeating: "x", count: RedactionPolicy.maximumCheckedBodySize) + "\"}").utf8)
+        let body = Data(("{\"a\":\"" + String(repeating: "x", count: RedactionPolicy.defaultMaximumBodySize) + "\"}").utf8)
         #expect(redactor.redact(body: body, contentType: "application/json") == "[body omitted: \(body.count) bytes, application/json]")
         #expect(redactor.redact(body: body, contentType: nil) == "[body omitted: \(body.count) bytes, no known content type]")
     }

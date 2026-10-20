@@ -9,7 +9,8 @@ struct TimedInput: Sendable, CustomTestStringConvertible {
     let redact: @Sendable (String) -> String
 }
 
-private let redactor = Redactor()
+// Bodies of a megabyte are read with the body limit raised to 1 MiB; free text has no limit.
+private let redactor = Redactor.largeBodies
 
 private func body(_ contentType: String) -> @Sendable (String) -> String {
     { redactor.redact(body: Data($0.utf8), contentType: contentType) }
@@ -139,7 +140,7 @@ struct RedactionTimeLimitTests {
     @Test("redacting a megabyte of an ordinary shape takes a 512 KiB thread less than a second", arguments: shapes + namesAsValues + nestedPayloads + namesInHiddenValues + oneStringPayloads)
     func shape(input: TimedInput) {
         let text = input.make()
-        #expect(text.utf8.count >= Self.size * 9 / 10 && text.utf8.count <= RedactionPolicy.maximumCheckedBodySize)
+        #expect(text.utf8.count >= Self.size * 9 / 10 && text.utf8.count <= Redactor.largeBodies.policy.maximumBodySize)
         var fastest = Self.threadTime(input, text)
         for _ in 0..<2 where fastest >= Self.limit {
             fastest = min(fastest, Self.threadTime(input, text))
@@ -166,7 +167,7 @@ struct RedactionTimeLimitTests {
     @Test("redacting a megabyte of nested input or a body of a megabyte takes less than a second", arguments: nested + bodies)
     func nestedOrBody(input: TimedInput) {
         let text = input.make()
-        #expect(text.utf8.count >= Self.size * 9 / 10 && text.utf8.count <= RedactionPolicy.maximumCheckedBodySize)
+        #expect(text.utf8.count >= Self.size * 9 / 10 && text.utf8.count <= Redactor.largeBodies.policy.maximumBodySize)
         expectFast(input.testDescription) { _ = input.redact(text) }
     }
 

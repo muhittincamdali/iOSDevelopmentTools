@@ -94,10 +94,28 @@ struct BodyRedactionTests {
 
     @Test("A body over the size limit is omitted before it is parsed")
     func oversizedBody() {
-        let body = Data(("{\"a\":\"" + String(repeating: "x", count: RedactionPolicy.maximumCheckedBodySize) + "\"}").utf8)
+        let body = Data(("{\"a\":\"" + String(repeating: "x", count: RedactionPolicy.defaultMaximumBodySize) + "\"}").utf8)
         let (data, outcome) = policy.redact(body: body, contentType: "application/json")
         #expect(outcome == .omitted)
         #expect(text(data) == "[body omitted: \(body.count) bytes, application/json]")
+    }
+
+    // Section 6 of the redaction rules: the default maximum body is 256 KB, and a larger one is
+    // written as `[body omitted]`. The app may set another limit.
+    @Test("Bodies over 256 KiB are omitted by default; the app can set another limit")
+    func bodyLimit() {
+        #expect(RedactionPolicy.defaultMaximumBodySize == 262_144)
+        #expect(policy.maximumBodySize == RedactionPolicy.defaultMaximumBodySize)
+        func json(_ size: Int) -> Data { Data(("{\"a\":\"" + String(repeating: "x", count: size - 8) + "\"}").utf8) }
+        let fits = json(RedactionPolicy.defaultMaximumBodySize)
+        let over = json(RedactionPolicy.defaultMaximumBodySize + 1)
+        #expect(fits.count == RedactionPolicy.defaultMaximumBodySize && over.count == fits.count + 1)
+        #expect(policy.redact(body: fits, contentType: "application/json").outcome != .omitted)
+        #expect(policy.redact(body: over, contentType: "application/json") == (Data("[body omitted: \(over.count) bytes, application/json]".utf8), .omitted))
+        let larger = RedactionPolicy(maximumBodySize: 1_048_576)
+        #expect(larger.redact(body: over, contentType: "application/json").outcome != .omitted)
+        #expect(RedactionPolicy(maximumBodySize: -1).maximumBodySize == 0)
+        #expect(RedactionPolicy(maximumBodySize: .max).maximumBodySize == RedactionPolicy.bodySizeLimit)
     }
 
     @Test("Form fields are decoded with the platform API, and names re-encoded only when changed")

@@ -169,7 +169,7 @@ struct RedactionBypassTests {
 
     @Test("Oversized and cut-off bodies are omitted before they are parsed")
     func oversizedBodies() {
-        let padding = String(repeating: "x", count: RedactionPolicy.maximumCheckedBodySize)
+        let padding = String(repeating: "x", count: RedactionPolicy.defaultMaximumBodySize)
         for (body, contentType) in [
             ("{\"a\":\"\(padding)\",\"note\":\"hunter2\"}", "application/json"), ("a=\(padding)&note=hunter2", "application/x-www-form-urlencoded"),
             ("\(padding) hunter2", "text/plain"),

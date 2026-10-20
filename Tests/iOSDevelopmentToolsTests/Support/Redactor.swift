@@ -12,6 +12,10 @@ struct Redactor: Sendable {
         self.policy = policy
     }
 
+    /// The default policy with the body limit raised to 1 MiB, for the tests that time and read
+    /// bodies of a megabyte.
+    static let largeBodies = Redactor(RedactionPolicy(maximumBodySize: 1_048_576))
+
     init(allowedQueryParameters: [String] = [], allowedTextKeys: [String] = [], urlDetail: RedactionPolicy.URLDetail = .full) {
         policy = RedactionPolicy(allowedQueryParameters: allowedQueryParameters, allowedTextKeys: allowedTextKeys, urlDetail: urlDetail)
     }

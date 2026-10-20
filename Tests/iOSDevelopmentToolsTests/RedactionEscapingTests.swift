@@ -27,7 +27,7 @@ struct RedactionEscapingTests {
     @Test("a megabyte string of quotes that a detector changes is written again, and hides what it found")
     func longStringOfQuotes() {
         let body = RedactionTimeLimitTests.oneLongString("say \\\"hi\\\" ", then: "ayse@ornek.com")
-        let output = String(decoding: RedactionPolicy.default.redact(body: Data(body.utf8), contentType: "application/json").body, as: UTF8.self)
+        let output = Redactor.largeBodies.redact(body: Data(body.utf8), contentType: "application/json")
         #expect(!output.contains("ayse@ornek.com"))
         #expect(output.hasPrefix("{\"msg\":\"say \\\"hi\\\" say \\\"hi\\\" "))
         #expect((try? JSONSerialization.jsonObject(with: Data(output.utf8))) != nil)

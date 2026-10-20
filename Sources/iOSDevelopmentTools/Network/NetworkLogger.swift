@@ -33,7 +33,7 @@ public final class NetworkLogger: Sendable {
         /// How many bytes of each request and response body are kept. Larger bodies are cut off
         /// and marked ``CapturedBody/isTruncated``; a cut-off body cannot be parsed, so redaction
         /// stores a note in its place (``RedactionOutcome/omitted``), as it does for a body over
-        /// ``RedactionPolicy/maximumCheckedBodySize``. Kept between 0 and ``bodySizeLimit``.
+        /// ``RedactionPolicy/maximumBodySize``. Kept between 0 and ``bodySizeLimit``.
         public var maximumBodySize: Int {
             get { storedMaximumBodySize }
             set { storedMaximumBodySize = min(max(newValue, 0), Self.bodySizeLimit) }

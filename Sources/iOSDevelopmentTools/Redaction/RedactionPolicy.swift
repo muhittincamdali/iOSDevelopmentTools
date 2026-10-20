@@ -20,8 +20,8 @@ import Foundation
 /// - **URLs** lose their user info and fragment; query values are hidden unless the name is on
 ///   ``allowedQueryParameters``, and path segments that look like identifiers become `:id`.
 /// - **Bodies** are parsed (JSON, forms, multipart, plain text). A body that cannot be parsed,
-///   has an unknown content type, was cut off or is larger than ``maximumCheckedBodySize`` is
-///   replaced by a note such as `[body omitted: 512 bytes, application/xml]`.
+///   has an unknown content type, was cut off or is larger than ``maximumBodySize`` (256 KiB by
+///   default) is replaced by a note such as `[body omitted: 512 bytes, application/xml]`.
 ///
 /// Redaction is a safety net, not a guarantee. Keep secrets out of logs in the first place.
 public struct RedactionPolicy: Sendable, Hashable {
@@ -42,8 +42,11 @@ public struct RedactionPolicy: Sendable, Hashable {
     /// What is recorded for a URL that cannot be parsed and has no host.
     public static let unparsedURL = "<unparsed URL>"
 
-    /// Bodies larger than this are omitted without being parsed: 1 MiB.
-    public static let maximumCheckedBodySize = 1_048_576
+    /// The default of ``maximumBodySize``: 256 KiB.
+    public static let defaultMaximumBodySize = 262_144
+
+    /// The largest value ``maximumBodySize`` accepts: 16 MiB.
+    public static let bodySizeLimit = 16 * 1_048_576
 
     /// The most JSON objects and arrays open at once, counted across every document a text is in:
     /// 64. JSON in a string inside one object may open 63 more.
@@ -117,6 +120,11 @@ public struct RedactionPolicy: Sendable, Hashable {
     /// How much of a URL is recorded.
     public let urlDetail: URLDetail
 
+    /// Bodies larger than this, in bytes, are omitted without being parsed. Parsing keeps the
+    /// body's scalars, its scanning copy and its tree, up to about 60 bytes of memory for each byte
+    /// of a body of many small values: at the default of 256 KiB, less than 16 MB.
+    public let maximumBodySize: Int
+
     /// The secret words and where they count, built once for the policy.
     let secretNameTable: SecretNameTable
 
@@ -136,23 +144,27 @@ public struct RedactionPolicy: Sendable, Hashable {
     ///     stays hidden when listed.
     ///   - allowedTextKeys: Keys after which free text is read on, in addition to
     ///     ``defaultAllowedTextKeys``. A key that is not plain ASCII or names a secret is dropped.
+    ///   - maximumBodySize: Bodies larger than this, in bytes, are omitted unread. Kept between 0
+    ///     and ``bodySizeLimit``. A larger limit costs memory in proportion (see
+    ///     ``maximumBodySize``).
     ///   - urlDetail: How much of a URL is recorded.
     public init(
         additionalSecretNames: [String] = [],
         allowedHeaders: [String] = RedactionPolicy.defaultAllowedHeaders,
         allowedQueryParameters: [String] = [],
         allowedTextKeys: [String] = [],
+        maximumBodySize: Int = RedactionPolicy.defaultMaximumBodySize,
         urlDetail: URLDetail = .full
     ) {
         self.init(
             isEnabled: true, secretNames: additionalSecretNames, allowedHeaders: allowedHeaders,
             allowedQueryParameters: allowedQueryParameters, allowedTextKeys: RedactionPolicy.defaultAllowedTextKeys + allowedTextKeys,
-            urlDetail: urlDetail)
+            maximumBodySize: maximumBodySize, urlDetail: urlDetail)
     }
 
     private init(
         isEnabled: Bool, secretNames: [String], allowedHeaders: [String], allowedQueryParameters: [String],
-        allowedTextKeys: [String], urlDetail: URLDetail
+        allowedTextKeys: [String], maximumBodySize: Int = RedactionPolicy.defaultMaximumBodySize, urlDetail: URLDetail
     ) {
         self.isEnabled = isEnabled
         let added = Set(secretNames.compactMap { PlainName($0.unicodeScalars)?.folded })
@@ -167,6 +179,7 @@ public struct RedactionPolicy: Sendable, Hashable {
         self.allowedQueryParameters = allowable(allowedQueryParameters)
         self.allowedTextKeys = allowable(allowedTextKeys)
         headerValueKeys = self.allowedTextKeys.union(allowable(Self.headerParameterNames))
+        self.maximumBodySize = min(max(maximumBodySize, 0), Self.bodySizeLimit)
         self.urlDetail = urlDetail
     }
 

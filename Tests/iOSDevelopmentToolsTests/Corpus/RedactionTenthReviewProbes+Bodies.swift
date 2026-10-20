@@ -145,7 +145,7 @@ extension TenthReviewProbeSet {
         p("{\"label\":\"Password\",\"value\":\"{S}\"\n", json)
 
         section("n9-large")
-        let mib = RedactionPolicy.maximumCheckedBodySize
+        let mib = RedactionPolicy.defaultMaximumBodySize
         p(String(repeating: " ", count: mib - 60) + "{\"label\":\"Password\",\"value\":\"{S}\"}", json)
         p("[" + String(repeating: "{\"label\":\"Status\",\"value\":\"ok\"},", count: 20_000) + "{\"label\":\"Password\",\"value\":\"{S}\"}]", json)
         p(String(repeating: "a ", count: 200_000) + "name=\"password\" {S}")

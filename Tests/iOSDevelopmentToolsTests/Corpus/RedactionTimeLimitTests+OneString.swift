@@ -8,7 +8,7 @@ import Foundation
 /// was escaped again into a `String.UnicodeScalarView`, and every escape copied what was written
 /// before it.
 extension RedactionTimeLimitTests {
-    private static let oneStringRedactor = Redactor()
+    private static let oneStringRedactor = Redactor.largeBodies
 
     /// An object of the review, with Turkish letters, a non-ASCII key and two secrets.
     static let turkishObject = #"{"ad":"Iğdır ılık ışık","şifre":"GizliParola1","password":"hunter2"}"#
