@@ -216,9 +216,14 @@ The triggers:
   ``RedactionPolicy/allowedTextKeys``: `status`, `method`, `path`, `duration_ms` and `count` by
   default, and the keys you add. Any other key cuts the text at its value: `x=hunter2` is stored
   as `x=[REDACTED]`, `curl -u bob:hunter2` as `curl -u bob:[REDACTED]`. A `:` between two digits
-  is part of a number only after a number: `12:30`, `2026-10-19T12:30:00Z` and `10.0.0.1:8080`
-  are kept, while after a key that ends in digits it is a separator (`user1:2345678901` is stored
-  as `user1:[REDACTED]`). JSON in the text follows the same rule member by member, a
+  is part of a number only when both sides are a whole number: a number before it, and after it
+  the two digits of a time (with seconds, a fraction, `Z` or an offset after them) or, after an
+  IPv4 address, a port of at most five digits, followed by white space, the end of the text or
+  closing punctuation. `12:30`, `12:30:45,123`, `2026-10-19T12:30:00Z` and `10.0.0.1:8080` are
+  kept. Any other `:` is a separator, after a key that ends in digits and after a number alike:
+  `user1:2345678901` is stored as `user1:[REDACTED]`, `curl -u 42:2345678901` as
+  `curl -u 42:[REDACTED]`, `12:34hunter2` as `12:[REDACTED]` and a ratio such as `16:9` as
+  `16:[REDACTED]`. JSON in the text follows the same rule member by member, a
   two-element array by its first string (`["user","bob"]`), and an element by its tag
   (`<user>bob</user>`).
 - **A secret name**, with or without a separator, quoted or not: `password=…`, `password …`,
@@ -244,7 +249,9 @@ The triggers:
   control characters, the line breaks VT, FF, U+0085, U+2028 and U+2029, and private-use or
   unassigned code points. No list of look-alikes is kept.
 - **An escape**, which is never decoded: `%XX`, `%uXXXX`, `&name;` (`&amp;`, `&lt;`), `&#…;`,
-  `\NNN`, `\xNN`, `\uNNNN`, `\u{…}` and `\=`. The text is hidden from the escape on:
+  `\=` and a backslash before an octal digit or before `x`, `u`, `U`, `N` or `o`, whatever
+  follows (`\101`, `\x41`, `\x{41}`, `\u0041`, `\u{41}`, `\U00000041`, `\N{…}`, `\o{101}`).
+  The text is hidden from the escape on:
   `pass%77ord=hunter2` is stored as `pass[REDACTED]`.
 - **A word longer than 256 characters**, which is no name or value that can be read.
 - **A token that cannot be read with certainty**: a word that mixes scripts (`tоken` with a
