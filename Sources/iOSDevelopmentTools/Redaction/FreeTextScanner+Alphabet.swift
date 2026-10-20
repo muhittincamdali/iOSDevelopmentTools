@@ -20,9 +20,9 @@ extension FreeTextScanner {
         if text.isLineTerminator(i) { return true }
         if text.bytes[i] == UInt8(ascii: " ") {
             // A spacing accent (`¨`, `´`, `‾`) is read as a space and a mark, but it is a symbol.
-            return scalar.properties.generalCategory != .spaceSeparator || !compatibility.foldsToASCII(scalar)
+            return ScalarTable.category(scalar) != .spaceSeparator || !compatibility.foldsToASCII(scalar)
         }
-        switch scalar.properties.generalCategory {
+        switch ScalarTable.category(scalar) {
         case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .otherLetter, .nonspacingMark, .spacingMark, .enclosingMark,
              .decimalNumber, .letterNumber, .otherNumber:
             return false
@@ -63,7 +63,7 @@ extension FreeTextScanner {
         let previousEnd = i > 0 ? text.offsets[i - 1] + 1 : 0
         let start = text.offsets[i]
         guard start > previousEnd else { return nil }
-        return (previousEnd..<start).first { source[$0].properties.generalCategory == .control }
+        return (previousEnd..<start).first { ScalarTable.category(source[$0]) == .control }
     }
 
     // MARK: Escapes

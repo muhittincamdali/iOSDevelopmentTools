@@ -83,8 +83,16 @@ enum WrittenName {
         return operations.contains(String(String.UnicodeScalarView(value)).lowercased())
     }
 
+    /// Whether `field`, in any case, is one of `names`, which are lowercase ASCII.
     static func isField(_ field: [Unicode.Scalar], oneOf names: Set<String>) -> Bool {
-        field.count <= longestField && names.contains(String(String.UnicodeScalarView(field)).lowercased())
+        guard field.count <= longestField else { return false }
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(field.count)
+        for scalar in field {
+            guard scalar.isASCII else { return false }
+            bytes.append(ASCII.lowercased(UInt8(scalar.value)))
+        }
+        return names.contains(String(decoding: bytes, as: UTF8.self))
     }
 
     /// A name held by a field, read by the key rule: anything but a plain-ASCII name that names no

@@ -27,7 +27,7 @@ enum ScriptMix {
     }
 
     private static func group(of scalar: Unicode.Scalar) -> Group? {
-        switch scalar.properties.generalCategory {
+        switch ScalarTable.category(scalar) {
         case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter: break
         default: return nil
         }

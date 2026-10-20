@@ -237,29 +237,35 @@ extension RedactionPolicy {
     /// reads `a.b`, `a b` and `a_b` as one name, which decoding (`pass%77ord`) and case can
     /// also make one.
     static func isStrictForm(_ text: String) -> Bool {
-        let scalars = Array(text.unicodeScalars)
-        for (i, scalar) in scalars.enumerated() {
-            guard (0x21...0x7E).contains(scalar.value), scalar != ";" else { return false }
-            guard scalar == "%" else { continue }
-            guard i + 2 < scalars.count, scalars[(i + 1)...(i + 2)].allSatisfy(\.properties.isASCIIHexDigit) else { return false }
+        // Printable ASCII only, so the UTF-8 bytes are the scalars.
+        let bytes = Array(text.utf8)
+        for (i, byte) in bytes.enumerated() {
+            guard (0x21...0x7E).contains(byte), byte != UInt8(ascii: ";") else { return false }
+            guard byte == UInt8(ascii: "%") else { continue }
+            guard i + 2 < bytes.count, isHexDigit(bytes[i + 1]), isHexDigit(bytes[i + 2]) else { return false }
         }
         var spellings: [String: Substring] = [:]
         for field in text.unicodeScalars.split(separator: "&") {
             let rawName = Substring(field.prefix { $0 != "=" })
             guard let name = formDecoded(rawName) else { return false }
-            let folded: [Unicode.Scalar] = name.unicodeScalars.drop { $0 == " " }.map { $0 == " " || $0 == "." ? "_" : $0 }
-            let serverName = String(String.UnicodeScalarView(folded)).lowercased()
+            let folded = name.utf8.drop { $0 == UInt8(ascii: " ") }.map { $0 == UInt8(ascii: " ") || $0 == UInt8(ascii: ".") ? UInt8(ascii: "_") : $0 }
+            let serverName = String(decoding: folded, as: UTF8.self).lowercased()
             if let earlier = spellings.updateValue(rawName, forKey: serverName), earlier != rawName { return false }
         }
         return true
     }
 
+    private static func isHexDigit(_ byte: UInt8) -> Bool {
+        ASCII.isDigit(byte) || (UInt8(ascii: "a")...UInt8(ascii: "f")).contains(byte | 0x20)
+    }
+
     /// `+` as a space, then percent-decoding as UTF-8; nil for a bad `%` escape or bytes that are
-    /// not UTF-8. `+` is replaced scalar by scalar: `replacingOccurrences` compares characters and
-    /// leaves a `+` that a combining mark follows.
+    /// not UTF-8. `+` is replaced byte by byte: `replacingOccurrences` compares characters and
+    /// leaves a `+` that a combining mark follows. The bytes are copied into a string once, not
+    /// appended as scalars one at a time, which took half the time of a large form.
     static func formDecoded(_ text: some StringProtocol) -> String? {
-        let spaced = text.unicodeScalars.map { $0 == "+" ? " " : $0 }
-        return String(String.UnicodeScalarView(spaced)).removingPercentEncoding
+        let spaced = text.utf8.map { $0 == UInt8(ascii: "+") ? UInt8(ascii: " ") : $0 }
+        return String(decoding: spaced, as: UTF8.self).removingPercentEncoding
     }
 
     /// Percent-encodes what form decoding would change, keeping `[` and `]` readable, so a

@@ -63,7 +63,7 @@ struct JSONDocument {
         var reader = Reader(scalars: scalars, depthLimit: nesting.depthLeft)
         guard let root = reader.document() else { throw reader.failure }
         guard allowsFragments || root.isContainer else { throw .invalid }
-        let data = Data(String(String.UnicodeScalarView(scalars)).utf8)
+        let data = Self.utf8(scalars[...])
         guard let parsed = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
               Self.agrees(root, with: parsed, in: scalars)
         else { throw .invalid }
@@ -82,7 +82,7 @@ struct JSONDocument {
         var reader = Reader(scalars: scalars, position: start, end: end, depthLimit: nesting.depthLeft)
         guard let root = reader.value() else { throw reader.failure }
         guard root.isContainer else { throw .invalid }
-        let data = Data(String(String.UnicodeScalarView(scalars[root.range])).utf8)
+        let data = Self.utf8(scalars[root.range])
         guard let parsed = try? JSONSerialization.jsonObject(with: data), Self.agrees(root, with: parsed, in: scalars) else { throw .invalid }
         self.scalars = scalars
         self.root = root
@@ -106,7 +106,8 @@ struct JSONDocument {
             return zip(elements, array).allSatisfy { agrees($0, with: $1, in: scalars) }
         case .string(let token):
             guard let string = parsed as? NSString else { return false }
-            return Array((string as String).utf16) == utf16(token, in: scalars)
+            let text = token.decoded.map { $0[...] } ?? scalars[token.content]
+            return (string as String).utf16.elementsEqual(text.lazy.flatMap(\.utf16))
         case .number, .boolean:
             return parsed is NSNumber
         case .null:
@@ -135,8 +136,26 @@ struct JSONDocument {
     }
 
     private static func utf16(_ token: StringToken, in scalars: [Unicode.Scalar]) -> [UInt16] {
-        let text = token.decoded ?? Array(scalars[token.content])
-        return Array(String(String.UnicodeScalarView(text)).utf16)
+        let text = token.decoded.map { $0[...] } ?? scalars[token.content]
+        var units: [UInt16] = []
+        units.reserveCapacity(text.count)
+        for scalar in text { units.append(contentsOf: scalar.utf16) }
+        return units
+    }
+
+    /// The scalars as UTF-8, encoded in one pass: building a `String` from them first appends them
+    /// one at a time, which took a third of the time of a JSON array of quoted documents.
+    private static func utf8(_ scalars: ArraySlice<Unicode.Scalar>) -> Data {
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(scalars.count)
+        for scalar in scalars {
+            if scalar.isASCII {
+                bytes.append(UInt8(scalar.value))
+            } else {
+                bytes.append(contentsOf: UTF8.encode(scalar)!)
+            }
+        }
+        return Data(bytes)
     }
 }
 
