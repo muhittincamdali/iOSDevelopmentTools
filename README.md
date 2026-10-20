@@ -45,7 +45,8 @@ written for Swift 6 strict concurrency.
   however they are spelled or escaped) and under keys that are not plain ASCII are replaced, and
   only allowlisted headers and query parameters keep their values. JSON, form and multipart
   bodies are parsed; a body that cannot be parsed is replaced by a note instead of being stored.
-  In a log message, everything from the first secret name to its end is hidden.
+  In a log message, everything from the first secret name, or key that is not on the allowlist,
+  to its end is hidden.
 - **Bounded storage** — at most 500 requests and 256 KiB of each body by default, log messages
   in a ring buffer, and uploads over 4 MiB streamed instead of copied. Headers and URLs are
   stored whole.
@@ -54,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 443 Swift Testing tests on macOS and 440 on an iOS simulator. Requests travel
+- **Tested** — 494 Swift Testing tests on macOS and 491 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -200,10 +201,13 @@ func configureNetworkLogger() {
 - **Bodies that cannot be parsed** (an unknown or missing content type, malformed JSON or
   multipart, a body cut off at the size limit) are replaced by a note such as
   `[body omitted: 512 bytes, application/xml]`.
-- **Log messages** are kept up to their first trigger: a secret name, a key that is not plain
-  ASCII, or a quote or bracket that does not close hides everything after it, the lines below
-  too (`login password=hunter2 status=200` is stored as `login password=[REDACTED]`). A message
-  with no trigger is kept as it is, apart from detected tokens, card numbers and email addresses.
+- **Log messages** are kept up to their first trigger: a secret name, a key that is not on the
+  allowlist (`status`, `method`, `path`, `duration_ms` and `count` by default; add yours with
+  `allowedTextKeys`), a character outside ASCII that is not a letter, mark, digit or space (`꞉`,
+  `…`, an emoji), an escape such as `%3D`, or a quote or bracket that does not close hides
+  everything after it, the lines below too (`login password=hunter2 status=200` is stored as
+  `login password=[REDACTED]`, `x=hunter2` as `x=[REDACTED]`). A message with no trigger is kept
+  as it is, apart from detected tokens, card numbers and email addresses.
 
 Redaction is a safety net, not a guarantee. It is built for secrets recorded by accident:
 structured input is parsed, and what the parser does not fully understand is hidden; free text is

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@72b70642c6b1268eaf3d23aa3db33daf39ef220e status=reviewed -->
+<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -44,7 +44,7 @@
 - **存储前先脱敏** — 秘密名称（`password`、`token`、`api_key`，无论怎么拼写或转义）下的值，以及
   不是纯 ASCII 的键下的值都会被替换，只有允许列表中的请求头和查询参数会保留值。JSON、表单和
   multipart 消息体会被解析；无法解析的消息体不会被存储，而是替换为一条说明。日志消息中从第一个
-  秘密名称到结尾的内容都会被隐藏。
+  秘密名称或不在允许列表中的键到结尾的内容都会被隐藏。
 - **存储有上限** — 默认最多保留 500 个请求，每个消息体最多 256 KiB；日志消息保存在环形缓冲区中，
   超过 4 MiB 的上传以流的方式处理，而不是复制。头部和 URL 会完整保存，不会截断。
 - **导出** — 任何请求都可以导出为可安全用于 shell 的 `curl` 命令，任何请求列表都可以导出为
@@ -52,7 +52,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 443 个 Swift Testing 测试，iOS 模拟器上有 440 个。请求从应用的会话
+- **经过测试** — macOS 上有 494 个 Swift Testing 测试，iOS 模拟器上有 491 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -193,10 +193,12 @@ func configureNetworkLogger() {
   `pаssword`、`pass\u200Dword`、`şifre`）的值默认会被隐藏。
 - **无法解析的消息体**（未知或缺失的内容类型、格式错误的 JSON 或 multipart、在大小上限处被截断的
   消息体）会被替换为 `[body omitted: 512 bytes, application/xml]` 这样的说明。
-- **日志消息**只保留到第一个触发点之前：秘密名称、不是纯 ASCII 的键，或未闭合的引号或括号，
+- **日志消息**只保留到第一个触发点之前：秘密名称、不在允许列表中的键（默认是 `status`、`method`、
+  `path`、`duration_ms` 和 `count`，可用 `allowedTextKeys` 添加自己的键）、ASCII 之外且不是字母、
+  附加符号、数字或空白的字符（`꞉`、`…`、表情符号）、`%3D` 这样的转义序列，或未闭合的引号或括号，
   会让其后的所有内容（包括下面的行）都被隐藏（`login password=hunter2 status=200` 会存储为
-  `login password=[REDACTED]`）。没有触发点的消息会原样保留，只有检测到的令牌、卡号和电子邮件
-  地址会被隐藏。
+  `login password=[REDACTED]`，`x=hunter2` 会存储为 `x=[REDACTED]`）。没有触发点的消息会原样保留，
+  只有检测到的令牌、卡号和电子邮件地址会被隐藏。
 
 脱敏只是一道安全网，而不是保证。它针对的是意外记录下来的秘密：结构化输入会用解析器读取，
 解析器不能完全理解的内容都会被隐藏；自由文本只能尽力而为，用相似字母伪装且不带 `=` 或 `:` 的

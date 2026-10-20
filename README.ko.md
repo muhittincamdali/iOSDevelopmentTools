@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@72b70642c6b1268eaf3d23aa3db33daf39ef220e status=reviewed -->
+<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -46,7 +46,8 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **저장 전에 가리기** — 비밀 이름(`password`, `token`, `api_key`, 철자나 인코딩과 상관없이)과
   순수 ASCII가 아닌 키 아래의 값은 바뀌고, 허용 목록에 있는 헤더와 쿼리 매개변수만 값을 유지합니다.
   JSON, 폼, multipart 본문은 파싱하며, 파싱할 수 없는 본문은 저장하는 대신 안내 문구로 바꿉니다.
-  로그 메시지에서는 첫 번째 비밀 이름부터 메시지 끝까지 모두 가려집니다.
+  로그 메시지에서는 첫 번째 비밀 이름 또는 허용 목록에 없는 키부터 메시지 끝까지 모두
+  가려집니다.
 - **저장량 제한** — 기본값으로 요청은 최대 500개, 본문은 각각 최대 256 KiB입니다. 로그
   메시지는 링 버퍼에 보관하고, 4 MiB를 넘는 업로드는 복사하지 않고 스트리밍합니다.
   헤더와 URL은 자르지 않고 그대로 저장합니다.
@@ -55,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 443개, iOS 시뮬레이터에서 440개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 494개, iOS 시뮬레이터에서 491개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -198,10 +199,13 @@ func configureNetworkLogger() {
   키릴 문자 `а`가 들어간 `pаssword`, `pass\u200Dword`, `şifre`)의 값은 기본적으로 가려집니다.
 - **파싱할 수 없는 본문**(알 수 없거나 없는 Content-Type, 잘못된 JSON이나 multipart, 크기 한도에서
   잘린 본문)은 `[body omitted: 512 bytes, application/xml]` 같은 안내 문구로 바뀝니다.
-- **로그 메시지**는 첫 번째 트리거까지만 보관됩니다. 비밀 이름, 순수 ASCII가 아닌 키, 닫히지 않은
-  따옴표나 괄호가 나오면 그 뒤의 모든 내용이 아래 줄까지 가려집니다
-  (`login password=hunter2 status=200`은 `login password=[REDACTED]`로 저장됩니다). 트리거가 없는
-  메시지는 감지된 토큰, 카드 번호, 이메일 주소를 빼고 그대로 보관됩니다.
+- **로그 메시지**는 첫 번째 트리거까지만 보관됩니다. 비밀 이름, 허용 목록에 없는 키(기본값은
+  `status`, `method`, `path`, `duration_ms`, `count`이며 `allowedTextKeys`로 직접 추가할 수
+  있습니다), 문자·결합 부호·숫자·공백이 아닌 ASCII 밖의 문자(`꞉`, `…`, 이모지), `%3D` 같은
+  이스케이프, 닫히지 않은 따옴표나 괄호가 나오면 그 뒤의 모든 내용이 아래 줄까지 가려집니다
+  (`login password=hunter2 status=200`은 `login password=[REDACTED]`로, `x=hunter2`는
+  `x=[REDACTED]`로 저장됩니다). 트리거가 없는 메시지는 감지된 토큰, 카드 번호, 이메일 주소를 빼고
+  그대로 보관됩니다.
 
 가리기는 안전망일 뿐 보장이 아닙니다. 실수로 기록된 비밀 값을 위해 만들어졌습니다. 구조화된
 입력은 파싱하고, 파서가 완전히 이해하지 못하는 부분은 가립니다. 자유 형식 텍스트는 최선의

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@72b70642c6b1268eaf3d23aa3db33daf39ef220e status=reviewed -->
+<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -50,7 +50,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
   ersetzt; nur Header und Query-Parameter auf der Allowlist behalten ihre Werte. JSON-, Formular-
   und Multipart-Bodys werden geparst; ein Body, der sich nicht parsen lässt, wird durch einen
   Hinweis ersetzt, statt gespeichert zu werden. In einer Log-Meldung wird alles ab dem ersten
-  geheimen Namen bis zu ihrem Ende geschwärzt.
+  geheimen Namen oder Schlüssel, der nicht auf der Allowlist steht, bis zu ihrem Ende geschwärzt.
 - **Begrenzte Speicherung** — standardmäßig höchstens 500 Anfragen und 256 KiB pro Body; Log-Meldungen
   liegen in einem Ringpuffer, und Uploads über 4 MiB werden gestreamt statt kopiert.
   Header und URLs werden vollständig gespeichert.
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 443 Swift-Testing-Tests auf macOS und 440 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 494 Swift-Testing-Tests auf macOS und 491 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -210,10 +210,14 @@ func configureNetworkLogger() {
   JSON oder Multipart, ein an der Größengrenze abgeschnittener Body), werden durch einen Hinweis wie
   `[body omitted: 512 bytes, application/xml]` ersetzt.
 - **Log-Meldungen** werden bis zu ihrem ersten Auslöser gespeichert: Ein geheimer Name, ein
-  Schlüssel, der kein reines ASCII ist, oder ein Anführungszeichen oder eine Klammer, die nicht
-  schließt, schwärzt alles danach, auch die Zeilen darunter (`login password=hunter2 status=200`
-  wird als `login password=[REDACTED]` gespeichert). Eine Meldung ohne Auslöser bleibt, wie sie
-  ist, bis auf erkannte Tokens, Kartennummern und E-Mail-Adressen.
+  Schlüssel, der nicht auf der Allowlist steht (standardmäßig `status`, `method`, `path`,
+  `duration_ms` und `count`; eigene fügen Sie mit `allowedTextKeys` hinzu), ein Zeichen außerhalb
+  von ASCII, das weder Buchstabe noch diakritisches Zeichen, Ziffer oder Leerzeichen ist (`꞉`,
+  `…`, ein Emoji), eine Escape-Sequenz wie `%3D` oder ein Anführungszeichen oder eine Klammer, die
+  nicht schließt, schwärzt alles danach, auch die Zeilen darunter
+  (`login password=hunter2 status=200` wird als `login password=[REDACTED]` gespeichert,
+  `x=hunter2` als `x=[REDACTED]`). Eine Meldung ohne Auslöser bleibt, wie sie ist, bis auf
+  erkannte Tokens, Kartennummern und E-Mail-Adressen.
 
 Schwärzen ist ein Sicherheitsnetz, keine Garantie. Es ist für Geheimnisse gebaut, die
 versehentlich aufgezeichnet werden: Strukturierte Eingaben werden geparst, und was der Parser

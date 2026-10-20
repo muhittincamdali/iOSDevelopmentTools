@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@72b70642c6b1268eaf3d23aa3db33daf39ef220e status=reviewed -->
+<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -47,7 +47,8 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **保存前にマスキング** — 秘密の名前 (`password`、`token`、`api_key`。綴りやエスケープの仕方は問いません)
   と、プレーンな ASCII ではないキーの値を置き換え、値を残すのは許可リストにあるヘッダーとクエリ
   パラメーターだけです。JSON、フォーム、multipart のボディは解析され、解析できないボディは保存せずに
-  注記に置き換えます。ログメッセージでは、最初の秘密の名前からメッセージの終わりまでが
+  注記に置き換えます。ログメッセージでは、最初の秘密の名前または許可リストにないキーから
+  メッセージの終わりまでが
   すべてマスキングされます。
 - **保存量に上限** — デフォルトでは最大 500 件のリクエスト、各ボディは 256 KiB までです。
   ログメッセージはリングバッファに保持され、4 MiB を超えるアップロードはコピーせずにストリーミング
@@ -57,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 443 件、iOS シミュレーターで 440 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 494 件、iOS シミュレーターで 491 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -202,11 +203,13 @@ func configureNetworkLogger() {
   `а` を含む `pаssword`、`pass\u200Dword`、`şifre` など) の値は、デフォルトで隠されます。
 - **解析できないボディ** (不明または欠落した Content-Type、不正な JSON や multipart、サイズ上限で
   切れたボディ) は `[body omitted: 512 bytes, application/xml]` のような注記に置き換えられます。
-- **ログメッセージ**は最初のトリガーまで保持されます。秘密の名前、プレーンな ASCII ではないキー、
-  閉じられていない引用符や括弧があると、それ以降は下の行も含めてすべてマスキングされます
-  （`login password=hunter2 status=200` は `login password=[REDACTED]` として保存されます）。
-  トリガーのないメッセージは、検出されたトークン、カード番号、メールアドレスを除いてそのまま
-  保持されます。
+- **ログメッセージ**は最初のトリガーまで保持されます。秘密の名前、許可リストにないキー（デフォルトは
+  `status`、`method`、`path`、`duration_ms`、`count`。独自のキーは `allowedTextKeys` で追加
+  します）、文字・結合記号・数字・空白以外の ASCII 外の文字（`꞉`、`…`、絵文字）、`%3D` のような
+  エスケープ、閉じられていない引用符や括弧があると、それ以降は下の行も含めてすべてマスキング
+  されます（`login password=hunter2 status=200` は `login password=[REDACTED]`、`x=hunter2` は
+  `x=[REDACTED]` として保存されます）。トリガーのないメッセージは、検出されたトークン、カード番号、
+  メールアドレスを除いてそのまま保持されます。
 
 マスキングはセーフティネットであり、保証ではありません。うっかり記録された秘密情報を想定して
 作られています。構造化された入力はパーサーで解析し、パーサーが完全には理解できないものは

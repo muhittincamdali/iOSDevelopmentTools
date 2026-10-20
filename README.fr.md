@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@72b70642c6b1268eaf3d23aa3db33daf39ef220e status=reviewed -->
+<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -50,7 +50,8 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   ASCII simple sont remplacées, et seuls les en-têtes et paramètres de query de la liste autorisée
   gardent leur valeur. Les corps JSON, de formulaire et multipart sont analysés ; un corps
   impossible à analyser est remplacé par une note au lieu d'être stocké. Dans un message de
-  journal, tout est masqué du premier nom secret jusqu'à la fin.
+  journal, tout est masqué du premier nom secret, ou de la première clé absente de la liste
+  autorisée, jusqu'à la fin.
 - **Stockage borné** — par défaut, au plus 500 requêtes et 256 KiB par corps ; les messages de journal
   sont conservés dans un tampon circulaire, et les envois de plus de 4 MiB sont transmis en flux au lieu
   d'être copiés. Les en-têtes et les URL sont stockés en entier.
@@ -60,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 443 tests Swift Testing sur macOS et 440 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 494 tests Swift Testing sur macOS et 491 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -212,10 +213,14 @@ func configureNetworkLogger() {
   multipart mal formé, un corps coupé à la limite de taille) sont remplacés par une note comme
   `[body omitted: 512 bytes, application/xml]`.
 - **Les messages de journal** sont conservés jusqu'à leur premier déclencheur : un nom secret, une
-  clé qui n'est pas en ASCII simple, ou un guillemet ou une parenthèse qui ne se ferme pas masque
-  tout ce qui suit, y compris les lignes suivantes (`login password=hunter2 status=200` est stocké
-  sous la forme `login password=[REDACTED]`). Un message sans déclencheur est conservé tel quel,
-  hormis les jetons, numéros de carte et adresses e-mail détectés.
+  clé absente de la liste autorisée (`status`, `method`, `path`, `duration_ms` et `count` par
+  défaut ; ajoutez les vôtres avec `allowedTextKeys`), un caractère hors ASCII qui n'est ni une
+  lettre, ni un signe diacritique, ni un chiffre, ni une espace (`꞉`, `…`, un emoji), une séquence
+  d'échappement comme `%3D`, ou un guillemet ou une parenthèse qui ne se ferme pas masque tout ce
+  qui suit, y compris les lignes suivantes (`login password=hunter2 status=200` est stocké sous la
+  forme `login password=[REDACTED]`, et `x=hunter2` sous la forme `x=[REDACTED]`). Un message sans
+  déclencheur est conservé tel quel, hormis les jetons, numéros de carte et adresses e-mail
+  détectés.
 
 Le masquage est un filet de sécurité, pas une garantie. Il est conçu pour les secrets enregistrés
 par accident : les entrées structurées sont analysées, et ce que l'analyseur ne comprend pas

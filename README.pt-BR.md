@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@72b70642c6b1268eaf3d23aa3db33daf39ef220e status=reviewed -->
+<!-- i18n-source: README.md@b93b13a2467c4399c2ebdb3bdfebcde4f9b751d9 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -50,7 +50,7 @@ concurrency do Swift 6.
   substituídos, e só os cabeçalhos e parâmetros de query da lista permitida mantêm seus valores.
   Corpos JSON, de formulário e multipart são analisados; um corpo que não pode ser analisado é
   substituído por uma nota em vez de ser armazenado. Em uma mensagem de log, tudo é ocultado do
-  primeiro nome secreto até o fim.
+  primeiro nome secreto, ou da primeira chave fora da lista permitida, até o fim.
 - **Armazenamento limitado** — por padrão, no máximo 500 requisições e 256 KiB de cada corpo; as mensagens
   de log ficam em um buffer circular, e uploads acima de 4 MiB são transmitidos em streaming em vez de
   copiados. Cabeçalhos e URLs são armazenados inteiros.
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 443 testes de Swift Testing no macOS e 440 em um simulador de iOS. As requisições vão de
+- **Testado** — 494 testes de Swift Testing no macOS e 491 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -208,11 +208,14 @@ func configureNetworkLogger() {
 - **Corpos que não podem ser analisados** (um tipo de conteúdo desconhecido ou ausente, JSON ou
   multipart malformado, um corpo cortado no limite de tamanho) são substituídos por uma nota como
   `[body omitted: 512 bytes, application/xml]`.
-- **Mensagens de log** são guardadas até o primeiro gatilho: um nome secreto, uma chave que não é
-  ASCII simples, ou uma aspa ou um colchete que não se fecha oculta tudo o que vem depois, inclusive
-  as linhas de baixo (`login password=hunter2 status=200` é armazenada como
-  `login password=[REDACTED]`). Uma mensagem sem gatilho é guardada como está, exceto os tokens,
-  números de cartão e endereços de e-mail detectados.
+- **Mensagens de log** são guardadas até o primeiro gatilho: um nome secreto, uma chave que não
+  está na lista permitida (`status`, `method`, `path`, `duration_ms` e `count` por padrão;
+  adicione as suas com `allowedTextKeys`), um caractere fora do ASCII que não é letra, marca,
+  dígito nem espaço (`꞉`, `…`, um emoji), uma sequência de escape como `%3D`, ou uma aspa ou um
+  colchete que não se fecha oculta tudo o que vem depois, inclusive as linhas de baixo
+  (`login password=hunter2 status=200` é armazenada como `login password=[REDACTED]`, e
+  `x=hunter2` como `x=[REDACTED]`). Uma mensagem sem gatilho é guardada como está, exceto os
+  tokens, números de cartão e endereços de e-mail detectados.
 
 A ocultação é uma rede de segurança, não uma garantia. Ela foi feita para segredos registrados por
 acidente: a entrada estruturada é analisada, e o que o analisador não entende por completo é
