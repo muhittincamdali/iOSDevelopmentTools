@@ -140,11 +140,14 @@ struct RedactionHeldNameTests {
         #expect(redactor.redact("<string name=\"password\" />\nhunter2") == "[REDACTED]")
     }
 
-    @Test("a plain key that holds a name is read for the name, and a route under path stays")
+    @Test("an allowed key that holds a name is read for the name, and a route under path stays")
     func keysThatHoldNames() {
-        #expect(redactor.redact("type=Пароль S3CR3Tq") == "type=[REDACTED]")
-        #expect(redactor.redact("type=status kept") == "type=status kept")
+        let allowing = Redactor(allowedTextKeys: ["type", "name"])
+        #expect(allowing.redact("type=Пароль S3CR3Tq") == "type=[REDACTED]")
+        #expect(allowing.redact("type=status kept") == "type=status kept")
         #expect(redactor.redact("method=GET path=/v1/users/me status=200") == "method=GET path=/v1/users/me status=200")
-        #expect(redactor.redact(#"name="status" kept"#) == #"name="status" kept"#)
+        #expect(allowing.redact(#"name="status" kept"#) == #"name="status" kept"#)
+        #expect(redactor.redact("type=status kept") == "type=[REDACTED]")
+        #expect(redactor.redact(#"name="status" kept"#) == #"name="[REDACTED]"#)
     }
 }

@@ -226,6 +226,9 @@ struct RedactionRegressionTests {
         "t\u{043E}ken:\n  hunter2", "password:\n\"abc\nhunter2\"",
         "count=1 note=\"a\nb\nhunter2", "x\u{2028}\"y\u{2029}hunter2", "creds%3Dhunter2", "path=%2Fcb%3Ftoken%3Dhunter2",
         "creds&#61;hunter2", "creds\\u003dhunter2", "see https://e.com/a,token:hunter2/x",
+        // The third review of 2.1.0: a key that is not on the allowed text keys showed its value.
+        "x=hunter2", "creds=hunter2", "resp {\"x\":\"hunter2\",\"status\":200}", "note: hunter2", "Error: hunter2",
+        "user=bob hunter2", "[\"user\",\"hunter2\"]", "user\u{FF1A}hunter2", "status\n=hunter2", "{\"status\":200,\"data\":[\"hunter2\"]}",
     ])
     func freeTextCut(text: String) {
         #expect(!policy.redact(text: text).contains(Self.secret))
@@ -240,7 +243,7 @@ struct RedactionRegressionTests {
     }
 
     @Test("Free text with no trigger is stored unchanged, wherever it is stored", arguments: [
-        "user=bob", "creds=ok count=3", "path=/a?page=2", "Note:\nall good", "status=200 user=bob path=/api/items",
+        "count=3", "path=/api/items", "status:\nall good", "status=200 method=GET path=/api/items", "GET /api/items done in 12 ms",
     ])
     func freeTextWithoutTrigger(text: String) {
         #expect(policy.redact(text: text) == text)
@@ -249,6 +252,21 @@ struct RedactionRegressionTests {
         #expect(store.entries.first?.message == text)
         let body = policy.redact(body: Data(text.utf8), contentType: "text/plain").body
         #expect(String(decoding: body, as: UTF8.self) == text)
+    }
+
+    @Test("A key the app allows is read on wherever free text is stored", arguments: [
+        "user=bob status=200", "login user: bob", "{\"user\":\"bob\",\"count\":3}", "[\"user\",\"bob\"]",
+    ])
+    func allowedTextKey(text: String) {
+        let allowing = RedactionPolicy(allowedTextKeys: ["user"])
+        #expect(policy.redact(text: text) != text)
+        #expect(allowing.redact(text: text) == text)
+        let store = LogStore(configuration: .init(systemLogSubsystem: nil, redaction: allowing))
+        store.info(text)
+        #expect(store.entries.first?.message == text)
+        #expect(String(decoding: allowing.redact(body: Data(text.utf8), contentType: "text/plain").body, as: UTF8.self) == text)
+        let headers = RedactionPolicy(allowedHeaders: ["X-Note"], allowedTextKeys: ["user"]).redact(headers: [HTTPHeader(name: "X-Note", value: text)])
+        #expect(headers.first?.value == text)
     }
 
     @Test("A long message of combining marks is redacted and cut off quickly")

@@ -11,6 +11,15 @@ extension RedactionPolicy {
     /// form, with U+2028, U+2029, U+0085, vertical tab and form feed read as line breaks. The
     /// triggers are:
     ///
+    /// - **A key that is not allowed.** In `key=value`, `key: value`, `key = value` and
+    ///   `"key":"value"` the text is read on only after a key that is plain ASCII, names no secret
+    ///   and is on ``allowedTextKeys`` (`status`, `method`, `path`, `duration_ms` and `count` by
+    ///   default), written on the line of its separator, which is `=`, `:` or a run of them
+    ///   (`:=`, `==`, `=>`) in ASCII. Any other key cuts the text at its value: `x=hunter2` becomes
+    ///   `x=[REDACTED]` and `Error: …` becomes `Error: [REDACTED]`. A `:` between two digits, as in
+    ///   `12:30`, is part of a time. JSON in the text follows the same rule member by member, and
+    ///   a two-element array by its first string (`["user","bob"]`); the tag of an element is the
+    ///   key of its text (`<user>bob</user>`).
     /// - **A secret name** (see ``secretNames``), with or without a separator, quoted or not:
     ///   `password=hunter2`, `password hunter2`, `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`.
     ///   The text is hidden from the value after the name. Words are read after their escapes are
@@ -19,33 +28,32 @@ extension RedactionPolicy {
     ///   as any letter or, between two letters, as none (`passꞏword`). This is a best effort: a
     ///   name disguised with two or more such letters and written without a separator
     ///   (`pɑsswoʀd hunter2`) is not found.
-    /// - **A secret name written as a value.** After a key that holds a name (`name=`, `key=`,
-    ///   `label=`, `id=`, … but not `path=`, the route of a request), a name that names a secret,
-    ///   is not plain ASCII or is JSON: `name="password"`, `key='token'`, `label="Пароль"`,
-    ///   `name=["pin"]`, `Content-Disposition: form-data; name="pin"`. In markup the text of a
-    ///   property list's `<key>` element is such a name (`<key>password</key>`,
-    ///   `<key>Şifre</key>`), and a trigger inside a tag hides the tag from its `<`, so the
-    ///   attributes written before the name are hidden too (`<input value="…" name="password">`).
-    ///   The element name `key` and the name of an end tag (`</password>`) name no value after
-    ///   them.
+    /// - **A secret name written as a value.** After an allowed key that holds a name (`name=`,
+    ///   `id=`, `type=`, … when the app allows them; never `path=`, the route of a request), a
+    ///   name that names a secret, is not plain ASCII or is JSON: `name="password"`,
+    ///   `label="Пароль"`, `name=["pin"]`. After a key that is not allowed, the key hides the name
+    ///   already (`Content-Disposition: form-data; name="pin"`). In markup, a trigger inside a tag
+    ///   hides the tag from its `<`, so the attributes written before the name are hidden too
+    ///   (`<input value="…" name="password">`). The text of a property list's `<key>` element is
+    ///   always hidden, since `key` is a secret name; the name of an end tag (`</password>`) names
+    ///   no value after it.
     /// - **A key that is not plain ASCII** or has no letter or digit, or no key at all, before
     ///   `=` or `:` (`pаssword=…` with a Cyrillic `а`, `🔑=…`, `user[name]=…`, `=…`), and the last
     ///   words of a key that, read as one name, name a secret (`pass word=…`, `c v v: …`).
-    /// - **A separator that is escaped or only looks like one** after other text: `%3D`, `&#61;`,
-    ///   `%u003D`, `\=`, `꞉`, `≔`. A character whose compatibility form is `=` or `:` (`＝`, `：`)
-    ///   is read as that character.
+    /// - **A separator that is escaped or only looks like one:** `%3D`, `&#61;`, `%u003D`, `\=`,
+    ///   `꞉`, `≔`, `＝`, `：`.
     /// - **An ambiguous token**: a word that mixes scripts (`pаssword` with a Cyrillic `а`) or
     ///   holds an invisible character other than a mark (a zero-width space, `pa\u{115F}ssword`,
     ///   a control character), a quote or bracket that does not close, and JSON that does not
     ///   parse. The text is hidden from there.
     ///
-    /// Text with no trigger is kept as it is (`status=200 user=bob path=/api/items`), except for
+    /// Text with no trigger is kept as it is (`status=200 method=GET path=/api/items`), except for
     /// what the value detectors find: JWTs, bearer tokens, long hex or Base64 strings, card
     /// numbers, IBANs and email addresses. JSON in the text (`{"…`, `[{…`, `["…`, `[[…`) is parsed
     /// with a JSON parser, within the limits of ``maximumJSONDepth`` and
-    /// ``maximumNestedDocuments``, and redacted by the key rule of structured input; its strings
-    /// are free text again, with this rule. URLs with a scheme and `//` are recorded as
-    /// ``redact(url:)`` records them.
+    /// ``maximumNestedDocuments``, and redacted by the key rule of structured input before its
+    /// members are compared with ``allowedTextKeys``; its strings are free text again, with this
+    /// rule. URLs with a scheme and `//` are recorded as ``redact(url:)`` records them.
     public func redact(text: String) -> String {
         guard isEnabled else { return text }
         return redact(text, nesting: .text(length: text.unicodeScalars.count))
@@ -55,9 +63,16 @@ extension RedactionPolicy {
     /// the value detectors, and the cut, from the first trigger to the end of the text. `nesting`
     /// says which documents the text is in; a text inside one whose JSON or URL goes past a limit
     /// is one finding.
-    func textSpans(in scalars: [Unicode.Scalar], compatibility: CompatibilityText, role: FreeTextScanner.Role = .text, nesting: Nesting) -> [Span] {
+    /// `allowedKeys` are the folded keys after which the text is read on; ``allowedTextKeys`` when
+    /// nil.
+    func textSpans(
+        in scalars: [Unicode.Scalar], compatibility: CompatibilityText, role: FreeTextScanner.Role = .text, nesting: Nesting,
+        allowedKeys: Set<String>? = nil
+    ) -> [Span] {
         guard !scalars.isEmpty, !isQuietWord(scalars) else { return [] }
-        return textSpans(in: scalars, text: NormalizedText(scalars, compatibility: compatibility), compatibility: compatibility, role: role, nesting: nesting)
+        return textSpans(
+            in: scalars, text: NormalizedText(scalars, compatibility: compatibility), compatibility: compatibility, role: role, nesting: nesting,
+            allowedKeys: allowedKeys)
     }
 
     /// ``textSpans(in:compatibility:role:nesting:)`` on a scanning copy that is already made.
@@ -67,12 +82,14 @@ extension RedactionPolicy {
     /// longer covers (see ``ReadingBudget``) is one finding.
     func textSpans(
         in scalars: [Unicode.Scalar], text: NormalizedText, compatibility: CompatibilityText, role: FreeTextScanner.Role = .text,
-        nesting: Nesting, detectsInRegions: Bool = false
+        nesting: Nesting, detectsInRegions: Bool = false, allowedKeys: Set<String>? = nil
     ) -> [Span] {
         guard !scalars.isEmpty else { return [] }
         let whole = [Span(start: 0, end: scalars.count, replacement: Self.replacement)]
         guard scalars.count <= Self.maximumTextLength, nesting.reads(scalars.count) else { return whole }
-        var scanner = FreeTextScanner(source: scalars, text: text, policy: self, compatibility: compatibility, role: role, nesting: nesting)
+        var scanner = FreeTextScanner(
+            source: scalars, text: text, policy: self, compatibility: compatibility, role: role, nesting: nesting,
+            allowedKeys: allowedKeys ?? allowedTextKeys)
         scanner.run()
         if scanner.hidesWholeText { return whole }
         let cut = scanner.cut.flatMap { $0 < scalars.count ? [Span(start: $0, end: scalars.count, replacement: Self.replacement)] : nil } ?? []
@@ -168,6 +185,13 @@ extension RedactionPolicy {
         let scalars = Array(text.unicodeScalars)
         let spans = textSpans(in: scalars, compatibility: CompatibilityText(), nesting: nesting)
         return spans.isEmpty ? text : Self.replacing(spans, in: scalars)
+    }
+
+    /// Whether free text is read on after the key `name`: it is plain ASCII, names no secret and
+    /// is on `keys` once folded.
+    func allowsTextKey(_ name: some Collection<Unicode.Scalar>, in keys: Set<String>) -> Bool {
+        guard let fold = allowableFold(name) else { return false }
+        return keys.contains(fold)
     }
 
     /// A key that is written out (a form or multipart field name, a query parameter name) read as

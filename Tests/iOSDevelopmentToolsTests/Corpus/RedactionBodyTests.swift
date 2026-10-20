@@ -29,7 +29,8 @@ struct RedactionBodyTests {
     @Test("reads JSON inside a JSON string")
     func jsonInString() {
         let body = #"{"query":"mutation","variables":"{\"password\":\"hunter2\",\"user\":\"bob\"}"}"#
-        #expect(redact(body, "application/json") == #"{"query":"mutation","variables":"{\"password\":\"[REDACTED]\",\"user\":\"bob\"}"}"#)
+        // The string is free text: the JSON in it is cut at its first member that is not allowed.
+        #expect(redact(body, "application/json") == #"{"query":"mutation","variables":"{\"password\":[REDACTED]"}"#)
     }
 
     @Test("omits JSON that does not parse completely", arguments: [
@@ -66,9 +67,10 @@ struct RedactionBodyTests {
         ("user%5Bpassword%5D=hunter2&user%5Bname%5D=bob", "user%5Bpassword%5D=[REDACTED]&user%5Bname%5D=[REDACTED]"),
         ("p%D0%B0ssword=hunter2", "p%D0%B0ssword=[REDACTED]"),
         ("user=bob%20smith&note=paid+4111+1111+1111+1111", "user=bob%20smith&note=paid+[REDACTED]"),
-        ("note=status%3D1+user%3Dbob", "note=status%3D1+user%3Dbob"),
+        ("note=status%3D1+user%3Dbob", "note=status%3D1+user%3D[REDACTED]"),
+        ("note=status%3D1+count%3D2", "note=status%3D1+count%3D2"),
         ("password=hunter2&password=again", "password=[REDACTED]&password=[REDACTED]"),
-        ("q=%7B%22password%22%3A%22hunter2%22%7D", "q=%7B%22password%22%3A%22[REDACTED]%22%7D"),
+        ("q=%7B%22password%22%3A%22hunter2%22%7D", "q=%7B%22password%22%3A[REDACTED]"),
         ("flag&password=hunter2", "flag&password=[REDACTED]"),
     ])
     func form(body: String, expected: String) {

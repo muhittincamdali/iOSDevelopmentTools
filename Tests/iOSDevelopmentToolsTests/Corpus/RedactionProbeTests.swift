@@ -14,7 +14,7 @@ struct RedactionProbeTests {
         ("p\u{430}ssword=hunter2", "[REDACTED]"),
         ("\u{440}assword=hunter2", "[REDACTED]"),
         ("passw\u{43E}rd=hunter2", "[REDACTED]"),
-        ("{\"p\u{430}ssword\":\"hunter2\"}", "{\"p\u{430}ssword\":\"[REDACTED]\"}"),
+        ("{\"p\u{430}ssword\":\"hunter2\"}", "{\"p\u{430}ssword\":[REDACTED]"),
         ("t\u{43E}ken=hunter2", "[REDACTED]"),
         ("s\u{435}cret=hunter2", "[REDACTED]"),
         ("\u{430}pi_key=hunter2", "[REDACTED]"),
@@ -25,7 +25,7 @@ struct RedactionProbeTests {
         ("api.key=hunter2", "api.key=[REDACTED]"),
         ("client.secret=hunter2", "client.secret=[REDACTED]"),
         ("access.token: hunter2", "access.token: [REDACTED]"),
-        ("{\"pass\\u0077ord\":\"hunter2\"}", "{\"pass\\u0077ord\":\"[REDACTED]\"}"),
+        ("{\"pass\\u0077ord\":\"hunter2\"}", "{\"pass\\u0077ord\":[REDACTED]"),
         ("pass%77ord=hunter2", "pass%77ord=[REDACTED]"),
         ("p&#97;ssword=hunter2", "p&#97;ssword=[REDACTED]"),
         ("pa\u{301}ssword=hunter2", "pa\u{301}ssword=[REDACTED]"),
@@ -36,12 +36,12 @@ struct RedactionProbeTests {
         ("password\u{301}=hunter2", "password\u{301}=[REDACTED]"),
         ("\u{1D429}\u{1D41A}\u{1D42C}\u{1D42C}\u{1D430}\u{1D428}\u{1D42B}\u{1D41D}=hunter2", "\u{1D429}\u{1D41A}\u{1D42C}\u{1D42C}\u{1D430}\u{1D428}\u{1D42B}\u{1D41D}=[REDACTED]"),
         ("\u{24DF}assword=hunter2", "\u{24DF}assword=[REDACTED]"),
-        ("{\"user\":{\"password\":\"hunter2\"}}", "{\"user\":{\"password\":\"[REDACTED]\"}}"),
-        ("[{\"password\":\"hunter2\"},{\"password\":\"hunter2\"}]", "[{\"password\":\"[REDACTED]\"},{\"password\":\"[REDACTED]\"}]"),
+        ("{\"user\":{\"password\":\"hunter2\"}}", "{\"user\":[REDACTED]"),
+        ("[{\"password\":\"hunter2\"},{\"password\":\"hunter2\"}]", "[{\"password\":[REDACTED]"),
         ("password=hunter2&password=hunter2", "password=[REDACTED]"),
-        ("{\"password\" : \"hunter2\"}", "{\"password\" : \"[REDACTED]\"}"),
+        ("{\"password\" : \"hunter2\"}", "{\"password\" : [REDACTED]"),
         ("password: \"hunter2", "password: \"[REDACTED]"),
-        ("{\"password\":\n\"hunter2\"}", "{\"password\":\n\"[REDACTED]\"}"),
+        ("{\"password\":\n\"hunter2\"}", "{\"password\":\n[REDACTED]"),
         ("password\u{2028}=hunter2", "password\u{2028}=[REDACTED]"),
         ("password\u{85}=hunter2", "password\u{85}=[REDACTED]"),
         ("password\u{B}=hunter2", "password\u{B}=[REDACTED]"),
@@ -54,9 +54,9 @@ struct RedactionProbeTests {
         ("\u{FEFF}password=hunter2", "[REDACTED]"),
         ("password='hunter2", "password='[REDACTED]"),
         ("password=\u{301}hunter2", "password=[REDACTED]"),
-        ("{\"password\":[\"hunter2\"]}", "{\"password\":\"[REDACTED]\"}"),
-        ("{\"password\":{\"v\":\"hunter2\"}}", "{\"password\":\"[REDACTED]\"}"),
-        ("{\"password\":\"hun\\\"ter2\"}", "{\"password\":\"[REDACTED]\"}"),
+        ("{\"password\":[\"hunter2\"]}", "{\"password\":[REDACTED]"),
+        ("{\"password\":{\"v\":\"hunter2\"}}", "{\"password\":[REDACTED]"),
+        ("{\"password\":\"hun\\\"ter2\"}", "{\"password\":[REDACTED]"),
         ("Authorization: Basic aHVudGVyMg==", "Authorization: [REDACTED]"),
         ("password=`hunter2`", "password=`[REDACTED]"),
         ("password=(hunter2)", "password=[REDACTED]"),
@@ -166,11 +166,13 @@ struct RedactionProbeTests {
         #expect(!output.contains("ter2") && !output.contains("aHVudGVyMg"))
     }
 
-    // `refresh` is not on the list of secret names, and free text with no trigger is kept: a
-    // limitation that the guide names ("What it does not find").
-    @Test("a name that is not on the list keeps its value in free text")
+    // `refresh` is not on the list of secret names: a body keeps its value, a limitation that the
+    // guide names ("What it does not find"). In free text it is not an allowed key, so the text
+    // is cut at its value.
+    @Test("a name that is not on the list keeps its value in a body and hides it in free text")
     func nameNotOnTheList() {
-        #expect(redactor.redact("refresh=ft42") == "refresh=ft42")
+        #expect(redactor.redact(body: Data(#"{"refresh":"ft42"}"#.utf8), contentType: "application/json") == #"{"refresh":"ft42"}"#)
+        #expect(redactor.redact("refresh=ft42") == "refresh=[REDACTED]")
         #expect(redactor.redact("refresh_token=ft42") == "refresh_token=[REDACTED]")
     }
 

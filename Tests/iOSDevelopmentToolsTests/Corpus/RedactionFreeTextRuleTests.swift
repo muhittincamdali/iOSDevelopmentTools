@@ -2,55 +2,76 @@ import Foundation
 import Testing
 @testable import iOSDevelopmentTools
 
-/// The free-text rule: one cut point. A plain key that names no secret keeps its value; from the
-/// first trigger (a secret name, a key that is not plain, a separator that is escaped or only looks
-/// like one, a token that cannot be read) the rest of the text is hidden, the lines below too.
+/// The free-text rule: one cut point. Only a key on the allowed text keys is read on; from the
+/// first trigger (a key that is not allowed, a secret name, a separator that is escaped or only
+/// looks like one, a token that cannot be read) the rest of the text is hidden, the lines below too.
 @Suite("Redaction corpus: free-text rule")
 struct RedactionFreeTextRuleTests {
     let redactor = Redactor()
 
-    @Test("plain keys that name no secret keep their value; a secret name or a key that is not plain hides the rest", arguments: [
+    @Test("only allowed keys are read on; any other key, a secret name or a key that is not plain hides the rest", arguments: [
         ("status=200 method=GET path=/a duration_ms=12 count=3", "status=200 method=GET path=/a duration_ms=12 count=3"),
-        ("status: 500, attempt: 2, level: warn", "status: 500, attempt: 2, level: warn"),
-        ("--status=1 (count=2) [page=3]", "--status=1 (count=2) [page=3]"),
-        ("\"status\":\"ok\" 'limit':5", "\"status\":\"ok\" 'limit':5"),
-        ("status=200 user=bob", "status=200 user=bob"),
-        ("user=bob status=200", "user=bob status=200"),
+        ("status: 500, count: 2, method: GET", "status: 500, count: 2, method: GET"),
+        ("--status=1 (count=2) [path=/a]", "--status=1 (count=2) [path=/a]"),
+        ("\"status\":\"ok\" 'count':5", "\"status\":\"ok\" 'count':5"),
+        ("Status=1 STATUS=2 Duration-MS=3 duration.ms=4", "Status=1 STATUS=2 Duration-MS=3 duration.ms=4"),
+        ("status==200 x", "status==200 x"),
+        ("status: 500, attempt: 2, level: warn", "status: 500, attempt: [REDACTED]"),
+        ("--status=1 (count=2) [page=3]", "--status=1 (count=2) [page=[REDACTED]"),
+        ("\"status\":\"ok\" 'limit':5", "\"status\":\"ok\" 'limit':[REDACTED]"),
+        ("status=200 user=bob", "status=200 user=[REDACTED]"),
+        ("user=bob status=200", "user=[REDACTED]"),
+        ("x=hunter2", "x=[REDACTED]"),
         ("db_pw=ft1 pw=ft2", "db_pw=[REDACTED]"),
-        ("refresh=ft42", "refresh=ft42"),
-        ("Status=1 STATUS_CODE=2 status-code=3", "Status=1 STATUS_CODE=2 status-code=3"),
+        ("refresh=ft42", "refresh=[REDACTED]"),
+        ("Status=1 STATUS_CODE=2 status-code=3", "Status=1 STATUS_CODE=[REDACTED]"),
         ("ｓｔａｔｕｓ=200", "ｓｔａｔｕｓ=[REDACTED]"),
         ("st%61tus=200", "st%61tus=[REDACTED]"),
         ("status\u{0301}=200", "status\u{0301}=[REDACTED]"),
-        ("status=200&user=bob", "status=200&user=bob"),
-        ("status=200;user=bob", "status=200;user=bob"),
-        ("status=200,user=bob", "status=200,user=bob"),
+        ("status=200&user=bob", "status=200&user=[REDACTED]"),
+        ("status=200;user=bob", "status=200;user=[REDACTED]"),
+        ("status=200,user=bob", "status=200,user=[REDACTED]"),
         ("path=/x?token=abc", "path=/x?token=[REDACTED]"),
+        ("path=/x?page=2", "path=/x?page=[REDACTED]"),
         ("status=200 password=x", "status=200 password=[REDACTED]"),
+        ("user=\"bob smith\" status=1", "user=\"[REDACTED]"),
+        ("data={\"a\":[1,2]} status=1", "data=[REDACTED]"),
+        ("Error: connection refused", "Error: [REDACTED]"),
+        ("[INFO] app: started", "[INFO] app: [REDACTED]"),
+        ("curl -u bob:Vq302Lm8x https://x.example", "curl -u bob:[REDACTED]"),
     ])
     func plainKeys(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
     }
 
-    @Test("a plain key after the cut stays hidden")
-    func keysAfterTheCut() {
-        #expect(redactor.redact("user=bob token=abc request-id=7") == "user=bob token=[REDACTED]")
+    @Test("the app's allowed keys are read on too; a key after the cut stays hidden")
+    func customAllowlist() {
+        let custom = Redactor(allowedTextKeys: ["user", "request_id", "token"])
+        #expect(custom.redact("user=bob request-id=7 token=abc") == "user=bob request-id=7 token=[REDACTED]")
+        #expect(custom.redact("user=bob token=abc request-id=7") == "user=bob token=[REDACTED]")
+        #expect(custom.redact("login user=bob status=401 password=hunter2") == "login user=bob status=401 password=[REDACTED]")
+        #expect(redactor.redact("user=bob token=abc request-id=7") == "user=[REDACTED]")
     }
 
-    @Test("separators are = and :, runs of them and their compatibility forms; a : between digits is a time; a separator with no key hides the rest", arguments: [
-        ("user:=bob", "user:=bob"),
-        ("user == bob", "user == bob"),
-        ("user => bob", "user => bob"),
-        ("user ::= bob", "user ::= bob"),
-        ("user\u{FF1D}bob", "user＝bob"),
-        ("user\u{FF1A}bob", "user：bob"),
-        ("user\u{FE13}bob", "user︓bob"),
-        ("user\u{2260}bob", "user≠bob"),
+    @Test("separators are = and :, runs of them, and a separator not written in ASCII hides the rest; a : between digits is a time; a separator with no key hides the rest", arguments: [
+        ("status:=200", "status:=200"),
+        ("status == 200", "status == 200"),
+        ("status => 200", "status => 200"),
+        ("status ::= 200", "status ::= 200"),
+        ("user:=bob", "user:=[REDACTED]"),
+        ("user == bob", "user == [REDACTED]"),
+        ("user => bob", "user => [REDACTED]"),
+        ("user ::= bob", "user ::= [REDACTED]"),
+        ("user\u{FF1D}bob", "user＝[REDACTED]"),
+        ("user\u{FF1A}bob", "user：[REDACTED]"),
+        ("user\u{FE13}bob", "user︓[REDACTED]"),
+        ("status\u{FF1D}200", "status＝[REDACTED]"),
+        ("user\u{2260}bob", "user≠[REDACTED]"),
         ("user\u{203F}bob", "user[REDACTED]"),
         ("a \u{203F} b", "a \u{203F} b"),
         ("at 12:30:45 done", "at 12:30:45 done"),
         ("2026-10-19T12:30:45Z ok", "2026-10-19T12:30:45Z ok"),
-        ("host:8080", "host:8080"),
+        ("host:8080", "host:[REDACTED]"),
         ("=bob", "=[REDACTED]"),
         ("x = = bob", "x = = [REDACTED]"),
     ])
@@ -58,14 +79,19 @@ struct RedactionFreeTextRuleTests {
         #expect(redactor.redact(input) == expected)
     }
 
-    @Test("after a secret name everything is hidden, whatever quotes, JSON or lines follow; a plain key keeps a quoted value or JSON", arguments: [
-        ("user=\"bob smith\" status=1", "user=\"bob smith\" status=1"),
-        ("user='bob smith' status=1", "user='bob smith' status=1"),
-        ("user=`bob` status=1", "user=`bob` status=1"),
-        ("user=\"a\\\"b\" status=1", "user=\"a\\[REDACTED]"),
+    @Test("after a secret name or a key that is not allowed everything is hidden, whatever quotes, JSON or lines follow; an allowed key keeps a quoted value or JSON", arguments: [
+        ("status=\"bob smith\" count=1", "status=\"bob smith\" count=1"),
+        ("status='bob smith' count=1", "status='bob smith' count=1"),
+        ("status=`bob` count=1", "status=`bob` count=1"),
+        ("status=\"a\\\"b\" count=1", "status=\"a\\[REDACTED]"),
+        ("status={\"count\":[1,2]} path=/a", "status={\"count\":[1,2]} path=/a"),
+        ("user=\"bob smith\" status=1", "user=\"[REDACTED]"),
+        ("user='bob smith' status=1", "user='[REDACTED]"),
+        ("user=`bob` status=1", "user=`[REDACTED]"),
+        ("user=\"a\\\"b\" status=1", "user=\"[REDACTED]"),
         ("{\\\"password\\\":\\\"x\\\"}", "{\\\"password[REDACTED]"),
-        ("data={\"a\":[1,2]} status=1", "data={\"a\":[1,2]} status=1"),
-        ("data=[\"a\",\"b\"],status=1", "data=[\"a\",\"b\"],status=1"),
+        ("data={\"a\":[1,2]} status=1", "data=[REDACTED]"),
+        ("data=[\"a\",\"b\"],status=1", "data=[REDACTED]"),
         ("password=hunter 2 status=ok", "password=[REDACTED]"),
         ("password=(hunter2)tail", "password=[REDACTED]"),
         ("token=abc) tail", "token=[REDACTED]"),
@@ -83,7 +109,8 @@ struct RedactionFreeTextRuleTests {
     @Test("the lines below a trigger are hidden, whatever the layout of the value", arguments: [
         ("password:\n  hunter2\nnext", "password:\n  [REDACTED]"),
         ("password:\n\n\nhunter2", "password:\n\n\n[REDACTED]"),
-        ("config:\n  password: x\n  user: bob\nstatus=1", "config:\n  password: [REDACTED]"),
+        ("config:\n  password: x\n  user: bob\nstatus=1", "config:\n  [REDACTED]"),
+        ("status:\n  password: x\n  user: bob\nstatus=1", "status:\n  password: [REDACTED]"),
         ("key: |\n  line one\n  line two\nstatus=1", "key: [REDACTED]"),
         ("export TOKEN=abc \\\ndef\nstatus=1", "export TOKEN=[REDACTED]"),
         ("password: // rotate\nhunter2", "password: [REDACTED]"),
@@ -181,6 +208,7 @@ struct RedactionFreeTextRuleTests {
     @Test("prose, other scripts and quoted text stay as they are", arguments: [
         "Merhaba Kullanıcı giriş yaptı", "Straße naïve café", "заказ отправлен", "東京 ログイン成功", "iPhoneで決済しました",
         "say \"hi\" now", "[INFO] started in 12 ms", "keyboard layout changed", "tokenizer ready", "bypass mode",
+        "user logged in at 12:30 from 10.0.0.1", "status=200 method=GET path=/api/items",
     ])
     func unchanged(input: String) {
         #expect(redactor.redact(input) == input)
@@ -189,11 +217,30 @@ struct RedactionFreeTextRuleTests {
     @Test("U+2028, U+2029, U+0085, VT and FF end a line and are kept as they are, and the cut runs over them")
     func lineSeparators() {
         #expect(redactor.redact("password\u{2028}=hunter2") == "password\u{2028}=[REDACTED]")
-        #expect(redactor.redact("user\u{2028}=bob") == "user\u{2028}=bob")
+        #expect(redactor.redact("user\u{2028}=bob") == "user\u{2028}=[REDACTED]")
         #expect(redactor.redact("a\u{2029}b\u{85}c\u{0B}d\u{0C}e") == "a\u{2029}b\u{85}c\u{0B}d\u{0C}e")
-        #expect(redactor.redact("status=1\r\nuser=bob\r\nstatus=2") == "status=1\r\nuser=bob\r\nstatus=2")
+        #expect(redactor.redact("status=1\r\nuser=bob\r\nstatus=2") == "status=1\r\nuser=[REDACTED]")
+        #expect(Redactor(allowedTextKeys: ["user"]).redact("status=1\r\nuser=bob\r\nstatus=2") == "status=1\r\nuser=bob\r\nstatus=2")
+        #expect(redactor.redact("status=1\u{2029}count=2\u{85}path=/a") == "status=1\u{2029}count=2\u{85}path=/a")
         #expect(redactor.redact("status=1\r\ntoken=abc\rstatus=2") == "status=1\r\ntoken=[REDACTED]")
         #expect(redactor.redact("password=hunter\u{2028}2") == "password=[REDACTED]")
         #expect(redactor.redact("password=hunter\u{0B}2\nstatus=3") == "password=[REDACTED]")
+    }
+
+    @Test("JSON in a line follows the allowed keys member by member, and pairs by their first string", arguments: [
+        ("{\"status\":200,\"count\":3} tail", "{\"status\":200,\"count\":3} tail"),
+        ("{\"status\":200,\"user\":\"bob\"} tail", "{\"status\":200,\"user\":[REDACTED]"),
+        ("{\"status\":\"ok\",\"items\":[1,2]} {\"count\":1}", "{\"status\":\"ok\",\"items\":[REDACTED]"),
+        ("{\"path\":\"/a\",\"items\":[{\"count\":1},{\"name\":\"x\"}]} tail", "{\"path\":\"/a\",\"items\":[REDACTED]"),
+        ("{\"status\":{\"count\":1,\"x\":2}} tail", "{\"status\":{\"count\":1,\"x\":[REDACTED]"),
+        ("{\"st\\u0061tus\":200} tail", "{\"st\\u0061tus\":200} tail"),
+        ("[\"status\",200] ok", "[\"status\",200] ok"),
+        ("[\"a\",\"b\"] ok", "[\"a\",[REDACTED]"),
+        ("[\"a\",\"b\",\"c\"] ok", "[\"a\",\"b\",\"c\"] ok"),
+        ("[[\"\u{15E}ifre\",\"1234\"]] ok", "[[\"\u{15E}ifre\",[REDACTED]"),
+        ("resp {\"x\":\"hunter2\",\"status\":200}", "resp {\"x\":[REDACTED]"),
+    ])
+    func jsonMembers(input: String, expected: String) {
+        #expect(redactor.redact(input) == expected)
     }
 }

@@ -36,6 +36,35 @@ extension JSONDocument {
         return collector.spans
     }
 
+    /// Where the first value is that free text does not read on: the value of a member whose name,
+    /// with its escapes decoded, `allows` does not take, or the second element of a two-element
+    /// array whose first is a string that `allows` does not take (`["user","bob"]`, as fetch
+    /// headers and `URLSearchParams` entries are written). The offset of its first scalar, or nil
+    /// when every name is taken. The objects and arrays are walked with a stack of their own, not
+    /// by recursion.
+    func firstValue(notAllowedBy allows: ([Unicode.Scalar]) -> Bool) -> Int? {
+        var first: Int?
+        func note(_ node: Node) { first = min(first ?? node.range.lowerBound, node.range.lowerBound) }
+        var pending = [root]
+        while let node = pending.popLast() {
+            switch node.value {
+            case .object(let members):
+                for member in members {
+                    if allows(text(of: member.name)) { pending.append(member.value) } else { note(member.value) }
+                }
+            case .array(let elements):
+                if elements.count == 2, case .string(let name) = elements[0].value, !allows(text(of: name)) {
+                    note(elements[1])
+                } else {
+                    pending += elements
+                }
+            case .string, .number, .boolean, .null:
+                break
+            }
+        }
+        return first
+    }
+
     /// Any value, quotes and brackets included, becomes the string `"[REDACTED]"`.
     static func hiding(_ node: Node) -> RedactionPolicy.Span {
         RedactionPolicy.Span(

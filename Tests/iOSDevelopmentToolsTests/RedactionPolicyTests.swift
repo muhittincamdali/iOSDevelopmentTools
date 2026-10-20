@@ -117,10 +117,16 @@ struct RedactionPolicyTests {
             HTTPHeader(name: "ETag", value: "W/\"v7\""),
             HTTPHeader(name: "X-Upstream", value: "route=eu, user=ada"),
             HTTPHeader(name: "X-Upstream", value: "charset=utf-8; max-age=60"),
+            HTTPHeader(name: "X-Upstream", value: "text/plain; x=hunter2"),
+            HTTPHeader(name: "X-Upstream", value: "status=200 q=0.5"),
         ]
+        // A kept value is free text that also reads on after the parameters of header values.
         #expect(lenient.redact(headers: headers).map(\.value) == [
-            redacted, redacted, "\"\(redacted)\"", "W/\"v7\"", "route=eu, user=ada", "charset=utf-8; max-age=60",
+            redacted, redacted, "\"\(redacted)\"", "W/\"v7\"", "route=\(redacted)", "charset=utf-8; max-age=60", "text/plain; x=\(redacted)",
+            "status=200 q=0.5",
         ])
+        // The parameters count only in header values, not in other free text.
+        #expect(lenient.redact(text: "charset=utf-8") == "charset=\(redacted)")
     }
 
     // MARK: URLs

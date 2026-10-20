@@ -42,9 +42,9 @@ extension FreeTextScanner {
     }
 
     /// Whether a word that holds a secret name names no value after it: the name of an end tag
-    /// (`</password>`), whose value came before it, and the element name `key`, which in a
-    /// property list holds the name of the element after it (`<key>user</key>`), so only a secret
-    /// name in it counts (`<key>password</key>`).
+    /// (`</password>`), whose value came before it, and the element name `key` in a start tag,
+    /// whose text the rule for the text of an element cuts where it starts (see
+    /// ``noteTag(_:at:)``).
     private func namesNoValue(_ word: Range<Int>) -> Bool {
         let start = word.lowerBound
         guard start >= 1, text.bytes[start - 1] == UInt8(ascii: "<") else { return false }

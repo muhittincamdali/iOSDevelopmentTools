@@ -22,7 +22,6 @@ struct RedactionEleventhReviewProbeTests {
             ("an arrow drawn as a symbol is not read as a separator", [272]),
             ("a value written before its name", [306, 308]),
             ("a value glued to a flag", [307]),
-            ("the value of a plain key that names no secret, which free text with no trigger keeps", [254, 255, 256, 257, 258, 259, 260, 266, 291]),
         ]
         for (reason, ids) in byReason {
             for id in ids { limitations[id] = reason }
@@ -32,14 +31,17 @@ struct RedactionEleventhReviewProbeTests {
 
     /// The probes that showed their secret when they were written and are hidden now: values laid
     /// out over lines after a property list's key, an element that holds nothing or JSON after
-    /// `name=`, multipart parts that hold a name that cannot be read as text, and the value of a
-    /// plain key on the line after a name written without quotes (`name=password`, `label: Şifre`).
+    /// `name=`, multipart parts that hold a name that cannot be read as text, the value of a
+    /// plain key on the line after a name written without quotes (`name=password`, `label: Şifre`),
+    /// and, since a key that is not allowed cuts free text, the value of a key that names no secret
+    /// after a separator outside ASCII (`user：…`, `user⩵…`) and after `bob:` in `curl -u`.
     static let fixed = [184, 185, 186, 189, 328, 329, 354, 360] + Array(367...374) + Array(376...383) + [319, 337]
+        + Array(254...260) + [266, 291]
 
     @Test("the set has 475 probes")
     func count() {
         #expect(EleventhReviewProbeSet.all.count == 475)
-        #expect(Self.documentedLimitations.count == 59)
+        #expect(Self.documentedLimitations.count == 50)
     }
 
     @Test("no probe outside the documented limitations shows its secret")
@@ -52,7 +54,7 @@ struct RedactionEleventhReviewProbeTests {
 
     @Test("the probes that showed their secret when they were written hide it")
     func fixedProbes() {
-        #expect(Self.fixed.count == 26)
+        #expect(Self.fixed.count == 35)
         for id in Self.fixed {
             let probe = EleventhReviewProbeSet.all[id - 1]
             #expect(probe.leakedPiece(in: probe.redacted()) == nil, "#\(id) \(probe.input.debugDescription)")

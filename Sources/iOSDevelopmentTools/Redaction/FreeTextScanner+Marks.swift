@@ -81,42 +81,52 @@ extension FreeTextScanner {
         return j > 0 && isSeparator(j - 1)
     }
 
-    /// Notes where a tag starts (`<` before a letter or `/`) and where its name ends, and where
-    /// it ends (`>`, at byte `i`). The end of the start tag `<key>` is followed by a name.
+    /// Notes where a tag starts (`<` before a letter of any script, or `/` and one) and where its
+    /// name ends, and where it ends (`>`, at byte `i`). The end of a start tag is followed by the
+    /// text of its element.
     mutating func noteTag(_ byte: UInt8, at i: Int) {
         if byte == UInt8(ascii: ">") {
             let endedTag = openTag
             openTag = nil
-            if let endedTag, isKeyStartTag(endedTag) { readKeyElement(after: i) }
+            if let endedTag, isStartTag(endedTag, endingAt: i) { readElementText(of: endedTag, after: i) }
             return
         }
         guard byte == UInt8(ascii: "<"), i + 1 < text.count else { return }
         var nameEnd = i + 1
         if text.bytes[nameEnd] == UInt8(ascii: "/") { nameEnd += 1 }
-        guard nameEnd < text.count, text.isLetter(nameEnd) else { return }
-        while nameEnd < text.count, text.isAlphanumeric(nameEnd) || Self.tagNameCharacters.contains(text.bytes[nameEnd]) { nameEnd += 1 }
+        guard nameEnd < text.count, text.isAnyLetter(nameEnd) else { return }
+        while nameEnd < text.count, text.isAnyAlphanumeric(nameEnd) || Self.tagNameCharacters.contains(text.bytes[nameEnd]) { nameEnd += 1 }
         openTag = (i, nameEnd)
     }
 
-    private func isKeyStartTag(_ tag: (start: Int, nameEnd: Int)) -> Bool {
-        let name = (tag.start + 1)..<tag.nameEnd
-        return name.count == 3 && text.bytes[name].map(ASCII.lowercased).elementsEqual("key".utf8)
+    /// Whether the tag that ends at the `>` at `close` opens an element: it is not an end tag
+    /// (`</a>`) and does not close itself (`<br/>`).
+    private func isStartTag(_ tag: (start: Int, nameEnd: Int), endingAt close: Int) -> Bool {
+        text.bytes[tag.start + 1] != UInt8(ascii: "/") && text.bytes[close - 1] != UInt8(ascii: "/")
     }
 
-    /// The text of a `<key>` element, up to the next `<`, is a name in name position, as a
-    /// property list writes it (`<key>Şifre</key><string>…`): a name that names a secret, is not
-    /// plain ASCII or has no letter hides what follows the start tag.
-    private mutating func readKeyElement(after close: Int) {
+    /// The text of an element is the value of its tag, as the value of a key is: unless the tag's
+    /// name is on ``allowedKeys``, the text is cut where it starts (`<user>bob</user>`,
+    /// `<名前>bob</名前>`, `<key>password</key>`). In an allowed tag that holds a name (`<key>`,
+    /// `<name>`, … when the app allows them), the text up to the next `<` is a name in name
+    /// position, as a property list writes it (`<key>Şifre</key><string>…`): a name that names a
+    /// secret, is not plain ASCII or has no letter hides what follows the start tag.
+    private mutating func readElementText(of tag: (start: Int, nameEnd: Int), after close: Int) {
+        guard let textStart = firstText(from: close + 1), text.bytes[textStart] != UInt8(ascii: "<") else { return }
+        let name = Array(source[text.original((tag.start + 1)..<tag.nameEnd)])
+        guard policy.allowsTextKey(name, in: allowedKeys) else {
+            cut(atByte: textStart)
+            return
+        }
+        guard WrittenName.holdsNameInText(name) else { return }
         var end = close + 1
         while end < text.count, text.bytes[end] != UInt8(ascii: "<") { end += 1 }
         let range = (close + 1)..<end
         let scalars = range.isEmpty ? [] : Array(source[text.originalWithInvisiblesBefore(range)])
-        if WrittenName.namesSecret(scalars, in: .quoted(after: Self.keyElement), policy: policy, compatibility: compatibility) {
+        if WrittenName.namesSecret(scalars, in: .quoted(after: name), policy: policy, compatibility: compatibility) {
             cut(afterByte: close)
         }
     }
-
-    private static let keyElement = Array("key".unicodeScalars)
 
     private static let tagNameCharacters = ByteSet(":-_.")
 }

@@ -51,19 +51,22 @@ struct RedactionEdgeCaseTests {
         ("<password type=\"text\">hunter2</password>", "<password [REDACTED]"),
         ("<password >hunter2</password>", "<password [REDACTED]"),
         ("<Token\n  kind=\"a>b\">abc</Token>", "<Token\n  [REDACTED]"),
-        ("<ns:password>hunter2</ns:password>", "<ns:password[REDACTED]"),
-        ("<wsse:Password Type=\"PasswordText\">hunter2</wsse:Password>", "<wsse:Password [REDACTED]"),
+        ("<ns:password>hunter2</ns:password>", "<ns:[REDACTED]"),
+        ("<wsse:Password Type=\"PasswordText\">hunter2</wsse:Password>", "<wsse:[REDACTED]"),
         ("password%3Dhunter2", "password[REDACTED]"),
-        ("q=password%3dhunter2", "q=password[REDACTED]"),
+        ("q=password%3dhunter2", "q=[REDACTED]"),
+        ("status=password%3dhunter2", "status=password[REDACTED]"),
         ("secret%3Ax", "secret[REDACTED]"),
         ("user%5Bpassword%5D=hunter2&user%5Bname%5D=bob", "user%5Bpassword[REDACTED]"),
         ("password%5B%5D=hunter2", "password[REDACTED]"),
         ("user%5bpassword%5d%3dhunter2", "user%5bpassword[REDACTED]"),
         ("user%5Bpassword%5D%5Bconfirmation%5D=x", "user%5Bpassword[REDACTED]"),
         ("password+%3D+hunter2", "password+[REDACTED]"),
-        ("q=password+%3A+hunter2&x=1", "q=password+[REDACTED]"),
+        ("q=password+%3A+hunter2&x=1", "q=[REDACTED]"),
+        ("status=password+%3A+hunter2&x=1", "status=password+[REDACTED]"),
         ("password%20%3D%20hunter2", "password[REDACTED]"),
-        ("q=password%20%3A%20hunter2&x=1", "q=password[REDACTED]"),
+        ("q=password%20%3A%20hunter2&x=1", "q=[REDACTED]"),
+        ("status=password%20%3A%20hunter2&x=1", "status=password[REDACTED]"),
         ("password%20=%20hunter2", "password[REDACTED]"),
         ("password: <hunter2>", "password: [REDACTED]"),
         ("token=<abc 123>; next", "token=[REDACTED]"),
@@ -135,17 +138,28 @@ struct RedactionEdgeCaseTests {
         #expect(redactor.redact(input) == expected)
     }
 
-    @Test("names that only look like a secret name keep their value in structured input and in text", arguments: [
+    @Test("names that only look like a secret name keep their value in structured input, and in text when allowed", arguments: [
         "passport", "bypass", "compass", "passed",
     ])
     func lookalikeNames(name: String) {
         #expect(redactor.redact(body: Data("{\"\(name)\":\"x\"}".utf8), contentType: "application/json") == "{\"\(name)\":\"x\"}")
-        #expect(redactor.redact("\(name)=x") == "\(name)=x")
+        #expect(Redactor(allowedTextKeys: [name]).redact("\(name)=x") == "\(name)=x")
+        #expect(redactor.redact("\(name)=x") == "\(name)=[REDACTED]")
     }
 
-    @Test("leaves markup without a secret name", arguments: ["</password>", "<private>", "<br/> <p>hi</p>", "if a<b && c>d then"])
+    @Test("leaves markup without a secret name or element text", arguments: ["</password>", "<private>", "<br/> <p>\n</p>", "if a<b"])
     func markup(input: String) {
         #expect(redactor.redact(input) == input)
+    }
+
+    // The tag of an element is its key: the text of an element whose tag is not allowed is cut.
+    @Test("the text of an element is kept only when its tag is allowed", arguments: [
+        ("<br/> <p>hi</p>", "<br/> <p>[REDACTED]"), ("if a<b && c>d then", "if a<b && c>[REDACTED]"),
+        ("<user>bob</user>", "<user>[REDACTED]"), ("<status>200</status> done", "<status>200</status> done"),
+        ("<count>\n  3\n</count>", "<count>\n  3\n</count>"), ("Loaded Array<Item> in 3 ms", "Loaded Array<Item> [REDACTED]"),
+    ])
+    func elementText(input: String, expected: String) {
+        #expect(redactor.redact(input) == expected)
     }
 }
 
@@ -161,34 +175,38 @@ extension RedactionEdgeCaseTests {
         #expect(redactor.redact(input) == expected)
     }
 
-    // Free text is not parsed as XML: an element is not a pair, so only a secret name or a word
-    // that cannot be read in it hides what follows.
-    @Test("an XML element is not read as a pair")
+    // An element's tag is its key, so a tag that is not plain ASCII cuts the text at the element's
+    // text, and one with a word that cannot be read cuts it at the tag.
+    @Test("an XML element is read as a pair of its tag and its text")
     func xmlElements() {
-        #expect(redactor.redact("<\u{540D}\u{524D}>bob</\u{540D}\u{524D}>") == "<\u{540D}\u{524D}>bob</\u{540D}\u{524D}>")
+        #expect(redactor.redact("<\u{540D}\u{524D}>bob</\u{540D}\u{524D}>") == "<\u{540D}\u{524D}>[REDACTED]")
+        #expect(Redactor(allowedTextKeys: ["user"]).redact("<user>bob</user>") == "<user>bob</user>")
         #expect(redactor.redact("<p\u{0430}ssword>bob</p\u{0430}ssword>") == "<[REDACTED]")
     }
 
-    // Comparisons, times and object descriptions written as `key: value` keep their value under a
-    // plain key; a key that is not plain, such as `</a`, hides the rest.
-    @Test("pairs in free text keep their value under a plain key", arguments: [
-        ("<a href=\"x\">y</a>", "<a href=\"x\">y</a>"),
+    // Free text keeps a value only after an allowed key, so comparisons, times and object
+    // descriptions written as `key: value` are hidden unless the app allows their keys.
+    @Test("pairs in free text keep their value only after an allowed key", arguments: [
+        ("<a href=\"x\">y</a>", "[REDACTED]"),
         ("count>=5", "count>=[REDACTED]"),
         ("a <= b", "a <= [REDACTED]"),
-        ("x == y", "x == y"),
-        ("time: 12:30:45", "time: 12:30:45"),
-        ("Error: connection refused", "Error: connection refused"),
-        ("<a:b:c>x</a:b:c>", "<a:b:c>x</a:[REDACTED]"),
-        ("finished: <NSHTTPURLResponse: 0x600> { URL: https://example.com/v2/items?id=7 } { Status Code: 200 }", "finished: <NSHTTPURLResponse: 0x600> { URL: https://example.com/v2/items?id=[REDACTED] } { Status Code: 200 }"),
-        ("<UIView: 0x7f8; frame = (0 0; 375 812); layer = <CALayer: 0x600>>", "<UIView: 0x7f8; frame = (0 0; 375 812); layer = <CALayer: 0x600>>"),
+        ("x == y", "x == [REDACTED]"),
+        ("count == 3", "count == 3"),
+        ("time: 12:30:45", "time: [REDACTED]"),
+        ("Error: connection refused", "Error: [REDACTED]"),
+        ("<a:b:c>x</a:b:c>", "<a:[REDACTED]"),
+        ("finished: <NSHTTPURLResponse: 0x600> { URL: https://example.com/v2/items?id=7 } { Status Code: 200 }", "finished: [REDACTED]"),
+        ("<UIView: 0x7f8; frame = (0 0; 375 812); layer = <CALayer: 0x600>>", "<UIView: [REDACTED]"),
     ])
     func pairsInText(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
     }
 
-    @Test("the value of a plain key is read on: a secret name in it hides the rest")
+    @Test("the value of an allowed key is read on: a secret name in it hides the rest")
     func valuesAreReadOn() {
-        #expect(redactor.redact("error: wrong password hunter2") == "error: wrong password [REDACTED]")
-        #expect(redactor.redact("error: bad input\ntoken hunter2\nnext") == "error: bad input\ntoken [REDACTED]")
+        let allowing = Redactor(allowedTextKeys: ["error"])
+        #expect(allowing.redact("error: wrong password hunter2") == "error: wrong password [REDACTED]")
+        #expect(allowing.redact("error: bad input\ntoken hunter2\nnext") == "error: bad input\ntoken [REDACTED]")
+        #expect(redactor.redact("error: wrong password hunter2") == "error: [REDACTED]")
     }
 }

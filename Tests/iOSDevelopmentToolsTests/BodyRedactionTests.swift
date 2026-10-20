@@ -57,10 +57,12 @@ struct BodyRedactionTests {
         #expect(object["query"] as? String == "{ me }")
         // A bracket that does not close is a trigger in text.
         #expect(object["note"] as? String == redacted)
-        let variables = try #require((object["variables"] as? String).map { Data($0.utf8) })
-        let input = try #require(try json(variables)["input"] as? [String: Any])
-        #expect(input["password"] as? String == redacted)
-        #expect(input["name"] as? String == "ada")
+        // A JSON string is free text: JSON in it is cut at the value of its first member that is
+        // not on the allowed text keys.
+        #expect(object["variables"] as? String == #"{"input":"# + redacted)
+        let allowing = RedactionPolicy(allowedTextKeys: ["input", "name"])
+        let variables = try #require((try json(allowing.redact(body: body, contentType: "application/json").body)["variables"] as? String))
+        #expect(variables == #"{"input":{"password":"# + redacted)
     }
 
     @Test("Bodies that do not parse, were cut off, are too large or nested too deeply are omitted", arguments: [
@@ -103,7 +105,7 @@ struct BodyRedactionTests {
         let body = Data("user=ada&pass%77ord=s3cret&remember=1&q=a+b%21&data=%7B%22password%22%3A%22hunter2%22%7D".utf8)
         let (data, outcome) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded; charset=utf-8")
         #expect(outcome == .redacted)
-        #expect(text(data) == "user=ada&pass%77ord=\(redacted)&remember=1&q=a+b%21&data=%7B%22password%22%3A%22\(redacted)%22%7D")
+        #expect(text(data) == "user=ada&pass%77ord=\(redacted)&remember=1&q=a+b%21&data=%7B%22password%22%3A\(redacted)")
     }
 
     @Test("A form value that holds pairs or JSON goes through the value rule; a `;` makes the form unreadable")

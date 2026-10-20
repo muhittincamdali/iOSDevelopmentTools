@@ -12,7 +12,7 @@ struct RedactionCutPropertyTests {
 
     /// Text with no trigger in it, written before a trigger.
     static let prefixes = [
-        "", "INFO ", "status=200 ", "GET /v1/items?page=2 ", "[x] ", "- ", "2026-10-19T12:00:00Z ", "user=bob ", "Merhaba d\u{FC}nya ",
+        "", "INFO ", "status=200 ", "GET /v1/items ", "[x] ", "- ", "2026-10-19T12:00:00Z ", "method=GET ", "Merhaba d\u{FC}nya ",
         "line one\nline two\n", "count: 3, ", "path=/api/items ", "{\"status\":\"ok\"} ", "took 12:30 ms | ",
     ]
 
@@ -31,6 +31,8 @@ struct RedactionCutPropertyTests {
         // A secret name written as a value, also in markup and in a multipart header.
         { "name=\"\($0)\" value=" }, { "key='\($0)' " }, { "<key>\($0)</key>\n<string>" }, { "<string name=\"\($0)\">" },
         { "Content-Disposition: form-data; name=\"\($0)\"\r\n\r\n" }, { "{\"name\":\"\($0)\",\"value\":\"" },
+        // A key that is not on the allowed text keys, plain or not.
+        { _ in "user=" }, { _ in "x: " }, { _ in "note = \"" }, { _ in "{\"x\":\"" }, { _ in "[\"user\",\"" }, { _ in "user\u{FF1A}" },
         // A key that is not plain ASCII or has no letter, whatever name it shows.
         { _ in "p\u{430}ssword=" }, { _ in "Kullan\u{131}c\u{131}: " }, { _ in "\u{1F511}=" }, { _ in "user[name]=" }, { _ in "a$b=" },
         { _ in "\u{FF55}\u{FF53}\u{FF45}\u{FF52}=" }, { _ in "label=\u{41F}\u{430}\u{440}\u{43E}\u{43B}\u{44C} " },
@@ -65,7 +67,7 @@ struct RedactionCutPropertyTests {
     func cutRunsToTheEnd() {
         var random = SeededRandom(seed: 0xC07_0002)
         for _ in 0..<300 {
-            let lines = (0..<40).map { "line \($0) status=200 user=bob path=/api/items/\($0)" }
+            let lines = (0..<40).map { "line \($0) status=200 method=GET path=/api/items/\($0)" }
             let at = Int.random(in: 0..<lines.count, using: &random)
             let trigger = Self.triggers.randomElement(using: &random)!(Self.secretNames.randomElement(using: &random)!)
             let value = RedactionCorpusPropertyTests.value(using: &random)
@@ -81,22 +83,39 @@ struct RedactionCutPropertyTests {
     }
 
     @Test("text with no trigger is kept exactly", arguments: [
-        "status=200 user=bob path=/api/items",
+        "status=200 method=GET path=/api/items",
         "GET /v1/users status=200 duration_ms=12 count=3",
         "status: 200 method: GET path: /v1/orders/42",
-        "retry attempt=2 limit=50 offset=100 page=3 level=info",
-        "login user=bob region=eu-west-1 build_number=512",
+        "retry 2 of 3, limit 50, offset 100, page 3",
         "{\"status\":\"ok\",\"count\":3}",
+        "[{\"status\":200},[\"count\",3]]",
         "Order 1234 shipped to Istanbul at 12:30",
         "Request finished in 12 ms",
         "Kullan\u{131}c\u{131} giri\u{15F} yapt\u{131} status=200",
-        "user\u{FF1A}ada, region=eu",
-        "a=1\r\nb=2\u{2028}c=3\u{2029}d=4\u{85}e=5\u{0B}f=6\u{0C}g=7\rh=8\n",
-        "ViewController.swift:120: loaded (3 items) [cache] {hit}",
-        "msg=\"it's done\" ok='yes' code=`x`",
+        "status=200\r\ncount=2\u{2028}path=/a\u{2029}method=GET\u{85}count=5\u{0B}status=6\u{0C}count=7\rpath=/b\n",
+        "loaded (3 items) [cache] {hit}",
+        "status=\"it's done\" method='GET' path=`x`",
     ])
     func textWithoutTrigger(input: String) {
         #expect(redactor.redact(input) == input)
+    }
+
+    @Test("text whose keys the app allows is kept exactly; by default the first of them hides the rest", arguments: [
+        "status=200 user=bob path=/api/items",
+        "retry attempt=2 limit=50 offset=100 page=3 level=info",
+        "login user=bob region=eu-west-1 build_number=512",
+        "a=1\r\nb=2\u{2028}c=3\u{2029}d=4\u{85}e=5\u{0B}f=6\u{0C}g=7\rh=8\n",
+        "msg=\"it's done\" ok='yes' code=`x`",
+        "{\"user\":\"bob\",\"list\":[[\"region\",\"eu\"]]}",
+    ])
+    func textWithAllowedKeys(input: String) {
+        let allowing = Redactor(allowedTextKeys: [
+            "user", "attempt", "limit", "offset", "page", "level", "region", "build_number", "a", "b", "c", "d", "e", "f", "g", "h", "msg", "ok",
+            "code", "list",
+        ])
+        #expect(allowing.redact(input) == input)
+        let output = redactor.redact(input)
+        #expect(output != input && output.hasSuffix(RedactionPolicy.replacement), "\(output.debugDescription)")
     }
 
     /// Plain ASCII names that hold no secret word as a word.
@@ -106,17 +125,22 @@ struct RedactionCutPropertyTests {
     ]
     static let keptValues = ["bob", "42", "eu-west-1", "ok", "Istanbul", "v2"]
 
-    @Test("plain ASCII names that hold no secret word keep their value, in structured input and in text", arguments: keptNames)
+    @Test("plain ASCII names that hold no secret word keep their value in structured input, and in text when allowed", arguments: keptNames)
     func keptNamesKeepTheirValue(name: String) {
         let encoded = name.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? name
+        // In text a key is one word: `first name=` is the key `name`.
+        let allowing = Redactor(allowedTextKeys: [name, String(name.split(separator: " ").last!), "list"])
         for value in Self.keptValues {
             let json = "{\"\(name)\":\"\(value)\",\"list\":[{\"\(name)\":\"\(value)\"}]}"
             #expect(redactor.redact(body: Data(json.utf8), contentType: "application/json") == json)
-            // JSON in a log line is read by the key rule of structured input.
-            #expect(redactor.redact("log \(json)") == "log \(json)")
+            // JSON in a log line is read by the rule for keys in text.
+            #expect(allowing.redact("log \(json)") == "log \(json)")
             let form = "a=1&\(encoded)=\(value)"
             #expect(redactor.redact(body: Data(form.utf8), contentType: "application/x-www-form-urlencoded") == form)
-            #expect(redactor.redact("\(name)=\(value) done") == "\(name)=\(value) done")
+            #expect(allowing.redact("\(name)=\(value) done") == "\(name)=\(value) done")
+            guard !RedactionPolicy.defaultAllowedTextKeys.contains(name) else { continue }
+            #expect(redactor.redact("log \(json)") == "log {\"\(name)\":\(RedactionPolicy.replacement)")
+            #expect(!redactor.redact("\(name)=\(value) done").hasSuffix("\(value) done"))
         }
     }
 
@@ -134,14 +158,15 @@ struct RedactionCutPropertyTests {
             let name = words.joined(separator: ["_", "-", ".", ""].randomElement(using: &random)!)
             let spaced = words.joined(separator: " ")
             let value = Self.keptValues.randomElement(using: &random)!
+            let allowing = Redactor(allowedTextKeys: [name, "other"])
             for json in ["{\"\(name)\":\"\(value)\"}", "{\"\(spaced)\":[\"\(value)\"]}"] {
                 #expect(redactor.redact(body: Data(json.utf8), contentType: "application/json") == json)
-                #expect(redactor.redact("got \(json) in 3 ms") == "got \(json) in 3 ms")
+                #expect(allowing.redact("got \(json) in 3 ms") == "got \(json) in 3 ms")
             }
             let form = "a=1&\(name)=\(value)"
             #expect(redactor.redact(body: Data(form.utf8), contentType: "application/x-www-form-urlencoded") == form)
             for input in ["\(name)=\(value)", "log \(name): \(value) done", "\(name) = \(value), other=\(value)"] {
-                #expect(redactor.redact(input) == input)
+                #expect(allowing.redact(input) == input)
             }
         }
     }
@@ -184,7 +209,7 @@ struct RedactionCutPropertyTests {
         return (key, false)
     }
 
-    @Test("a generated key that is not plain ASCII hides the rest of the text; a plain one that names no secret keeps its value")
+    @Test("a generated key that is not plain ASCII hides the rest of the text; a plain one that names no secret keeps its value when allowed")
     func generatedKeys() {
         var random = SeededRandom(seed: 0xC3C3_0001)
         let policy = RedactionPolicy.default
@@ -196,10 +221,16 @@ struct RedactionCutPropertyTests {
             guard key.contains(where: \.isLetter), key.first.map({ $0.isLetter || $0.isNumber }) == true else { continue }
             let context = Self.contexts.randomElement(using: &random)!
             let separator = Self.separators.randomElement(using: &random)!
-            if isPlain, !policy.isSensitive(name: key) {
+            if isPlain, !policy.isSensitive(name: key), separator.unicodeScalars.allSatisfy(\.isASCII) {
                 let value = Self.keptValues.randomElement(using: &random)!
                 let input = context.before + key + separator + value + context.after
-                #expect(redactor.redact(input) == input, "\(input.debugDescription)")
+                #expect(Redactor(allowedTextKeys: [key]).redact(input) == input, "\(input.debugDescription)")
+                let output = redactor.redact(input)
+                // A `:` between two digits is part of a time, not a separator.
+                let isTime = separator == ":" && key.last?.isNumber == true && value.first?.isNumber == true
+                if !RedactionPolicy.defaultAllowedTextKeys.contains(key), !isTime {
+                    #expect(output.hasPrefix(context.before) && output.hasSuffix(RedactionPolicy.replacement), "\(input.debugDescription) -> \(output.debugDescription)")
+                }
                 kept += 1
             } else {
                 let value = RedactionCorpusPropertyTests.value(using: &random)
@@ -210,7 +241,7 @@ struct RedactionCutPropertyTests {
                 hidden += 1
             }
         }
-        #expect(hidden > 8_000 && kept > 6_000)
+        #expect(hidden > 8_000 && kept > 4_000, "\(hidden) hidden, \(kept) kept")
     }
 
     // A plain name that holds a secret word as a word hides its value even when it only

@@ -4,10 +4,13 @@
 /// text once, left to right, on the scanning copy (``NormalizedText``), and stops at the first
 /// trigger:
 ///
+/// - a key before `=` or `:` that is not on the allowlist (``RedactionPolicy/allowedTextKeys``),
+///   is not plain ASCII, names a secret or is missing (`x=…`, `pаssword=…`, `=…`), and JSON
+///   with a member whose name is not on it (`{"x":…}`): hidden from the value;
 /// - a secret name, with or without a separator, quoted or not, also written as a value
 ///   (`name="password"`, `<key>password</key>`): the text is hidden from the value after it;
-/// - a key, or a name held by a key (`name=`, `label=`, …), that is not plain ASCII or has no
-///   letter or digit: hidden from its value;
+/// - a name held by an allowed key that holds one (`name=`, `label=`, …) that names a secret or
+///   is not plain ASCII: hidden from its value;
 /// - a separator that is escaped (`%3D`, `&#61;`, `\=`) or only looks like one (`꞉`): hidden from
 ///   there;
 /// - a word that cannot be read with certainty (mixed scripts, an invisible character in it), a
@@ -38,6 +41,8 @@ struct FreeTextScanner {
     let role: Role
     /// The documents the text is in and the JSON objects and arrays around it.
     let nesting: Nesting
+    /// The folded keys after which the text is read on.
+    let allowedKeys: Set<String>
 
     /// The replacements of the JSON and URLs read before the cut.
     private(set) var spans: [RedactionPolicy.Span] = []
@@ -64,7 +69,7 @@ struct FreeTextScanner {
 
     init(
         source: [Unicode.Scalar], text: NormalizedText, policy: RedactionPolicy, compatibility: CompatibilityText, role: Role = .text,
-        nesting: Nesting
+        nesting: Nesting, allowedKeys: Set<String>
     ) {
         self.source = source
         self.text = text
@@ -72,6 +77,7 @@ struct FreeTextScanner {
         self.compatibility = compatibility
         self.role = role
         self.nesting = nesting
+        self.allowedKeys = allowedKeys
     }
 
     /// Whether words, quotes and brackets are read as triggers: in text, not in a name.
@@ -118,12 +124,15 @@ struct FreeTextScanner {
     }
 
     /// A run of `=`, `:` and `>` (`:=`, `==`, `=>`) after a key. In a name every separator starts
-    /// a value. In text, a separator escaped with a backslash (`status\=…`, which a properties
-    /// file reads as part of the key) is a trigger. So is a key that is not plain ASCII or has no
-    /// letter or digit, no key at all (`=hunter2`), the last words before the separator when, read as one name, they name a
-    /// secret (`pass word`, `c v v`, `secret&#107.;ey`), and a name after a key that holds one
-    /// (`name=`, `label=`, …) that names a secret, is not plain ASCII or is JSON, which cannot be
-    /// read as a name. The value of any other key is read on as text.
+    /// a value. In text, the value is read on only after a key on ``allowedKeys``: plain ASCII,
+    /// naming no secret, on the same line as its separator, which is written in ASCII. Any other
+    /// key cuts the text at its value (`x=hunter2`, `Error: …`, `pаssword=…`, `user：bob`), and so
+    /// does a separator with no key before it (`=hunter2`) and the last words before the separator
+    /// when, read as one name, they name a secret (`pass word`, `c v v`, `secret&#107.;ey`). A
+    /// separator escaped with a backslash (`status\=…`, which a properties file reads as part of
+    /// the key) cuts it at the backslash. After an allowed key that holds a name (`name=`, `id=`,
+    /// … when the app allows them), a name that names a secret, is not plain ASCII or is JSON,
+    /// which cannot be read as a name, cuts it too.
     private mutating func separator() {
         let start = position
         var end = position + 1
@@ -137,8 +146,10 @@ struct FreeTextScanner {
             cut(atByte: start)
             return
         }
-        // A separator with no key before it has a name with no letter (`=hunter2`).
-        guard let name = keyName(before: start), PlainName(name) != nil, !keyWordsNameSecret(before: start) else {
+        let isLookAlike = (start..<end).contains { !source[text.offsets[$0]].isASCII }
+        guard !isLookAlike, !isKeyOnLineBefore(separator: start), let name = keyName(before: start),
+              policy.allowsTextKey(name, in: allowedKeys), !keyWordsNameSecret(before: start)
+        else {
             cut(afterByte: end - 1)
             return
         }
@@ -160,6 +171,17 @@ struct FreeTextScanner {
         }
         let scalars = range.isEmpty ? [] : Array(source[text.originalWithInvisiblesBefore(range)])
         return WrittenName.namesSecret(scalars, in: .quoted(after: key), policy: policy, compatibility: compatibility)
+    }
+
+    /// Whether a line break comes between the separator at `separator` and the key before it: a
+    /// key is never read on from the line above.
+    private func isKeyOnLineBefore(separator: Int) -> Bool {
+        var k = separator
+        while k > 0, text.isSpace(k - 1) || text.isLineTerminator(k - 1) {
+            if text.isLineTerminator(k - 1) { return true }
+            k -= 1
+        }
+        return false
     }
 
     // MARK: Lines
@@ -214,6 +236,12 @@ struct FreeTextScanner {
     }
 
     private static let keptAfterName = ByteSet("=:\"'`")
+
+    /// Hides the text from the original scalar `offset` to its end; `trigger` is the byte that
+    /// set it off.
+    mutating func cut(atOffset offset: Int, trigger: Int) {
+        setCut(offset, trigger: trigger)
+    }
 
     /// Ends the scan with the text hidden from `offset`, or from the `<` of the tag the trigger
     /// is in when it comes after the tag's name.

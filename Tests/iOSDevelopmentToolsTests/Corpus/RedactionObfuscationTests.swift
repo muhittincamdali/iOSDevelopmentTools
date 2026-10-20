@@ -10,7 +10,7 @@ struct RedactionObfuscationTests {
     @Test("hides the value of a name with letters outside ASCII", arguments: [
         ("p\u{0430}ssword=hunter2", "[REDACTED]"),
         ("\u{0440}assword=hunter2", "[REDACTED]"),
-        ("{\"p\u{0430}ssword\":\"hunter2\"}", "{\"p\u{0430}ssword\":\"[REDACTED]\"}"),
+        ("{\"p\u{0430}ssword\":\"hunter2\"}", "{\"p\u{0430}ssword\":[REDACTED]"),
         ("\u{0420}\u{0410}SSWORD=hunter2", "[REDACTED]"),
         ("t\u{03BF}ken=hunter2", "[REDACTED]"),
         ("t\u{0254}ken=hunter2", "t\u{0254}ken=[REDACTED]"),
@@ -74,8 +74,8 @@ struct RedactionObfuscationTests {
         ("p&#97;ssword=hunter2", "p&#97;ssword=[REDACTED]"),
         ("p&#x61;ssword=hunter2", "p&#x61;ssword=[REDACTED]"),
         ("&quot;password&quot;:&quot;hunter2&quot;", "&quot;password[REDACTED]"),
-        ("{\"pass\\u0077ord\":\"hunter2\"}", "{\"pass\\u0077ord\":\"[REDACTED]\"}"),
-        ("log {\"pass\\u0077ord\":\"hunter2\"}", "log {\"pass\\u0077ord\":\"[REDACTED]\"}"),
+        ("{\"pass\\u0077ord\":\"hunter2\"}", "{\"pass\\u0077ord\":[REDACTED]"),
+        ("log {\"pass\\u0077ord\":\"hunter2\"}", "log {\"pass\\u0077ord\":[REDACTED]"),
         ("password=abc&#100;ef next=1", "password=[REDACTED]"),
         ("password=hunter%32 next=1", "password=[REDACTED]"),
     ])
@@ -107,7 +107,7 @@ struct RedactionObfuscationTests {
         ("api.key=hunter2", "api.key=[REDACTED]"),
         ("client.secret=hunter2", "client.secret=[REDACTED]"),
         ("user.session=abc", "user.session=[REDACTED]"),
-        ("{\"api key\":\"hunter2\"}", "{\"api key\":\"[REDACTED]\"}"),
+        ("{\"api key\":\"hunter2\"}", "{\"api key\":[REDACTED]"),
     ])
     func foldedNames(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)

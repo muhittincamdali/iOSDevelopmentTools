@@ -46,7 +46,7 @@ struct RedactionNameAsValueTests {
         (#"field name="password" S3CR3Tq"#, #"field name="[REDACTED]"#),
         ("name=`token` S3CR3Tq", "name=`[REDACTED]"),
         (#"name=\"token\" S3CR3Tq"#, #"name=[REDACTED]"#),
-        ("note=\"password\"\u{2028}S3CR3Tq", "note=\"password\"\u{2028}[REDACTED]"),
+        ("note=\"password\"\u{2028}S3CR3Tq", "note=\"[REDACTED]"),
         // The name is read as any word of a line is: disguised, escaped or split.
         ("name=\"p\u{0430}ssword\" S3CR3Tq", "name=\"[REDACTED]"),
         ("name=\"pass\u{200B}word\" S3CR3Tq", "name=\"[REDACTED]"),
@@ -66,7 +66,7 @@ struct RedactionNameAsValueTests {
         (#"<property name="spring.datasource.password" value="S3CR3Tq"/>"#, #"[REDACTED]"#),
         (#"<p title="password">S3CR3Tq</p>"#, #"[REDACTED]"#),
         (#"<string name="api_key"><![CDATA[S3CR3Tq]]></string>"#, #"[REDACTED]"#),
-        ("<td>password</td><td>S3CR3Tq</td>", "<td>password[REDACTED]"),
+        ("<td>password</td><td>S3CR3Tq</td>", "<td>[REDACTED]"),
     ])
     func sameElement(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -91,7 +91,7 @@ struct RedactionNameAsValueTests {
         ("<dict>\n\t<key>password</key>\n\t<string>S3CR3Tq\nS3CR3Tq2</string>\n</dict>", "<dict>\n\t<key>[REDACTED]"),
         ("<key>password</key> <!-- note -->\n<string>S3CR3Tq</string>", "<key>[REDACTED]"),
         ("<key>password</key>\nS3CR3Tq\nnext line", "<key>[REDACTED]"),
-        ("<label>Password</label>\n<input value=\"S3CR3Tq\">\n<p>after</p>", "<label>Password[REDACTED]"),
+        ("<label>Password</label>\n<input value=\"S3CR3Tq\">\n<p>after</p>", "<label>[REDACTED]"),
     ])
     func siblingElement(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -101,7 +101,7 @@ struct RedactionNameAsValueTests {
         // Android strings.xml
         (
             "<resources>\n    <string name=\"app_name\">My App</string>\n    <string name=\"api_key\">S3CR3Tq</string>\n    <string name=\"title\">Hello</string>\n</resources>",
-            "<resources>\n    <string name=\"app_name\">My App</string>\n    [REDACTED]"
+            "<resources>\n    [REDACTED]"
         ),
         // Java Properties XML
         (
@@ -116,14 +116,14 @@ struct RedactionNameAsValueTests {
         // Spring beans
         (
             "<bean id=\"ds\"><property name=\"password\" value=\"S3CR3Tq\"/><property name=\"url\" value=\"jdbc:x\"/></bean>",
-            "<bean id=\"ds\">[REDACTED]"
+            "[REDACTED]"
         ),
     ])
     func configurationFiles(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
     }
 
-    @Test("names that are not secret keep what follows them", arguments: [
+    @Test("names that are not secret keep what follows them after allowed keys", arguments: [
         (#"name="status" ok"#, #"name="status" ok"#),
         (#"<string name="status">200</string> status=200"#, #"<string name="status">200</string> status=200"#),
         (#"user="bob" status=200 path=/x"#, #"user="bob" status=200 path=/x"#),
@@ -131,7 +131,10 @@ struct RedactionNameAsValueTests {
         ("<token>unclosed\nnext line", "<token[REDACTED]"),
     ])
     func plainNames(input: String, expected: String) {
-        #expect(redactor.redact(input) == expected)
+        let allowing = Redactor(allowedTextKeys: ["name", "string", "user"])
+        #expect(allowing.redact(input) == expected)
+        // By default `name=`, `user=` and the text of `<string>` are not allowed and cut the text.
+        #expect(redactor.redact(input).hasSuffix(RedactionPolicy.replacement))
     }
 
     @Test("a JSON member that names a secret hides the other members", arguments: [
@@ -155,8 +158,8 @@ struct RedactionNameAsValueTests {
         (#"{"label":"Status","value":"ok"}"#, #"{"label":"Status","value":"ok"}"#),
         (#"{"label":"Password","value":"x","op":"add"}"#, #"{"label":"Password","value":"[REDACTED]","op":"add"}"#),
         (#"{"name":"Cookie","value":"a=b","comment":"x"}"#, #"{"name":"Cookie","value":"[REDACTED]","comment":"[REDACTED]"}"#),
-        (#"{"msg":"Error: token expired","user":"bob"}"#, #"{"msg":"Error: token [REDACTED]","user":"bob"}"#),
-        (#"{"query":"mutation","variables":"{\"password\":\"x\"}"}"#, #"{"query":"mutation","variables":"{\"password\":\"[REDACTED]\"}"}"#),
+        (#"{"msg":"Error: token expired","user":"bob"}"#, #"{"msg":"Error: [REDACTED]","user":"bob"}"#),
+        (#"{"query":"mutation","variables":"{\"password\":\"x\"}"}"#, #"{"query":"mutation","variables":"{\"password\":[REDACTED]"}"#),
     ])
     func jsonKeepsPlainMembers(input: String, expected: String) {
         #expect(redactor.redact(body: Data(input.utf8), contentType: "application/json") == expected)

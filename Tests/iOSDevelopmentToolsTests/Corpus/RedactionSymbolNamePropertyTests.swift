@@ -88,7 +88,7 @@ struct RedactionSymbolNamePropertyTests {
         }
     }
 
-    @Test("plain-ASCII names without a secret word keep the value beside them")
+    @Test("plain-ASCII names without a secret word keep the value beside them in structured input, and in text after an allowed key")
     func plainNamesKeepValues() {
         var random = SeededRandom(seed: 0xA1_2B_0101)
         for name in ["status", "user", "display name", "region", "count", "user_id", "Content-Type", "a.b"] {
@@ -97,13 +97,16 @@ struct RedactionSymbolNamePropertyTests {
             let field = Self.holdingFields.randomElement(using: &random)!
             let object = #"{"\#(field)":"\#(name)","value":"\#(value)"}"#
             #expect(redactor.redact(body: Data(object.utf8), contentType: "application/json") == object)
-            // A text/plain body and a log line read the JSON by the key rule too.
-            for (index, output) in outputs(of: object).enumerated() where ![1, 2].contains(index) {
+            // The paths that read the object as JSON keep the value; on the paths that read it as
+            // free text its members follow the rule for keys in text, which cuts the text.
+            let all = outputs(of: object)
+            for output in [all[0], all[6]] {
                 #expect(output.contains(value), "\(object.debugDescription) -> \(output.debugDescription)")
             }
-            #expect(Redactor().redact("status=200 \(object) done").contains(value))
+            #expect(Redactor(allowedTextKeys: [field, "value"]).redact("status=200 \(object) done").contains(value))
             #expect(redactor.redact(body: Data(#"[["\#(name)","\#(value)"]]"#.utf8), contentType: "application/json").contains(value))
-            #expect(redactor.redact("label=\"\(name)\" \(value)").contains(value))
+            #expect(Redactor(allowedTextKeys: ["label"]).redact("label=\"\(name)\" \(value)").contains(value))
+            #expect(!redactor.redact("label=\"\(name)\" \(value)").contains(value))
         }
     }
 }

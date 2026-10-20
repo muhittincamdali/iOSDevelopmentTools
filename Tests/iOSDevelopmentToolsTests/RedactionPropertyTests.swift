@@ -78,16 +78,26 @@ struct RedactionPropertyTests {
         }
     }
 
-    @Test("Plain keys that name no secret stay readable in free text")
+    @Test("Allowed keys stay readable in free text; other plain keys hide their value unless the app allows them")
     func plainKeysInFreeText() throws {
         var generator = Obfuscator(seed: 7)
-        for key in ["status", "method", "path", "duration_ms", "count", "user", "region", "order_id", "screen", "retryCount"] {
+        let others = ["user", "region", "order_id", "screen", "retryCount"]
+        let allowing = RedactionPolicy(allowedTextKeys: others)
+        let hidden = RedactionPolicy.replacement
+        for key in RedactionPolicy.defaultAllowedTextKeys + others {
+            let isDefault = RedactionPolicy.defaultAllowedTextKeys.contains(key)
             for _ in 0..<20 {
                 let (value, other) = (generator.harmlessValue(), generator.harmlessValue())
                 let data = try JSONSerialization.data(withJSONObject: [key: value], options: .withoutEscapingSlashes)
                 let json = String(decoding: data, as: UTF8.self)
-                for line in ["\(key)=\(value)", "\(key): \(value)", "done \(key)=\(value) count=\(other)", json, "got \(json) in 3 ms"] {
-                    #expect(policy.redact(text: line) == line, "\(line.debugDescription)")
+                let lines = [
+                    ("\(key)=\(value)", "\(key)=\(hidden)"), ("\(key): \(value)", "\(key): \(hidden)"),
+                    ("done \(key)=\(value) count=\(other)", "done \(key)=\(hidden)"), (json, "{\"\(key)\":\(hidden)"),
+                    ("got \(json) in 3 ms", "got {\"\(key)\":\(hidden)"),
+                ]
+                for (line, cut) in lines {
+                    #expect(allowing.redact(text: line) == line, "\(line.debugDescription)")
+                    #expect(policy.redact(text: line) == (isDefault ? line : cut), "\(line.debugDescription)")
                 }
             }
         }
@@ -144,7 +154,8 @@ struct RedactionPropertyTests {
             "Cache hit for items-page-2", "Order E621E1F8-C36C-495A-93FC-0C247A3E6E5F placed", "The request timed out.",
             "Sync finished at 12:30:45, 3 changes", "Opened https://example.com/docs/getting-started",
             "Giriş başarılı, 3 öğe yüklendi", "Family 👨‍👩‍👧 joined the café", "Загружено 5 элементов", "設定を保存しました",
-            "GET /v1/items status=200 duration_ms=35 size: 1234 bytes", #"{"count":3,"status":"ok"}"#, "[INFO] Loaded {0} of [1/3]",
+            "GET /v1/items status=200 duration_ms=35 count=3", "path=/v1/items method=GET", #"{"count":3,"status":"ok"}"#,
+            "[INFO] Loaded {0} of [1/3]",
         ]
         for line in lines { #expect(policy.redact(text: line) == line) }
         // The digits of a UUID can pass the Luhn check; they are not laid out as a card number.

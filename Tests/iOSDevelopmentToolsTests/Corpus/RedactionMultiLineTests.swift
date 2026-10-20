@@ -68,14 +68,17 @@ struct RedactionMultiLineTests {
         expectHidden(layout.replacingOccurrences(of: "S", with: Self.secret))
     }
 
-    @Test("names that are not secret keep what follows them over lines")
+    @Test("names that are not secret keep what follows them over lines after allowed keys")
     func usefulness() {
-        // The element `key` holds the name of the element after it, so only a name in it that names
-        // a secret, is not plain ASCII or has no letter hides what follows.
-        #expect(redactor.redact("<key>CFBundleName</key>\n<string/>\nMyApp") == "<key>CFBundleName</key>\n<string/>\nMyApp")
-        #expect(redactor.redact("<key>user</key>\n<string>bob</string>\nstatus=200") == "<key>user</key>\n<string>bob</string>\nstatus=200")
+        // The tag of an element is its key, and `key` is a secret name: the text of a property
+        // list's `<key>` element is always hidden, with everything after it.
+        #expect(redactor.redact("<key>CFBundleName</key>\n<string/>\nMyApp") == "<key>[REDACTED]")
+        #expect(redactor.redact("<key>user</key>\n<string>bob</string>\nstatus=200") == "<key>[REDACTED]")
         #expect(redactor.redact("status=[\n1,\n2\n] ok") == "status=[\n1,\n2\n] ok")
-        #expect(redactor.redact("<string name=\"title\"></string>\nHello") == "<string name=\"title\"></string>\nHello")
+        #expect(redactor.redact("<string name=\"title\"></string>\nHello") == "[REDACTED]")
+        let allowing = Redactor(allowedTextKeys: ["name", "string"])
+        #expect(allowing.redact("<string name=\"title\"></string>\nHello") == "<string name=\"title\"></string>\nHello")
+        #expect(allowing.redact("<string name=\"title\">Hello</string>\nstatus=200") == "<string name=\"title\">Hello</string>\nstatus=200")
         #expect(redactor.redact("<key>password</key>\n<string>k-1</string>\nnext") == "<key>[REDACTED]")
     }
 

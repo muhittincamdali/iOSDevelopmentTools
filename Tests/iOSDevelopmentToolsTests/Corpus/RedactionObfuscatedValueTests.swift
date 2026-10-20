@@ -70,11 +70,12 @@ struct RedactionObfuscatedValueTests {
     }
 
     @Test("hides an array or object value whole", arguments: [
-        ("{\"password\":[\"hunter2\"]}", "{\"password\":\"[REDACTED]\"}"),
-        ("{\"password\":{\"v\":\"hunter2\"}}", "{\"password\":\"[REDACTED]\"}"),
-        ("{\"token\":[\"a]\",{\"b\":[\"hunter2\"]}],\"status\":\"ok\"}", "{\"token\":\"[REDACTED]\",\"status\":\"ok\"}"),
-        ("{\"password\": [\n  \"hunter2\"\n], \"status\": \"ok\"}", "{\"password\": \"[REDACTED]\", \"status\": \"ok\"}"),
-        ("log {\"password\":[\"hunter2\"]}", "log {\"password\":\"[REDACTED]\"}"),
+        // In free text the JSON is cut at the value of a member that is not allowed.
+        ("{\"password\":[\"hunter2\"]}", "{\"password\":[REDACTED]"),
+        ("{\"password\":{\"v\":\"hunter2\"}}", "{\"password\":[REDACTED]"),
+        ("{\"token\":[\"a]\",{\"b\":[\"hunter2\"]}],\"status\":\"ok\"}", "{\"token\":[REDACTED]"),
+        ("{\"password\": [\n  \"hunter2\"\n], \"status\": \"ok\"}", "{\"password\": [REDACTED]"),
+        ("log {\"password\":[\"hunter2\"]}", "log {\"password\":[REDACTED]"),
         ("password=[hunter2] next", "password=[REDACTED]"),
         ("password={hunter2} next", "password=[REDACTED]"),
         ("password=(hunter2) next", "password=[REDACTED]"),
@@ -93,14 +94,18 @@ struct RedactionObfuscatedValueTests {
     @Test("a quoted value glued to more text is hidden with it")
     func gluedQuotedValue() {
         #expect(redactor.redact("password=\"hun\"\u{0301}ter2\" next") == "password=\"[REDACTED]")
-        // Every quote closes and no secret name comes before the value, so the text is kept.
-        #expect(redactor.redact("msg=\"a=\"b\nS3CRETV\"\"\nstatus=2") == "msg=\"a=\"b\nS3CRETV\"\"\nstatus=2")
-        #expect(redactor.redact("msg=\"a=\"b\nS3CRETV\"\nstatus=2") == "msg=\"a=\"b\nS3CRETV[REDACTED]")
+        // `msg` is not an allowed key, so the text is cut at its value.
+        #expect(redactor.redact("msg=\"a=\"b\nS3CRETV\"\"\nstatus=2") == "msg=\"[REDACTED]")
+        // After an allowed key every quote closes and no secret name comes before the value, so
+        // the text is kept; a quote that does not close cuts it.
+        let allowing = Redactor(allowedTextKeys: ["msg", "a"])
+        #expect(allowing.redact("msg=\"a=\"b\nS3CRETV\"\"\nstatus=2") == "msg=\"a=\"b\nS3CRETV\"\"\nstatus=2")
+        #expect(allowing.redact("msg=\"a=\"b\nS3CRETV\"\nstatus=2") == "msg=\"a=\"b\nS3CRETV[REDACTED]")
     }
 
     @Test("hides a value after line breaks and other whitespace", arguments: [
-        ("log {\"password\":\n\"hunter2\"}", "log {\"password\":\n\"[REDACTED]\"}"),
-        ("log {\"password\"\n:\n\"hunter2\"}", "log {\"password\"\n:\n\"[REDACTED]\"}"),
+        ("log {\"password\":\n\"hunter2\"}", "log {\"password\":\n[REDACTED]"),
+        ("log {\"password\"\n:\n\"hunter2\"}", "log {\"password\"\n:\n[REDACTED]"),
         ("password:\n  hunter2", "password:\n  [REDACTED]"),
         ("password\n= hunter2", "password\n= [REDACTED]"),
         ("password\u{2028}=hunter2", "password\u{2028}=[REDACTED]"),
@@ -119,8 +124,9 @@ struct RedactionObfuscatedValueTests {
     // ends open (`(`, `[`, `=`, `"""`); with one cut point the lines below a trigger are hidden
     // whatever the line ends with, and text with no trigger is kept.
     @Test("everything after a trigger is hidden, however the line ends", arguments: [
-        ("user=bob msg=\"hi\"\nstatus=200", "user=bob msg=\"hi\"\nstatus=200"),
-        ("user=bob.\nstatus=200", "user=bob.\nstatus=200"),
+        ("status=ok count=\"hi\"\nstatus=200", "status=ok count=\"hi\"\nstatus=200"),
+        ("status=ok.\nstatus=200", "status=ok.\nstatus=200"),
+        ("user=bob msg=\"hi\"\nstatus=200", "user=[REDACTED]"),
         ("password=(\nS3CRETV)", "password=[REDACTED]"),
         ("token=[\n\"S3CRETV\"\n]", "token=[REDACTED]"),
         // Which of the quotes in `"""` closes the value cannot be told: the lines after it go too.

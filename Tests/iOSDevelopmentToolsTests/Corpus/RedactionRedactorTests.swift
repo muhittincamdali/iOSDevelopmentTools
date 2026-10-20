@@ -9,8 +9,9 @@ struct SensitiveDataRedactorTests {
     @Test("redacts the documentation examples")
     func documentationExamples() {
         let input = #"POST /login {"user":"alice@example.com","password":"hunter2"}"#
-        #expect(redactor.redact(input) == #"POST /login {"user":"[REDACTED]","password":"[REDACTED]"}"#)
-        #expect(redactor.redact("login failed user=alice status=401") == "login failed user=alice status=401")
+        #expect(redactor.redact(input) == #"POST /login {"user":[REDACTED]"#)
+        #expect(redactor.redact("login failed user=alice status=401") == "login failed user=[REDACTED]")
+        #expect(Redactor(allowedTextKeys: ["user"]).redact("login failed user=alice status=401") == "login failed user=alice status=401")
         #expect(redactor.redact("login failed password=hunter2 status=401") == "login failed password=[REDACTED]")
         #expect(redactor.redact("GET /orders status=200 duration_ms=41") == "GET /orders status=200 duration_ms=41")
     }
@@ -76,7 +77,9 @@ struct SensitiveDataRedactorTests {
 
     @Test("findings are replaced where they are in the original text")
     func matches() {
-        #expect(redactor.redact("mail bob@example.com, paid=4242424242424242 ok") == "mail [REDACTED], paid=[REDACTED] ok")
+        #expect(redactor.redact("mail bob@example.com, paid=4242424242424242 ok") == "mail [REDACTED], paid=[REDACTED]")
+        #expect(redactor.redact("mail bob@example.com, card 4242424242424242 ok") == "mail [REDACTED], card [REDACTED]")
+        #expect(redactor.redact("mail bob@example.com, ref 4242424242424242 ok") == "mail [REDACTED], ref [REDACTED] ok")
         #expect(redactor.redact("a\u{2028}b") == "a\u{2028}b")
     }
 
@@ -89,9 +92,11 @@ struct SensitiveDataRedactorTests {
 
     @Test("the allowlists are folded, and secret or non-ASCII names cannot be added")
     func allowlists() {
-        let custom = Redactor(allowedQueryParameters: ["Page", "token"])
+        let custom = Redactor(allowedQueryParameters: ["Page", "token"], allowedTextKeys: ["Request-ID", "api_key", "p\u{430}ss"])
         #expect(custom.policy.allowedQueryParameters == ["page"])
+        #expect(custom.policy.allowedTextKeys == ["status", "method", "path", "durationms", "count", "requestid"])
         #expect(custom.redact("request_id=42 api_key=k1") == "request_id=42 api_key=[REDACTED]")
         #expect(Redactor().policy.allowedQueryParameters.isEmpty)
+        #expect(Redactor().policy.allowedTextKeys == Set(RedactionPolicy.defaultAllowedTextKeys.map { $0.replacingOccurrences(of: "_", with: "") }))
     }
 }

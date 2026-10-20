@@ -12,10 +12,10 @@ import Foundation
 /// - **Values** of secret keys are hidden whole, whatever their type. Other values are scanned
 ///   for JWTs, bearer tokens, long hex or Base64 strings, card numbers, IBANs and email addresses.
 /// - **Free text** (log messages, error descriptions, kept header values, `text/plain` bodies)
-///   has no grammar, so it has one cut point: from the first trigger, such as a secret name, a
-///   name that is not plain ASCII or a quote that does not close, everything to the end of the
-///   text is hidden. JSON and URLs written in the text are read with their parsers. See
-///   ``redact(text:)``.
+///   has no grammar, so it has one cut point: from the first trigger, such as a key that is not
+///   on ``allowedTextKeys`` (`x=…`), a secret name or a quote that does not close, everything to
+///   the end of the text is hidden. JSON and URLs written in the text are read with their
+///   parsers. See ``redact(text:)``.
 /// - **Headers** keep their value only when the name is on ``allowedHeaders``.
 /// - **URLs** lose their user info and fragment; query values are hidden unless the name is on
 ///   ``allowedQueryParameters``, and path segments that look like identifiers become `:id`.
@@ -80,13 +80,20 @@ public struct RedactionPolicy: Sendable, Hashable {
         "Content-Length", "Content-Type", "ETag", "User-Agent",
     ]
 
-    /// The default policy: the default secret names and allowed headers, no query values kept.
+    /// The keys after which free text is read on by default: names that logs use for a response
+    /// status, a request method and route, a duration and a count. After any other key, free text
+    /// is hidden to its end (see ``redact(text:)``). The keys passed to the initializer are added
+    /// to them.
+    public static let defaultAllowedTextKeys: [String] = ["status", "method", "path", "duration_ms", "count"]
+
+    /// The default policy: the default secret names, allowed headers and allowed text keys, no
+    /// query values kept.
     public static let `default` = RedactionPolicy()
 
     /// A policy that stores everything as it was sent and received. Use it only with test
     /// servers and test accounts.
     public static let disabled = RedactionPolicy(
-        isEnabled: false, secretNames: [], allowedHeaders: [], allowedQueryParameters: [], urlDetail: .full)
+        isEnabled: false, secretNames: [], allowedHeaders: [], allowedQueryParameters: [], allowedTextKeys: [], urlDetail: .full)
 
     /// Whether the policy changes anything at all.
     public let isEnabled: Bool
@@ -102,11 +109,20 @@ public struct RedactionPolicy: Sendable, Hashable {
     /// that is not plain ASCII or names a secret is never on it.
     public let allowedQueryParameters: Set<String>
 
+    /// The folded keys after which free text is read on: ``defaultAllowedTextKeys`` and the keys
+    /// passed to the initializer, lowercased and without `_`, `-`, `.` and spaces. A name that is
+    /// not plain ASCII or names a secret is never on it.
+    public let allowedTextKeys: Set<String>
+
     /// How much of a URL is recorded.
     public let urlDetail: URLDetail
 
     /// The secret words and where they count, built once for the policy.
     let secretNameTable: SecretNameTable
+
+    /// ``allowedTextKeys`` and the parameters that the values of kept headers are written with
+    /// (see ``headerParameterNames``), for the free text of a kept header value.
+    let headerValueKeys: Set<String>
 
     /// Creates a policy.
     ///
@@ -118,21 +134,25 @@ public struct RedactionPolicy: Sendable, Hashable {
     ///     (`Authorization`, `Cookie`, names with `token`, `key`, …) stay hidden when listed.
     ///   - allowedQueryParameters: The query parameters whose values are kept. A secret name
     ///     stays hidden when listed.
+    ///   - allowedTextKeys: Keys after which free text is read on, in addition to
+    ///     ``defaultAllowedTextKeys``. A key that is not plain ASCII or names a secret is dropped.
     ///   - urlDetail: How much of a URL is recorded.
     public init(
         additionalSecretNames: [String] = [],
         allowedHeaders: [String] = RedactionPolicy.defaultAllowedHeaders,
         allowedQueryParameters: [String] = [],
+        allowedTextKeys: [String] = [],
         urlDetail: URLDetail = .full
     ) {
         self.init(
             isEnabled: true, secretNames: additionalSecretNames, allowedHeaders: allowedHeaders,
-            allowedQueryParameters: allowedQueryParameters, urlDetail: urlDetail)
+            allowedQueryParameters: allowedQueryParameters, allowedTextKeys: RedactionPolicy.defaultAllowedTextKeys + allowedTextKeys,
+            urlDetail: urlDetail)
     }
 
     private init(
         isEnabled: Bool, secretNames: [String], allowedHeaders: [String], allowedQueryParameters: [String],
-        urlDetail: URLDetail
+        allowedTextKeys: [String], urlDetail: URLDetail
     ) {
         self.isEnabled = isEnabled
         let added = Set(secretNames.compactMap { PlainName($0.unicodeScalars)?.folded })
@@ -145,6 +165,8 @@ public struct RedactionPolicy: Sendable, Hashable {
         secretNameTable = table
         self.allowedHeaders = allowable(allowedHeaders)
         self.allowedQueryParameters = allowable(allowedQueryParameters)
+        self.allowedTextKeys = allowable(allowedTextKeys)
+        headerValueKeys = self.allowedTextKeys.union(allowable(Self.headerParameterNames))
         self.urlDetail = urlDetail
     }
 

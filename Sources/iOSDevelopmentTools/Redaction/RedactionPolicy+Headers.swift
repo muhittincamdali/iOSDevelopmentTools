@@ -7,7 +7,11 @@ extension RedactionPolicy {
     /// header with a secret name and a header whose name is not an ASCII token of letters, digits,
     /// `-`, `_` and `.` are hidden even when listed. So is a kept value that starts with an
     /// authentication scheme and credentials (`Bearer …`, `Basic …`, `Token …`, as 2.0.0 hid
-    /// them). Other kept values go through the free-text rule (``redact(text:)``).
+    /// them). Other kept values go through the free-text rule (``redact(text:)``), which reads on
+    /// after the keys on ``allowedTextKeys`` and after the parameters that the default headers
+    /// are written with (see ``headerParameterNames``): `text/html; charset=utf-8`,
+    /// `en-US,en;q=0.9` and `max-age=3600` are kept, while any other parameter hides the rest of
+    /// the value (`text/plain; x=…`).
     public func redact(headers: [HTTPHeader]) -> [HTTPHeader] {
         guard isEnabled else { return headers }
         return headers.map { header in
@@ -18,8 +22,18 @@ extension RedactionPolicy {
     /// One header value as ``redact(headers:)`` stores it.
     func redactedHeaderValue(name: String, value: String) -> String {
         guard !hidesHeader(named: name), !Self.startsWithAuthenticationScheme(value) else { return Self.replacement }
-        return redact(value, nesting: .text(length: value.unicodeScalars.count))
+        let scalars = Array(value.unicodeScalars)
+        let spans = textSpans(in: scalars, compatibility: CompatibilityText(), nesting: .text(length: scalars.count), allowedKeys: headerValueKeys)
+        return spans.isEmpty ? value : Self.replacing(spans, in: scalars)
     }
+
+    /// The parameters that the values of the default ``allowedHeaders`` are written with, which
+    /// a kept header value reads on after, besides ``allowedTextKeys``: `charset` and `boundary`
+    /// of a media type (RFC 9110), the weight `q` of `Accept`, `Accept-Encoding` and
+    /// `Accept-Language`, and the `Cache-Control` directives with a value (RFC 9111, RFC 5861).
+    public static let headerParameterNames: [String] = [
+        "charset", "boundary", "q", "max-age", "s-maxage", "max-stale", "min-fresh", "stale-while-revalidate", "stale-if-error",
+    ]
 
     private static let alwaysHiddenHeaders: Set<String> = ["authorization", "proxyauthorization", "cookie", "setcookie", "xapikey"]
     private static let hiddenHeaderNameParts = ["token", "secret", "key", "auth", "session", "signature"]

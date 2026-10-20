@@ -14,7 +14,6 @@ struct RedactionTenthReviewProbeTests {
             ("a member that holds a name stays beside a secret name", [171, 172]),
             ("a name and its value in two JSON objects", [175]),
             ("a value glued to a flag", [284]),
-            ("the value of a plain key that names no secret, which free text with no trigger keeps, or a name that is not on the list", [280, 283]),
             ("a name wholly in another script that only looks Latin, with no = or :", [318]),
         ]
         for (reason, ids) in byReason {

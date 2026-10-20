@@ -78,7 +78,9 @@ struct RedactionReadingBudgetTests {
     func smallDeepDocuments() {
         let innermost = #"{"status":"ok"}"#
         let four = (0..<3).reduce(innermost) { inner, _ in #"{"note":""# + RedactionStackTests.escaped(inner) + #""}"# }
-        #expect(body(four) == four)
+        // `note` is allowed, so each string reads on into the JSON in it.
+        #expect(Redactor(allowedTextKeys: ["note"]).redact(body: Data(four.utf8), contentType: "application/json") == four)
+        #expect(body(four) == #"{"note":"{\"note\":[REDACTED]"}"#)
     }
 
     /// A secret in a text nested in documents of every kind, inside or past the budget, never

@@ -89,18 +89,24 @@ extension FreeTextScanner {
     /// ``mentionsSecret(_:policy:compatibility:)`` on a scanning copy that is already made.
     static func mentionsSecret(_ scalars: [Unicode.Scalar], text: NormalizedText, policy: RedactionPolicy, compatibility: CompatibilityText) -> Bool {
         // Only words are read here, never JSON or URLs, so no nesting is entered.
-        let scanner = FreeTextScanner(source: scalars, text: text, policy: policy, compatibility: compatibility, nesting: .text(length: 0))
-        var start = 0
-        while start < text.count {
-            guard !scanner.endsWord(start) || scanner.referenceLength(at: start) != nil else {
+        let scanner = FreeTextScanner(
+            source: scalars, text: text, policy: policy, compatibility: compatibility, nesting: .text(length: 0), allowedKeys: policy.allowedTextKeys)
+        return scanner.mentionsSecret(in: 0..<text.count) || ScalarClass.hidesText(scalars)
+    }
+
+    /// Whether a word in the bytes `range` of the text holds a secret name or cannot be read.
+    func mentionsSecret(in range: Range<Int>) -> Bool {
+        var start = range.lowerBound
+        while start < range.upperBound {
+            guard !endsWord(start) || referenceLength(at: start) != nil else {
                 start += 1
                 continue
             }
-            let end = scanner.wordEnd(from: start, to: text.count)
-            if scanner.read(start..<end) != .plain { return true }
+            let end = wordEnd(from: start, to: range.upperBound)
+            if read(start..<end) != .plain { return true }
             start = end
         }
-        return ScalarClass.hidesText(scalars)
+        return false
     }
 }
 

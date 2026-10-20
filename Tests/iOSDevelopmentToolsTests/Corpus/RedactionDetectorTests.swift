@@ -12,7 +12,8 @@ struct RedactionDetectorTests {
         ("pay to DE89370400440532013000", "pay to [REDACTED]"),
         ("to DE89 3704 0044 0532 0130 00 today", "to [REDACTED] today"),
         ("GB82 WEST 1234 5698 7654 32", "[REDACTED]"),
-        ("{\"note\":\"DE89370400440532013000\"}", "{\"note\":\"[REDACTED]\"}"),
+        ("{\"status\":\"DE89370400440532013000\"}", "{\"status\":\"[REDACTED]\"}"),
+        ("{\"note\":\"DE89370400440532013000\"}", "{\"note\":[REDACTED]"),
     ])
     func ibans(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -29,8 +30,10 @@ struct RedactionDetectorTests {
         ("commit 2c73d1a49804c8035388364230944e541f8e6e2c", "commit [REDACTED]"),
         ("fingerprint 0123456789abcdef0123456789abcdef ok", "fingerprint [REDACTED] ok"),
         // The `==` that pads base64 is a separator after a plain key, so only the token goes.
-        ("b64 dGhpcyBpcyBhIHNlY3JldCB2YWx1ZSAxMjM0NTY3OA== end", "b64 [REDACTED] end"),
-        ("{\"note\":\"sk_live_" + "51HxQ2wErTyUiOpAsDfGhJkLzXcVbNm1234\"}", "{\"note\":\"[REDACTED]\"}"),
+        // `==` after the token is a separator with a key that is not allowed, so the rest goes too.
+        ("b64 dGhpcyBpcyBhIHNlY3JldCB2YWx1ZSAxMjM0NTY3OA== end", "b64 [REDACTED] [REDACTED]"),
+        ("b64 dGhpcyBpcyBhIHNlY3JldCB2YWx1ZSAxMjM0NTY3OA end", "b64 [REDACTED] end"),
+        ("{\"status\":\"sk_live_" + "51HxQ2wErTyUiOpAsDfGhJkLzXcVbNm1234\"}", "{\"status\":\"[REDACTED]\"}"),
     ])
     func longTokens(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)

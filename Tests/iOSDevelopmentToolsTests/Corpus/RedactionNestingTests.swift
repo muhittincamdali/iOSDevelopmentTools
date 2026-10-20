@@ -6,7 +6,9 @@ import Testing
 /// strings, and documents one inside another.
 @Suite("Redaction corpus: nesting budget")
 struct RedactionNestingTests {
-    let redactor = Redactor()
+    /// Documents are nested in the member `note`, which is allowed in text, so that free text reads
+    /// on into the document in it instead of being cut at its value.
+    let redactor = Redactor(allowedTextKeys: ["note"])
 
     private func redact(_ body: String, _ contentType: String = "application/json") -> String {
         redactor.redact(body: Data(body.utf8), contentType: contentType)

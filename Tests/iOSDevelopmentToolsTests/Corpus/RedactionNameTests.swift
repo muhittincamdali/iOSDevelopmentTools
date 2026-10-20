@@ -71,7 +71,8 @@ struct RedactionNameTests {
         ("verification code: 123456", "verification code: [REDACTED]"),
     ])
     func roundTwoInputs(input: String, expected: String) {
-        #expect(redactor.redact(input) == expected)
+        let output = input.hasPrefix("{") ? redactor.redact(body: Data(input.utf8), contentType: "application/json") : redactor.redact(input)
+        #expect(output == expected)
     }
 
     @Test("a form with the new names hides their values")
@@ -81,7 +82,7 @@ struct RedactionNameTests {
     }
 
     // Short secret words count as a word or at the end of a name, not inside a longer word.
-    @Test("names that only hold the letters of a secret word keep their value in structured input and in text", arguments: [
+    @Test("names that only hold the letters of a secret word keep their value in structured input, and in text when allowed", arguments: [
         "keyboard", "pinned", "spinner", "author", "authenticated", "inside", "president",
         "sidebar", "description", "bypass", "passport", "tokenizer", "secretary", "discard_count",
     ])
@@ -89,7 +90,8 @@ struct RedactionNameTests {
         #expect(redactor.redact(body: Data("{\"\(name)\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(name)\":\"bob\"}")
         let form = Data("\(name)=bob".utf8)
         #expect(redactor.redact(body: form, contentType: "application/x-www-form-urlencoded") == "\(name)=bob")
-        #expect(redactor.redact("\(name)=bob") == "\(name)=bob")
+        #expect(Redactor(allowedTextKeys: [name]).redact("\(name)=bob") == "\(name)=bob")
+        #expect(redactor.redact("\(name)=bob") == "\(name)=[REDACTED]")
     }
 
     // A name that holds a secret word as a word may only describe the secret, but telling the
@@ -99,11 +101,13 @@ struct RedactionNameTests {
         "signature_version", "cookie_policy", "token_type", "secret_name",
     ])
     func describingNames(name: String) {
-        #expect(redactor.redact("{\"\(name)\":\"bob\"}") == "{\"\(name)\":\"[REDACTED]\"}")
+        #expect(redactor.redact(body: Data("{\"\(name)\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(name)\":\"[REDACTED]\"}")
         let form = Data("\(name)=bob".utf8)
         #expect(redactor.redact(body: form, contentType: "application/x-www-form-urlencoded") == "\(name)=[REDACTED]")
         // In text the secret word is the trigger: the rest is hidden from the end of the word.
         #expect(!redactor.redact("\(name)=bob").contains("bob"))
+        // A secret name cannot be allowed.
+        #expect(!Redactor(allowedTextKeys: [name]).redact("\(name)=bob").contains("bob"))
     }
 
     @Test("a long name is compared in time linear in its length and hidden past 256 characters")
@@ -111,7 +115,7 @@ struct RedactionNameTests {
         let plain = String(repeating: "user", count: 64)
         #expect(redactor.redact(body: Data("{\"\(plain)\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(plain)\":\"bob\"}")
         #expect(redactor.redact(body: Data("{\"\(plain)x\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(plain)x\":\"[REDACTED]\"}")
-        #expect(Redactor().redact("\(plain)=bob") == "\(plain)=bob")
-        #expect(Redactor().redact("\(plain)x=bob") == "\(plain)x=[REDACTED]")
+        #expect(Redactor(allowedTextKeys: [plain]).redact("\(plain)=bob") == "\(plain)=bob")
+        #expect(Redactor(allowedTextKeys: [plain + "x"]).redact("\(plain)x=bob") == "\(plain)x=[REDACTED]")
     }
 }
