@@ -25,7 +25,12 @@ out of logs in the first place.
 - Names written as values are read by the same rule: `{"name":"Authorization","value":…}`, JSON
   Patch and SCIM `{"op":…,"path":"/password","value":…}`, `label=Password&value=…`,
   `[["Authorization","…"]]`, and a name that is not plain ASCII or has no letter or digit
-  (`Şifre`, `ⓟⓘⓝ`, `🔑`) hide the values beside them.
+  (`Şifre`, `ⓟⓘⓝ`, `🔑`) hide the value beside them (`value`, `data`, `content`, … and any member
+  with such a word in its name). A name that names a secret word, has no letter or digit, is
+  written in styled letters or is held by `key`, `label`, `param` or another member that only
+  pairs use hides every member beside it. A `name`, `id` or `type` written in another script or
+  with punctuation is as often a person, a place, a product or a media type, so the rest of such
+  a record stays: `{"id":42,"name":"Ayşe Yılmaz","price":12.5}` is stored as it is.
 - Bodies are parsed, never scanned by hand: JSON with a JSON parser whose tree must agree with
   `JSONSerialization` (stored as sent, with hidden values replaced, so it stays valid JSON), forms
   with the platform's percent decoding, multipart with a strict RFC 2046 and RFC 7578 parser that
@@ -64,14 +69,20 @@ out of logs in the first place.
   holds an invisible character; a quote or bracket that does not close; and JSON that does not
   parse. A trigger inside a tag hides the tag from its `<`. Text with no trigger is kept as it is,
   apart from the value detectors, and JSON in it is read by the key rule of structured input.
-- A URL in free text is not a safe island. Unless every parameter of its query, fragment and `;`
-  path parameters is on `allowedQueryParameters` and has a value in the URL, the text is hidden
-  from right after the first `?`, `#` or `;` that starts one, so a value written after an empty
-  parameter (`GET https://a.example/x?api_key= hunter2`) is hidden; before, the URL was redacted
-  and the text after it read on. A URL that ends with `=` or `:` or whose last path segment names
-  a secret hides the text after it, one past the limits of segments or parameters hides the text
-  after its host, one that does not parse hides the text from the URL, and one whose host is not
-  written hides it from after the scheme.
+- A URL in free text has no island logic. It stays visible only when it is clean:
+  `scheme://host` with an optional path of ASCII letters, digits, `.`, `_`, `-` and `/`, a host
+  name or IPv4 address, no host or path segment that names a secret, and white space, a line
+  break or punctuation that ends a sentence after it. Any other URL hides the text from where the
+  URL starts: one with a query, a fragment, `;`, `%`, `=`, `:`, `@`, `\`, a port, user info, an
+  escape or a character outside ASCII (`GET https://api.example.com/v1/items?page=2 done` is
+  stored as `GET [REDACTED]`). `allowedQueryParameters` applies to recorded URLs, not to URLs in
+  text. Earlier builds of this release read the query, fragment and path parameters of a URL in
+  text and read on after them; reviews got values past that reading through an empty or allowed
+  section after a secret segment (`/password# hunter2`), an encoded `=` or `:` at the end
+  (`/user%3A hunter2`) and an escape in the path (`/x\u003d hunter2`).
+- A `:` between two digits is part of a number only after a number (`12:30`,
+  `2026-10-19T12:30:00Z`, `10.0.0.1:8080`). After a key that ends in digits it is a separator, so
+  `curl -u admin1:2345678901` is stored as `curl -u admin1:[REDACTED]`.
 - Multipart part headers keep their names only when they are on the header allowlist; any other
   is written as `[REDACTED]: [REDACTED]`.
 - A `LogStore` message is redacted up to 1 MiB of Unicode scalars, on the thread that logs it; a
@@ -99,7 +110,7 @@ out of logs in the first place.
   name, generated triggers after which no value may show and generated keys, tests that ordinary
   keys, allowlisted headers and text with no trigger stay readable, parser-differential, stack,
   time-limit and peak-memory tests, the probes of every review of the shared rules, and the
-  examples of the guide. 494 tests run on macOS and 491 on an iOS simulator.
+  examples of the guide. 512 tests run on macOS and 509 on an iOS simulator.
 
 ### Changed
 
@@ -111,6 +122,11 @@ out of logs in the first place.
   `auth`. `bearer` is one of the names, since what follows it is a credential.
 - JSON bodies are stored as sent instead of serialized again, and UTF-16 and UTF-32 JSON is stored
   as UTF-8. A query parameter without `=` is kept only when it is allowlisted.
+- The Unicode properties redaction asks of a scalar are looked up once for the Basic Multilingual
+  Plane and shared, and JSON and form text is encoded for the platform parsers without building
+  a string scalar by scalar. A megabyte of an array of strings quoted in JSON three times took
+  0.72 s on a 512 KiB thread in a release build and takes about 0.3 s on the same machine; no
+  shape of the time-limit tests takes more than 0.4 s there.
 
 ### Deprecated
 
