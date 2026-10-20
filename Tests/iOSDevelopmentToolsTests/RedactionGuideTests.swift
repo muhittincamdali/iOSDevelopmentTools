@@ -30,6 +30,14 @@ struct RedactionGuideTests {
         #expect(policy.redact(text: "git clone https://github.com/x/y.git") == "git clone https://github.com/x/y.git")
         #expect(policy.redact(text: "Payment failed: card declined") == "Payment failed: [REDACTED]")
         #expect(policy.redact(text: "Order 1234 shipped :(") == "Order 1234 shipped :[REDACTED]")
+        // A clean URL stays with `:id` in its path; any other URL cuts the text where it starts,
+        // whatever the allowed query parameters, and a colon after a key ending in digits is a
+        // separator.
+        #expect(policy.redact(text: "GET https://api.example.com/v1/users/12345678 done") == "GET https://api.example.com/v1/users/:id done")
+        #expect(RedactionPolicy(allowedQueryParameters: ["page"]).redact(text: "GET https://api.example.com/v1/items?page=2 done") == "GET [REDACTED]")
+        #expect(policy.redact(text: "health http://localhost:8080/health ok") == "health [REDACTED]")
+        #expect(policy.redact(text: "user1:2345678901") == "user1:[REDACTED]")
+        #expect(policy.redact(text: "at 12:30 from 10.0.0.1:8080 on 2026-10-19T12:30:00Z") == "at 12:30 from 10.0.0.1:8080 on 2026-10-19T12:30:00Z")
     }
 
     @Test("What it does not find, as the guide names it")
@@ -50,6 +58,10 @@ struct RedactionGuideTests {
         // A short secret in a path segment is kept; a token of 16 or more letters and digits is not.
         #expect(policy.redact(url: URL(string: "https://e.com/reset/abc123")!) == "https://e.com/reset/abc123")
         #expect(policy.redact(url: URL(string: "https://e.com/reset/abc123def456ghi789")!) == "https://e.com/reset/:id")
+        #expect(policy.redact(text: "see https://x.example/reset/abc123") == "see https://x.example/reset/abc123")
+        // Beside a `name` in another script, a field that does not carry a value keeps it.
+        #expect(String(decoding: policy.redact(body: Data(#"{"name":"Şifre","x":"hunter2"}"#.utf8), contentType: "application/json").body, as: UTF8.self)
+            == #"{"name":"Şifre","x":"hunter2"}"#)
     }
 
     @Test("Bodies, URLs and headers")
