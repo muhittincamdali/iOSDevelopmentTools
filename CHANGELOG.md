@@ -80,9 +80,23 @@ out of logs in the first place.
   text and read on after them; reviews got values past that reading through an empty or allowed
   section after a secret segment (`/password# hunter2`), an encoded `=` or `:` at the end
   (`/user%3A hunter2`) and an escape in the path (`/x\u003d hunter2`).
-- A `:` between two digits is part of a number only after a number (`12:30`,
-  `2026-10-19T12:30:00Z`, `10.0.0.1:8080`). After a key that ends in digits it is a separator, so
-  `curl -u admin1:2345678901` is stored as `curl -u admin1:[REDACTED]`.
+- A `:` between two digits is part of a number only when both sides are a whole number: a
+  number before it, and after it the two digits of a time (with seconds, a fraction, `Z` or an
+  offset) or, after an IPv4 address, a port of at most five digits, then white space, the end of
+  the text or closing punctuation (`12:30`, `12:30:45,123`, `2026-10-19T12:30:00Z`,
+  `10.0.0.1:8080`). Any other `:` is a separator, so `curl -u admin1:2345678901` is stored as
+  `curl -u admin1:[REDACTED]` and `curl -u 42:2345678901` as `curl -u 42:[REDACTED]`. An earlier
+  build of this release looked only at the left side; a review got values through after a number
+  used as a key (`42:2345678901`, `12:34hunter2`, `10.0.0.1:8080secretvalue`, `12:30:4f9a2c7b`),
+  in a line, a JSON string and an allowed header. A ratio such as `16:9` is now cut as well.
+- One letter that has no ASCII form put in before the last letter of a secret word
+  (`tokeꞏn`, `piın`, `keıy`, `pꞏw`) is read as no letter as well as the last letter, so the word
+  is found where it has to end a name. Before, the match took the first reading only and missed
+  14 of 16 short secret words in free text, URL path segments, record names and allowed query
+  values.
+- A backslash before `x`, `u`, `U`, `N`, `o` or an octal digit is an escape in free text whatever
+  follows it, so `\x{70}assword`, `\U00000070assword`, `\N{LATIN SMALL LETTER P}assword` and
+  `\o{160}assword` cut the text like `\u0070assword` does.
 - Multipart part headers keep their names only when they are on the header allowlist; any other
   is written as `[REDACTED]: [REDACTED]`.
 - A `LogStore` message is redacted up to 1 MiB of Unicode scalars, on the thread that logs it; a
