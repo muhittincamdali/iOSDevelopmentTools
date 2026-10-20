@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
+<!-- i18n-source: README.md@18e57b7a2a0dccfd1368f858e7f164287df01867 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 501 tests de Swift Testing en macOS y 498 en un simulador de iOS. Las solicitudes van
+- **Probado** — 512 tests de Swift Testing en macOS y 509 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -217,12 +217,14 @@ func configureNetworkLogger() {
   siguientes (`login password=hunter2 status=200` se guarda como `login password=[REDACTED]`, y
   `x=hunter2` como `x=[REDACTED]`). Un mensaje sin disparador se guarda tal cual, salvo los tokens,
   los números de tarjeta y las direcciones de correo detectados.
-- **Las URL en los mensajes de log** no son una isla segura. Salvo que cada parámetro de la
-  query, del fragmento y de los parámetros `;` esté en la lista permitida y tenga un valor, el
-  mensaje se oculta justo después del primer `?`, `#` o `;`
-  (`GET https://a.example/x?api_key= hunter2` se guarda como
-  `GET https://a.example/x?[REDACTED]`), y una URL que termina en `=`, `:` o en un nombre secreto
-  oculta lo que la sigue.
+- **Las URL en los mensajes de log** no tienen lógica de isla. Una URL solo queda visible si está
+  limpia: `scheme://host` con una ruta opcional de letras ASCII, dígitos, `.`, `_`, `-` y `/`, sin
+  host ni segmento de ruta que sea un nombre secreto, y seguida de un espacio, un fin de línea o un
+  signo que cierra una frase. Cualquier otra URL (una query, un fragmento, un puerto, información
+  de usuario, un escape como `%3D`) oculta el mensaje desde donde empieza la URL
+  (`GET https://api.example.com/v1/items?page=2 done` se guarda como `GET [REDACTED]`);
+  `allowedQueryParameters` se aplica a las URL de las solicitudes registradas, no a las URL en el
+  texto.
 
 La ocultación es una red de seguridad, no una garantía. Está pensada para secretos registrados por
 accidente: la entrada estructurada se analiza, y lo que el analizador no entiende del todo se

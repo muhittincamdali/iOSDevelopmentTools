@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
+<!-- i18n-source: README.md@18e57b7a2a0dccfd1368f858e7f164287df01867 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -56,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 501개, iOS 시뮬레이터에서 498개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 512개, iOS 시뮬레이터에서 509개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -206,10 +206,13 @@ func configureNetworkLogger() {
   (`login password=hunter2 status=200`은 `login password=[REDACTED]`로, `x=hunter2`는
   `x=[REDACTED]`로 저장됩니다). 트리거가 없는 메시지는 감지된 토큰, 카드 번호, 이메일 주소를 빼고
   그대로 보관됩니다.
-- **로그 메시지 속 URL**은 안전한 섬이 아닙니다. 쿼리, 프래그먼트, `;` 파라미터의 모든
-  파라미터가 허용 목록에 있고 값을 가진 경우가 아니면 메시지는 첫 번째 `?`, `#`, `;` 바로 뒤부터
-  가려집니다(`GET https://a.example/x?api_key= hunter2`는 `GET https://a.example/x?[REDACTED]`로
-  저장됩니다). `=`, `:` 또는 비밀 이름으로 끝나는 URL도 그 뒤에 오는 내용을 가립니다.
+- **로그 메시지 속 URL**에는 섬 논리가 없습니다. URL은 깨끗할 때만 그대로 보입니다. 즉
+  `scheme://host`와 ASCII 문자, 숫자, `.`, `_`, `-`, `/`로만 된 선택적 경로로 이루어지고,
+  비밀 이름인 호스트나 경로 세그먼트가 없으며, 바로 뒤에 공백, 줄 끝 또는 문장을 끝내는 문장
+  부호가 와야 합니다. 그 밖의 URL(쿼리, 프래그먼트, 포트, 사용자 정보, `%3D` 같은 이스케이프가
+  있는 URL)은 URL이 시작하는 곳부터 메시지를 가립니다
+  (`GET https://api.example.com/v1/items?page=2 done`은 `GET [REDACTED]`로 저장됩니다).
+  `allowedQueryParameters`는 기록된 요청 URL에 적용되며 텍스트 속 URL에는 적용되지 않습니다.
 
 가리기는 안전망일 뿐 보장이 아닙니다. 실수로 기록된 비밀 값을 위해 만들어졌습니다. 구조화된
 입력은 파싱하고, 파서가 완전히 이해하지 못하는 부분은 가립니다. 자유 형식 텍스트는 최선의

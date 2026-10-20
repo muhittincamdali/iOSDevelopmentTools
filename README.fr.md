@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
+<!-- i18n-source: README.md@18e57b7a2a0dccfd1368f858e7f164287df01867 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 501 tests Swift Testing sur macOS et 498 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 512 tests Swift Testing sur macOS et 509 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -221,12 +221,14 @@ func configureNetworkLogger() {
   forme `login password=[REDACTED]`, et `x=hunter2` sous la forme `x=[REDACTED]`). Un message sans
   déclencheur est conservé tel quel, hormis les jetons, numéros de carte et adresses e-mail
   détectés.
-- **Les URL dans les messages de log** ne sont pas un îlot sûr. Sauf si chaque paramètre de la
-  query, du fragment et des paramètres `;` figure dans la liste autorisée et a une valeur, le
-  message est masqué juste après le premier `?`, `#` ou `;`
-  (`GET https://a.example/x?api_key= hunter2` est enregistré comme
-  `GET https://a.example/x?[REDACTED]`), et une URL qui se termine par `=`, `:` ou un nom secret
-  masque ce qui la suit.
+- **Les URL dans les messages de log** n'ont pas de logique d'îlot. Une URL ne reste visible que si
+  elle est propre : `scheme://host` avec un chemin facultatif fait de lettres ASCII, de chiffres,
+  de `.`, `_`, `-` et `/`, sans hôte ni segment de chemin qui soit un nom secret, suivie d'une
+  espace, d'une fin de ligne ou d'une ponctuation qui termine une phrase. Toute autre URL (une
+  query, un fragment, un port, des informations d'utilisateur, un échappement comme `%3D`) masque
+  le message à partir du début de l'URL (`GET https://api.example.com/v1/items?page=2 done` est
+  enregistré comme `GET [REDACTED]`) ; `allowedQueryParameters` s'applique aux URL des requêtes
+  enregistrées, pas aux URL dans un texte.
 
 Le masquage est un filet de sécurité, pas une garantie. Il est conçu pour les secrets enregistrés
 par accident : les entrées structurées sont analysées, et ce que l'analyseur ne comprend pas

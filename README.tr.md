@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
+<!-- i18n-source: README.md@18e57b7a2a0dccfd1368f858e7f164287df01867 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 501, iOS simülatöründe 498 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 512, iOS simülatöründe 509 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -218,11 +218,14 @@ func configureNetworkLogger() {
   (`login password=hunter2 status=200`, `login password=[REDACTED]`; `x=hunter2` ise
   `x=[REDACTED]` olarak saklanır). Tetikleyici içermeyen bir mesaj, bulunan token'lar, kart
   numaraları ve e-posta adresleri dışında olduğu gibi tutulur.
-- **Günlük mesajlarındaki URL'ler** güvenli bir ada değildir. Sorgunun, fragment'ın ve `;`
-  parametrelerinin her parametresi izin listesinde ve dolu olmadıkça mesaj ilk `?`, `#` ya da `;`
-  işaretinin hemen ardından gizlenir (`GET https://a.example/x?api_key= hunter2`,
-  `GET https://a.example/x?[REDACTED]` olarak saklanır); `=`, `:` ya da gizli bir adla biten bir
-  URL de ardından geleni gizler.
+- **Günlük mesajlarındaki URL'ler** için ada mantığı yoktur. Bir URL yalnızca temizse görünür
+  kalır: `scheme://host` ve isteğe bağlı olarak ASCII harf, rakam, `.`, `_`, `-` ve `/`
+  karakterlerinden oluşan bir yol; gizli bir ad olan bir host ya da yol parçası yok; ardından bir
+  boşluk, satır sonu ya da cümleyi bitiren bir noktalama işareti geliyor. Başka her URL (sorgu,
+  fragment, port, kullanıcı bilgisi, `%3D` gibi bir kaçış dizisi) mesajı URL'nin başladığı yerden
+  itibaren gizler (`GET https://api.example.com/v1/items?page=2 done`, `GET [REDACTED]` olarak
+  saklanır); `allowedQueryParameters` metindeki URL'lere değil, kaydedilen istek URL'lerine
+  uygulanır.
 
 Maskeleme bir güvenlik ağıdır, garanti değildir. Yanlışlıkla kaydedilen gizli bilgiler için
 tasarlanmıştır: yapılandırılmış girdi ayrıştırılır ve ayrıştırıcının tam anlamadığı her şey

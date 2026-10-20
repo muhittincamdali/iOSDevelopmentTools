@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
+<!-- i18n-source: README.md@18e57b7a2a0dccfd1368f858e7f164287df01867 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -58,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 501 件、iOS シミュレーターで 498 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 512 件、iOS シミュレーターで 509 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -210,11 +210,14 @@ func configureNetworkLogger() {
   されます（`login password=hunter2 status=200` は `login password=[REDACTED]`、`x=hunter2` は
   `x=[REDACTED]` として保存されます）。トリガーのないメッセージは、検出されたトークン、カード番号、
   メールアドレスを除いてそのまま保持されます。
-- **ログメッセージ内の URL** は安全な場所ではありません。クエリ、フラグメント、`;` パラメーターの
-  すべてのパラメーターが許可リストにあり値を持つ場合を除き、メッセージは最初の `?`、`#`、`;` の
-  直後からマスキングされます（`GET https://a.example/x?api_key= hunter2` は
-  `GET https://a.example/x?[REDACTED]` として保存されます）。`=`、`:` または秘密の名前で終わる
-  URL も、その後に続くものをマスキングします。
+- **ログメッセージ内の URL** を特別に扱う仕組みはありません。URL がそのまま表示されるのは
+  クリーンな場合だけです。つまり `scheme://host` と、ASCII の英字・数字・`.`・`_`・`-`・`/`
+  だけからなる省略可能なパスでできていて、秘密の名前であるホストやパスセグメントがなく、直後が
+  空白、行末、または文を終える句読点である場合です。それ以外の URL（クエリ、フラグメント、
+  ポート、ユーザー情報、`%3D` のようなエスケープを含むもの）は、URL の始まりからメッセージを
+  マスキングします（`GET https://api.example.com/v1/items?page=2 done` は `GET [REDACTED]`
+  として保存されます）。`allowedQueryParameters` は記録されたリクエストの URL に適用され、
+  テキスト内の URL には適用されません。
 
 マスキングはセーフティネットであり、保証ではありません。うっかり記録された秘密情報を想定して
 作られています。構造化された入力はパーサーで解析し、パーサーが完全には理解できないものは

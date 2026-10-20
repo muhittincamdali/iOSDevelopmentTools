@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
+<!-- i18n-source: README.md@18e57b7a2a0dccfd1368f858e7f164287df01867 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -59,7 +59,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 501 тест Swift Testing на macOS и 498 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 512 тестов Swift Testing на macOS и 509 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -216,11 +216,13 @@ func configureNetworkLogger() {
   (`login password=hunter2 status=200` сохраняется как `login password=[REDACTED]`, а `x=hunter2`
   как `x=[REDACTED]`). Сообщение без триггера сохраняется как есть, кроме найденных токенов, номеров
   карт и адресов почты.
-- **URL в сообщениях лога** — не безопасный островок. Если не каждый параметр запроса,
-  фрагмента и параметров после `;` есть в списке разрешённых и имеет значение, сообщение
-  скрывается сразу после первого `?`, `#` или `;` (`GET https://a.example/x?api_key= hunter2`
-  сохраняется как `GET https://a.example/x?[REDACTED]`), а URL, который заканчивается на `=`, `:`
-  или секретное имя, скрывает то, что идёт после него.
+- **URL в сообщениях лога** не обрабатываются как отдельный островок. URL остаётся видимым, только
+  если он чистый: `scheme://host` с необязательным путём из ASCII-букв, цифр, `.`, `_`, `-` и `/`,
+  без хоста или сегмента пути, который является секретным именем, а после него стоит пробел, конец
+  строки или знак, завершающий предложение. Любой другой URL (с запросом, фрагментом, портом,
+  данными пользователя, экранированием вроде `%3D`) скрывает сообщение с того места, где начинается
+  URL (`GET https://api.example.com/v1/items?page=2 done` сохраняется как `GET [REDACTED]`);
+  `allowedQueryParameters` применяется к URL записанных запросов, а не к URL в тексте.
 
 Маскирование — это страховка, а не гарантия. Оно рассчитано на секреты, записанные по ошибке:
 структурированные данные разбираются парсером, и всё, что парсер не понимает полностью,

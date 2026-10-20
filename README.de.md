@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@91d3076732c2aa9ce76e25d96278000de2ae42c6 status=reviewed -->
+<!-- i18n-source: README.md@18e57b7a2a0dccfd1368f858e7f164287df01867 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 501 Swift-Testing-Tests auf macOS und 498 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 512 Swift-Testing-Tests auf macOS und 509 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -218,12 +218,13 @@ func configureNetworkLogger() {
   (`login password=hunter2 status=200` wird als `login password=[REDACTED]` gespeichert,
   `x=hunter2` als `x=[REDACTED]`). Eine Meldung ohne Auslöser bleibt, wie sie ist, bis auf
   erkannte Tokens, Kartennummern und E-Mail-Adressen.
-- **URLs in Log-Meldungen** sind keine sichere Insel. Wenn nicht jeder Parameter der Query,
-  des Fragments und der `;`-Parameter auf der Allowlist steht und einen Wert hat, wird die
-  Meldung direkt nach dem ersten `?`, `#` oder `;` verborgen
-  (`GET https://a.example/x?api_key= hunter2` wird als `GET https://a.example/x?[REDACTED]`
-  gespeichert), und eine URL, die auf `=`, `:` oder einen geheimen Namen endet, verbirgt, was
-  ihr folgt.
+- **URLs in Log-Meldungen** haben keine Insel-Logik. Eine URL bleibt nur sichtbar, wenn sie sauber
+  ist: `scheme://host` mit einem optionalen Pfad aus ASCII-Buchstaben, Ziffern, `.`, `_`, `-` und
+  `/`, ohne Host oder Pfadsegment, das ein geheimer Name ist, und danach ein Leerzeichen, ein
+  Zeilenende oder ein Satzzeichen, das einen Satz beendet. Jede andere URL (eine Query, ein
+  Fragment, ein Port, Benutzerdaten, ein Escape wie `%3D`) verbirgt die Meldung ab dem Anfang der
+  URL (`GET https://api.example.com/v1/items?page=2 done` wird als `GET [REDACTED]` gespeichert);
+  `allowedQueryParameters` gilt für aufgezeichnete Request-URLs, nicht für URLs im Text.
 
 Schwärzen ist ein Sicherheitsnetz, keine Garantie. Es ist für Geheimnisse gebaut, die
 versehentlich aufgezeichnet werden: Strukturierte Eingaben werden geparst, und was der Parser
