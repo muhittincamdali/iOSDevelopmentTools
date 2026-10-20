@@ -20,12 +20,8 @@ extension FreeTextScanner {
         let lineEnd = currentLineEnd()
         let end = wordEnd(from: start, to: lineEnd)
         position = end
-        if let embedded = embeddedSeparator(in: start..<end, lineEnd: lineEnd) {
+        if let embedded = embeddedSeparator(in: start..<end) {
             cut(atByte: embedded)
-            return
-        }
-        if isSeparatorWord(start..<end, lineEnd: lineEnd) {
-            cut(atByte: start)
             return
         }
         guard readsWords else { return }
@@ -70,21 +66,24 @@ extension FreeTextScanner {
     private static let splittingBoundaries = ByteSet("|,;&?")
 
     /// Punctuation, a math symbol or a modifier letter or symbol outside ASCII, such as `꞉`, `∶`,
-    /// `≔`, `→` or `·`, may be meant as a separator. Glued between other characters of a word
-    /// (`user꞉bob`, `e%79≔…`, `token·"…"`), or after other text at the start of a word, and written
-    /// as `%3D`, `&#61;` or `:`, it is a trigger. Glued, a connector without an ASCII form
-    /// counts too (`user‿bob`); between words of prose it does not. A dash of any kind is read as
-    /// `-` (see ``CompatibilityText``), which joins words. Quotation marks, brackets, currency
-    /// signs, emoji, skin tones and the punctuation of East Asian scripts are not read this way.
-    private func embeddedSeparator(in range: Range<Int>, lineEnd: Int) -> Int? {
+    /// `≔`, `→` or `·`, may be meant as a separator, and `=` or `:` written as `%3D`, `&#61;` or
+    /// `\u003A` is one. Anywhere in a word, with more text after it on its line or below, such a
+    /// character is a trigger: glued between other characters (`user꞉bob`, `e%79≔…`,
+    /// `token·"…"`), at the end of a word with its value after white space (`user꞉ bob`,
+    /// `pɑsswoʀd≔ hunter2`), at the start of a word (`a ꞉b`) and on its own (`user ꞉ bob`). A
+    /// connector without an ASCII form counts only glued between other characters (`user‿bob`);
+    /// between words of prose it does not. A dash of any kind is read as `-` (see
+    /// ``CompatibilityText``), which joins words. Quotation marks, brackets, currency signs,
+    /// emoji, skin tones and the punctuation of East Asian scripts are not read this way.
+    private func embeddedSeparator(in range: Range<Int>) -> Int? {
         let first = text.offsets[range.lowerBound]
-        let followsText = range.lowerBound > 0
-        let glued = range.first { k in
-            guard text.offsets[k] > first || followsText, isSeparatorLike(k, glued: true) else { return false }
+        let lookAlike = range.first { k in
             let after = scalarEnd(k)
-            return after < range.upperBound || (range.upperBound < lineEnd && !text.isSpace(range.upperBound))
+            guard isSeparatorLike(k, glued: text.offsets[k] > first && after < range.upperBound) else { return false }
+            // At the end of the word a value may follow after white space or on a line below.
+            return after < range.upperBound || firstText(from: range.upperBound) != nil
         }
-        return [glued, escapedValueStart(in: range)].compactMap { $0 }.min()
+        return [lookAlike, escapedValueStart(in: range)].compactMap { $0 }.min()
     }
 
     /// The byte after the bytes that the scalar of byte `i` became.
@@ -92,13 +91,6 @@ extension FreeTextScanner {
         var k = i + 1
         while k < text.count, text.offsets[k] == text.offsets[i] { k += 1 }
         return k
-    }
-
-    /// Whether the word is only such characters, between other text and more text after it
-    /// (`user ꞉ bob`).
-    private func isSeparatorWord(_ range: Range<Int>, lineEnd: Int) -> Bool {
-        guard range.lowerBound > 0, range.allSatisfy({ isSeparatorLike($0) }) else { return false }
-        return firstText(from: range.upperBound) != nil
     }
 
     /// A character without an ASCII reading that may be a separator; one that has an ASCII
