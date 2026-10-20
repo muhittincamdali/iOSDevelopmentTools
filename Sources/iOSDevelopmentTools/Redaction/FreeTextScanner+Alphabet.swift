@@ -70,8 +70,10 @@ extension FreeTextScanner {
 
     /// The first byte of the word `range` that starts an escape: `%XX` and `%uXXXX`, a character
     /// reference by number (`&#97;`, `&#x61;`, also without `;`) or by name (`&amp;`, `&lt;`), and
-    /// `\xXX`, `\uXXXX`, `\u{…}` and an octal escape (`\101`). In free text an escape is a trigger
-    /// and is never decoded: what it stands for cannot be told without guessing the format.
+    /// a backslash before an octal digit or before `x`, `u`, `U`, `N` or `o`, whatever follows it
+    /// (`\101`, `\x41`, `\x{41}`, `\u0041`, `\u{41}`, `\U00000041`, `\N{…}`, `\o{101}`: the ways
+    /// languages write a code point). In free text an escape is a trigger and is never decoded:
+    /// what it stands for cannot be told without guessing the format.
     func firstEscape(in range: Range<Int>) -> Int? {
         range.first(where: startsEscape)
     }
@@ -87,9 +89,7 @@ extension FreeTextScanner {
         case UInt8(ascii: "\\"):
             guard i + 1 < text.count else { return false }
             let next = text.bytes[i + 1]
-            if (UInt8(ascii: "0")...UInt8(ascii: "7")).contains(next) { return true }
-            if next == UInt8(ascii: "x") { return hexDigits(from: i + 2, count: 2) }
-            return next == UInt8(ascii: "u") && (hexDigits(from: i + 2, count: 4) || bracedEscapeLength(at: i) != nil)
+            return (UInt8(ascii: "0")...UInt8(ascii: "7")).contains(next) || Self.codePointEscapes.contains(next)
         default:
             return false
         }
@@ -107,6 +107,9 @@ extension FreeTextScanner {
     }
 
     private static let longestReferenceName = 32
+
+    /// The letters after a backslash that start a code point in some language.
+    private static let codePointEscapes = ByteSet("xuUNo")
 
     private func hexDigits(from i: Int, count: Int) -> Bool {
         guard i + count <= text.count else { return false }

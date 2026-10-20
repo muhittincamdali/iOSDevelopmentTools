@@ -165,6 +165,9 @@ struct RedactionFreeTextRuleTests {
         "pa\u{0301}ssword hunter2", "pass\u{00AD}word hunter2", "PASS-WORD hunter2", "pass.word hunter2",
         "p&#97;ssword hunter2", "p&#x61;ssword hunter2", "pass%77ord hunter2", "pass%2577ord hunter2", "\\u0070assword hunter2",
         "\\u{70}assword hunter2", "pass\\x77ord hunter2", "password%3Dhunter2", "password&#61;hunter2", "password\\u003Dhunter2",
+        // The sixth review of the spec branch: the ways other languages write a code point.
+        "\\x{70}assword hunter2", "\\U00000070assword hunter2", "\\N{LATIN SMALL LETTER P}assword hunter2", "\\o{160}assword hunter2",
+        "status=200 \\N{EQUALS SIGN} hunter2", "status\\U0000003dhunter2",
     ])
     func disguisedSecretNames(input: String) {
         let output = redactor.redact(input)
