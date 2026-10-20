@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@fbf2dd5bb72dde66bfdd8caa9db66f9061072989 status=reviewed -->
+<!-- i18n-source: README.md@72b70642c6b1268eaf3d23aa3db33daf39ef220e status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -49,7 +49,8 @@ escrito para la strict concurrency de Swift 6.
   `token`, `api_key`, se escriban o codifiquen como sea) y bajo claves que no son ASCII simple, y
   solo las cabeceras y los parámetros de query de la lista permitida conservan su valor. Los
   cuerpos JSON, de formulario y multipart se analizan; un cuerpo que no se puede analizar se
-  sustituye por una nota en lugar de guardarse. Los mensajes de registro también se ocultan.
+  sustituye por una nota en lugar de guardarse. En un mensaje de registro se oculta todo desde el
+  primer nombre secreto hasta el final.
 - **Almacenamiento acotado** — por defecto, como máximo 500 solicitudes y 256 KiB de cada cuerpo; los
   mensajes de log van a un búfer circular y las subidas de más de 4 MiB se transmiten en streaming en
   lugar de copiarse. Las cabeceras y las URL se guardan completas.
@@ -59,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 158 tests de Swift Testing en macOS y 159 en un simulador de iOS. Las solicitudes van
+- **Probado** — 443 tests de Swift Testing en macOS y 440 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -208,10 +209,18 @@ func configureNetworkLogger() {
 - **Los cuerpos que no se pueden analizar** (un tipo de contenido desconocido o ausente, JSON o
   multipart mal formado, un cuerpo cortado en el límite de tamaño) se sustituyen por una nota como
   `[body omitted: 512 bytes, application/xml]`.
-- **Los mensajes de registro** pasan por las mismas reglas antes de que `LogStore` los guarde.
+- **Los mensajes de registro** se guardan hasta su primer disparador: un nombre secreto, una clave
+  que no es ASCII simple, o una comilla o un corchete que no se cierra oculta todo lo que viene
+  después, también las líneas siguientes (`login password=hunter2 status=200` se guarda como
+  `login password=[REDACTED]`). Un mensaje sin disparador se guarda tal cual, salvo los tokens,
+  los números de tarjeta y las direcciones de correo detectados.
 
-La ocultación es una red de seguridad, no una garantía. Mantén los secretos fuera de las
-solicitudes que registras y de los mensajes de registro desde el principio.
+La ocultación es una red de seguridad, no una garantía. Está pensada para secretos registrados por
+accidente: la entrada estructurada se analiza, y lo que el analizador no entiende del todo se
+oculta; el texto libre es un mejor esfuerzo, y no se garantiza encontrar un nombre secreto
+disfrazado con letras parecidas y escrito sin `=` ni `:` (`pɑsswoʀd hunter2`). Mantén los secretos
+fuera de las solicitudes que registras y de los mensajes de registro desde el principio, y
+prefiere el registro estructurado.
 
 ### Registrar mensajes
 

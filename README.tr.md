@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@fbf2dd5bb72dde66bfdd8caa9db66f9061072989 status=reviewed -->
+<!-- i18n-source: README.md@72b70642c6b1268eaf3d23aa3db33daf39ef220e status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -49,7 +49,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   da kodlanmış olursa olsun) ve düz ASCII olmayan anahtarlar altındaki değerler değiştirilir;
   değerini yalnızca izin listesindeki header'lar ve sorgu parametreleri korur. JSON, form ve
   multipart gövdeleri ayrıştırılır; ayrıştırılamayan bir gövde saklanmak yerine bir notla
-  değiştirilir. Günlük mesajları da maskelenir.
+  değiştirilir. Bir günlük mesajında ilk gizli addan mesajın sonuna kadar her şey gizlenir.
 - **Sınırlı saklama** — varsayılan olarak en fazla 500 istek ve her gövdenin 256 KiB'ı;
   günlük mesajları bir halka arabellekte tutulur, 4 MiB'ı aşan yüklemeler kopyalanmak yerine
   akış olarak işlenir. Başlıklar ve URL'ler kısaltılmadan saklanır.
@@ -59,7 +59,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 158, iOS simülatöründe 159 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 443, iOS simülatöründe 440 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -209,10 +209,18 @@ func configureNetworkLogger() {
 - **Ayrıştırılamayan gövdeler** (bilinmeyen ya da eksik içerik türü, bozuk JSON veya multipart,
   boyut sınırında kesilmiş bir gövde) `[body omitted: 512 bytes, application/xml]` gibi bir notla
   değiştirilir.
-- **Günlük mesajları**, `LogStore` onları tutmadan önce aynı kurallardan geçer.
+- **Günlük mesajları** ilk tetikleyiciye kadar tutulur: gizli bir ad, düz ASCII olmayan bir
+  anahtar ya da kapanmayan bir tırnak veya parantez, ondan sonraki her şeyi alttaki satırlarla
+  birlikte gizler (`login password=hunter2 status=200`, `login password=[REDACTED]` olarak
+  saklanır). Tetikleyici içermeyen bir mesaj, bulunan token'lar, kart numaraları ve e-posta
+  adresleri dışında olduğu gibi tutulur.
 
-Maskeleme bir güvenlik ağıdır, garanti değildir. Gizli bilgileri en baştan kaydettiğiniz
-isteklerin ve günlük mesajlarının dışında tutun.
+Maskeleme bir güvenlik ağıdır, garanti değildir. Yanlışlıkla kaydedilen gizli bilgiler için
+tasarlanmıştır: yapılandırılmış girdi ayrıştırılır ve ayrıştırıcının tam anlamadığı her şey
+gizlenir; serbest metin ise en iyi çabadır ve benzer görünen harflerle gizlenmiş, `=` ya da `:`
+olmadan yazılmış bir gizli adın (`pɑsswoʀd hunter2`) bulunacağı garanti edilmez. Gizli bilgileri
+en baştan kaydettiğiniz isteklerin ve günlük mesajlarının dışında tutun ve yapılandırılmış
+günlük kaydını tercih edin.
 
 ### Mesajları günlüğe yazın
 
