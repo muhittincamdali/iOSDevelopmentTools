@@ -94,6 +94,12 @@ out of logs in the first place.
   is found where it has to end a name. Before, the match took the first reading only and missed
   14 of 16 short secret words in free text, URL path segments, record names and allowed query
   values.
+- Such a letter right after a secret word is read as its plural `s` and as no letter before a
+  plural `s`, so `tokenꞏ`, `tokenꞏs`, `keyꞏs` and `/v1/otpł/…` are found like `tokens`. Before,
+  the match stopped once the word was spelled whole, and short secret words (`token`, `key`,
+  `pin`, `otp`, `card`, …) followed by such a letter were not found in free text, JSON strings,
+  form values, text/plain and multipart parts, an allowed header, LogStore lines and URL path
+  segments.
 - A backslash before `x`, `u`, `U`, `N`, `o` or an octal digit is an escape in free text whatever
   follows it, so `\x{70}assword`, `\U00000070assword`, `\N{LATIN SMALL LETTER P}assword` and
   `\o{160}assword` cut the text like `\u0070assword` does.
