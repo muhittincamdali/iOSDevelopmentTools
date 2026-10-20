@@ -11,8 +11,8 @@ documented rules is a vulnerability.
   through an unusual spelling or encoding of the name, a body format the policy claims to
   handle, or a body that should have been omitted.
 - In a log message or other free text, anything after a trigger that the documentation names (a
-  secret name, a key that is not plain ASCII, a quote or bracket that does not close) that is
-  stored.
+  secret name, a key that is not on the allowed text keys, a character outside the safe alphabet,
+  an escape, a quote or bracket that does not close) that is stored.
 - Input that makes the package crash, hang or use memory without bound (a request or response
   body, a header, a URL, a log message).
 - A `curl` command from `curlCommand()` that runs something other than `curl` when pasted into
@@ -21,8 +21,10 @@ documented rules is a vulnerability.
   from the original).
 
 Values that the documentation lists as limits (a secret under a plain ASCII name that is not a
-secret name, in a body or in free text; a value written before its name; a short secret in a path
-segment; a look-alike secret word without `=` or `:` in free text) are known limits, not
+secret name in a body; a secret with no label or with a label not followed by `=` or `:` in free
+text; the value of an allowed key; a value written before its name; a card number grouped with
+`+` or `.`; a short secret in a path segment; a look-alike secret word without `=` or `:` in free
+text) are known limits, not
 vulnerabilities. Free text hidden from its first trigger to its end, more than the secret, is
 hidden that way on purpose and is not a bug either. See
 [Redacting sensitive data](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata).
