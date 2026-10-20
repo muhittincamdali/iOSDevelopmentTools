@@ -156,6 +156,36 @@ struct Obfuscator {
         return scalars + Array(generator.element(of: suffixes).unicodeScalars)
     }
 
+    // MARK: Random keys
+
+    /// A random key of one of several shapes: lowercase letters, camel case, words joined by `_`,
+    /// `-` or `.`, letters with digits, or a key with letters outside ASCII, a format character
+    /// or an escape. It holds no white space, quote, backslash, `=` or `:`.
+    mutating func randomKey() -> String {
+        let letters = Array("abcdefghijklmnopqrstuvwxyz".unicodeScalars)
+        var word = characters(1 + number(below: 10), from: letters)
+        switch number(below: 7) {
+        case 0: break
+        case 1: word += element(of: ["Id", "Name", "Value", "Ref", "X"]) + characters(1 + number(below: 4), from: letters)
+        case 2: word += element(of: ["_", "-", "."]) + characters(1 + number(below: 6), from: letters)
+        case 3: word += String(number(below: 1_000))
+        case 4: word += element(of: ["é", "ş", "ı", "\u{0430}", "\u{03BF}", "名", "ü"])
+        case 5: word.insert(contentsOf: element(of: ["\u{200D}", "\u{00AD}", "\u{0301}"]), at: word.index(after: word.startIndex))
+        default: word = element(of: ["%61", "&#98;", "\u{FF43}"]) + word
+        }
+        return word
+    }
+
+    /// A random value that the allowlist keeps and that holds nothing the detectors or the secret
+    /// words find: digits, a short word or a path.
+    mutating func harmlessValue() -> String {
+        switch number(below: 3) {
+        case 0: String(number(below: 100_000))
+        case 1: element(of: ["GET", "POST", "ok", "done", "warning", "items", "2xx"])
+        default: "/v1/" + element(of: ["items", "orders", "users"]) + "/" + String(number(below: 1_000))
+        }
+    }
+
     // MARK: Secrets
 
     private static let alphanumerics = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".unicodeScalars)

@@ -217,12 +217,35 @@ struct RedactionRegressionTests {
         #expect(store.entries.first?.message.contains(Self.secret) == false)
     }
 
+    @Test("Free text keeps a value only under an allowlisted key, wherever the text is stored", arguments: [
+        "user=hunter2", "creds=hunter2", "x: hunter2", "{\"pass\":\"hunter2\"}", "login user=ada pass=hunter2",
+        "t\u{043E}ken hunter2", "p\u{0430}ssword hunter2", "msg=\"unterminated hunter2", "payload {\"a\": \"hunter2\"",
+        "status='ok hunter2", "status=\"ok hunter2", "user\u{FF1A}hunter2", "user\u{FF1D}hunter2", "count=1&creds=hunter2",
+        "[\"token\",\"hunter2\"]", "payload [{\"a\":1},{\"b\":\"hunter2\"}] done", "path=/a?creds=hunter2",
+        "said \"hi\" and 5\" hunter2", "Note:\nhunter2", "dict [\"pass\": \"hunter2\"]",
+        "status=\"ok\nhunter2\" done", "note=\\\"a\n\nb hunter2\\\" c", "t\u{043E}ken:\n  hunter2", "password:\n\"abc\nhunter2\"",
+        "count=1 note=\"a\nb\nhunter2", "x\u{2028}\"y\u{2029}hunter2", "creds%3Dhunter2", "path=%2Fcb%3Ftoken%3Dhunter2",
+        "creds&#61;hunter2", "creds\\u003dhunter2", "see https://e.com/a,token:hunter2/x",
+    ])
+    func freeTextAllowlist(text: String) {
+        #expect(!policy.redact(text: text).contains(Self.secret))
+        let store = LogStore(configuration: .init(systemLogSubsystem: nil))
+        store.info(text)
+        #expect(store.entries.first?.message.contains(Self.secret) == false)
+        #expect(!leaks(Data(text.utf8), "text/plain"))
+        let headers = RedactionPolicy(allowedHeaders: ["X-Note"]).redact(headers: [HTTPHeader(name: "X-Note", value: text)])
+        #expect(headers.first?.value.contains(Self.secret) == false)
+        let error = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: text])
+        #expect(!NetworkError(error, policy: policy).message.contains(Self.secret))
+    }
+
     @Test("A long message of combining marks is redacted and cut off quickly")
     func combiningMarkMessage() {
         let store = LogStore(configuration: .init(systemLogSubsystem: nil))
-        let start = Date()
+        // CPU time of this thread, so that other tests running at the same time do not count.
+        let start = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
         store.info("a" + String(repeating: "\u{301}", count: 1_000_000) + " password=hunter2", category: "c" + String(repeating: "\u{301}", count: 500_000))
-        #expect(Date().timeIntervalSince(start) < 10)
+        #expect(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - start < 10_000_000_000)
         #expect(store.entries.first?.message.contains(Self.secret) == false)
         #expect(store.entries.first?.isTruncated == true)
     }

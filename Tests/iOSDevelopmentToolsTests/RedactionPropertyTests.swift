@@ -47,6 +47,54 @@ struct RedactionPropertyTests {
         ]
     }
 
+    // MARK: Property: random keys in free text
+
+    /// Free-text lines that pair the key with the value in every shape the free-text rule reads.
+    private func freeTextLines(key: String, value: String) throws -> [String] {
+        func json(_ object: Any) throws -> String {
+            String(decoding: try JSONSerialization.data(withJSONObject: object), as: UTF8.self)
+        }
+        return [
+            "\(key)=\(value)", "\(key): \(value)", "\(key) = \(value)", "x \(key)=\"\(value) y\" z", "\(key)='\(value)' z",
+            "\"\(key)\":\"\(value)\"", "status=200 \(key)=\(value) count=1", "\(key)=\(value)&status=1", "\(key):\n  \(value)",
+            "\(key)\n= \(value)", "\(key)\u{2028}: \(value)", "log " + (try json([key: value])) + " done",
+            try json(["status": 200, key: ["x": value]] as [String: Any]), try json([[key: [value]]]),
+        ]
+    }
+
+    @Test("No value under a random key that is not allowlisted is stored from free text")
+    func randomKeysInFreeText() throws {
+        var generator = Obfuscator(seed: 6)
+        var checked = 0
+        while checked < 1_500 {
+            let key = generator.randomKey()
+            guard !(policy.allowableFold(key.unicodeScalars).map(policy.allowedTextKeys.contains) ?? false) else { continue }
+            let value = generator.secret()
+            for line in try freeTextLines(key: key, value: value) {
+                let stored = policy.redact(text: line)
+                #expect(!stored.contains(value), "\(line.debugDescription) stored \(stored.debugDescription)")
+            }
+            checked += 1
+        }
+    }
+
+    @Test("Allowlisted keys stay readable in free text, the default ones and the app's own")
+    func allowlistedKeysInFreeText() throws {
+        var generator = Obfuscator(seed: 7)
+        let appKeys = ["order_id", "screen", "retryCount"]
+        let lenient = RedactionPolicy(allowedTextKeys: appKeys)
+        for key in RedactionPolicy.defaultAllowedTextKeys + appKeys {
+            for _ in 0..<20 {
+                let (value, other) = (generator.harmlessValue(), generator.harmlessValue())
+                let data = try JSONSerialization.data(withJSONObject: [key: value], options: .withoutEscapingSlashes)
+                let json = String(decoding: data, as: UTF8.self)
+                for line in ["\(key)=\(value)", "\(key): \(value)", "done \(key)=\(value) count=\(other)", json, "got \(json) in 3 ms"] {
+                    #expect(lenient.redact(text: line) == line, "\(line.debugDescription)")
+                }
+            }
+        }
+    }
+
     // MARK: Property: generated secrets
 
     @Test("Generated JWTs, hex and Base64 tokens, card numbers, IBANs and emails are found in text and values")
@@ -95,9 +143,10 @@ struct RedactionPropertyTests {
         #expect(policy.redact(headers: headers) == headers)
         let lines = [
             "GET /v1/items 200 in 35 ms", "Loaded 42 items for user 7", "Retrying request (attempt 2 of 3)",
-            "Cache hit: items-page-2", "Order E621E1F8-C36C-495A-93FC-0C247A3E6E5F placed", "Error: The request timed out.",
+            "Cache hit for items-page-2", "Order E621E1F8-C36C-495A-93FC-0C247A3E6E5F placed", "The request timed out.",
             "Sync finished at 12:30:45, 3 changes", "Opened https://example.com/docs/getting-started",
             "Giriş başarılı, 3 öğe yüklendi", "Family 👨‍👩‍👧 joined the café", "Загружено 5 элементов", "設定を保存しました",
+            "GET /v1/items status=200 duration_ms=35 size: 1234 bytes", #"{"count":3,"status":"ok"}"#, "[INFO] Loaded {0} of [1/3]",
         ]
         for line in lines { #expect(policy.redact(text: line) == line) }
         // The digits of a UUID can pass the Luhn check; they are not laid out as a card number.

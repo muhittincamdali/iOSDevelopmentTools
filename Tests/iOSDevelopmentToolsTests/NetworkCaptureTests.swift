@@ -98,7 +98,8 @@ final class NetworkCaptureTests {
         let (echoed, _) = try await session.data(for: request)
         #expect(echoed == body)
 
-        let entry = try await finishedEntry("/echo?form")
+        // A query parameter without `=` that is not allowed is hidden too.
+        let entry = try await finishedEntry("/echo?\(RedactionPolicy.replacement)")
         let sent = try #require(entry.requestBody)
         #expect(sent.redaction == .omitted)
         #expect(sent.text == "[body omitted: 25 bytes, no known content type]")

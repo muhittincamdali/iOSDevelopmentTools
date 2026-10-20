@@ -4,13 +4,17 @@ import Foundation
 ///
 /// The policy follows one rule: what it does not fully understand is hidden, never shown.
 ///
-/// - **Keys** (JSON fields, query and form names, header names, `key=value` in text) are folded:
-///   escapes are decoded, then NFKC, case folding, and `_`, `-`, `.` and spaces are removed. Only a
-///   key that is then plain ASCII letters and digits is compared with ``secretNames``. Any other
-///   key, for example one with a Cyrillic letter, a zero-width character or a `[`, has its value
-///   hidden.
+/// - **Keys** (JSON member names, form, query and multipart field names, header names) are read
+///   after their escapes are decoded. Only a key made of ASCII letters, digits, `_`, `-`, `.` and
+///   spaces is compared with ``secretNames``; the separators are folded away and the letters
+///   lowercased, so `PASS-WORD` reads as `password`. Any other key, for example one with a
+///   Cyrillic letter, a full-width letter, a zero-width character or a `[`, has its value hidden.
 /// - **Values** of secret keys are hidden whole, whatever their type. Other values are scanned
 ///   for JWTs, bearer tokens, long hex or Base64 strings, card numbers, IBANs and email addresses.
+/// - **Free text** (log messages, error descriptions, kept header values, `text/plain` bodies)
+///   has no grammar, so it works the other way round: the value of a `key=value`, `key: value` or
+///   `"key":"value"` pair, also inside JSON written in the text, is kept only when the key is on
+///   ``allowedTextKeys``. See ``redact(text:)``.
 /// - **Headers** keep their value only when the name is on ``allowedHeaders``.
 /// - **URLs** lose their user info and fragment; query values are hidden unless the name is on
 ///   ``allowedQueryParameters``, and path segments that look like identifiers become `:id`.
@@ -40,18 +44,34 @@ public struct RedactionPolicy: Sendable, Hashable {
     /// Bodies larger than this are omitted without being parsed: 1 MiB.
     public static let maximumCheckedBodySize = 1_048_576
 
-    /// The names whose values are always hidden: the shared list, then this library's extensions
-    /// (`passphrase`, `credential`, `cvc`, `sessid`).
+    /// The most JSON objects and arrays open at once, counted across every document a text is in:
+    /// 64. JSON in a string inside one object may open 63 more.
+    public static let maximumJSONDepth = Nesting.maximumDepth
+
+    /// The most documents read one inside another: 4. A body, JSON in a line of text, a URL and a
+    /// multipart part each count; JSON in a string of a JSON body is the second.
+    public static let maximumNestedDocuments = Nesting.maximumLevel
+
+    /// A URL whose path has more segments than this is recorded with its scheme, host and port
+    /// only: 64.
+    public static let maximumPathSegments = 64
+
+    /// A URL whose query, or whose path, has more parameters than this is recorded with its
+    /// scheme, host and port only: 128.
+    public static let maximumQueryParameters = 128
+
+    /// The names whose values are always hidden, folded: the list the redaction rules share with
+    /// other packages (`password`, `passwd`, `pwd`, `secret`, `token`, `accesstoken`,
+    /// `refreshtoken`, `idtoken`, `apikey`, `key`, `auth`, `authorization`, `cookie`, `session`,
+    /// `sid`, `otp`, `pin`, `cvv`, `card`, `iban`, `ssn`, `privatekey`, `clientsecret`,
+    /// `signature`) and this library's extensions (`passphrase`, `passcode`, `credential`, `cvc`,
+    /// `sessid`, `pincode`, `verificationcode`, `cardnumber`, `pass`, `pw`, …).
     ///
-    /// A folded key matches a name of five or more letters when it contains it (`newPassword`,
-    /// `x_refresh_token`), and a shorter name when one of its words is that name or it ends with
-    /// it (`api-key`, `userPin`, `creditcard`).
-    public static let defaultSecretNames: [String] = [
-        "password", "passwd", "pwd", "secret", "token", "access_token", "refresh_token", "id_token",
-        "api_key", "apikey", "key", "auth", "authorization", "cookie", "set-cookie", "session", "sid",
-        "otp", "pin", "cvv", "card", "iban", "ssn", "private_key", "client_secret", "signature",
-        "passphrase", "credential", "cvc", "sessid",
-    ]
+    /// Words of five or more letters count anywhere in a key (`dbPassword`), shorter ones as a
+    /// word of the key or at its end (`user_pin`, `X-Auth-Key`, `apitoken`), `pass`, `pw` and
+    /// `sid` only as a word (`DB_PASS`, but not `bypass` or `inside`). A plural `s` after the word
+    /// counts too (`tokens`).
+    public static let defaultSecretNames: [String] = SecretNameTable.defaultWords
 
     /// The headers whose values are kept by default.
     public static let defaultAllowedHeaders: [String] = [
@@ -59,69 +79,113 @@ public struct RedactionPolicy: Sendable, Hashable {
         "Content-Length", "Content-Type", "ETag", "User-Agent",
     ]
 
-    /// The default policy: the default secret names and header allowlist, no query values kept.
+    /// The keys whose values free text keeps: harmless names that logs use for numbers and routes.
+    /// The keys passed to the initializer are added to them.
+    public static let defaultAllowedTextKeys: [String] = [
+        "status", "status_code", "method", "path", "duration", "duration_ms", "count", "size", "bytes",
+        "page", "limit", "offset", "attempt", "level",
+    ]
+
+    /// The default policy: the default secret names, header and text key allowlists, no query
+    /// values kept.
     public static let `default` = RedactionPolicy()
 
     /// A policy that stores everything as it was sent and received. Use it only with test
     /// servers and test accounts.
-    public static let disabled = RedactionPolicy(isEnabled: false, secretNames: [], allowedHeaders: [], allowedQueryParameters: [], urlDetail: .full)
+    public static let disabled = RedactionPolicy(
+        isEnabled: false, secretNames: [], allowedHeaders: [], allowedQueryParameters: [], allowedTextKeys: [], urlDetail: .full)
 
     /// Whether the policy changes anything at all.
     public let isEnabled: Bool
 
     /// The folded secret names: ``defaultSecretNames`` and the names passed to the initializer.
-    public let secretNames: Set<String>
+    public var secretNames: Set<String> { secretNameTable.words }
 
-    /// The folded names of the headers whose values are kept.
+    /// The folded names of the headers whose values are kept. A name that is not plain ASCII or
+    /// names a secret is never on it.
     public let allowedHeaders: Set<String>
 
-    /// The folded names of the query parameters whose values are kept. Empty by default.
+    /// The folded names of the query parameters whose values are kept. Empty by default. A name
+    /// that is not plain ASCII or names a secret is never on it.
     public let allowedQueryParameters: Set<String>
+
+    /// The folded keys whose values free text keeps: ``defaultAllowedTextKeys`` and the keys passed
+    /// to the initializer. A key that is not plain ASCII or names a secret is never on it.
+    public private(set) var allowedTextKeys: Set<String>
 
     /// How much of a URL is recorded.
     public let urlDetail: URLDetail
 
-    let secretNameMatcher: SecretNameMatcher
+    /// The secret words and where they count, built once for the policy.
+    let secretNameTable: SecretNameTable
+
+    /// The keys whose values a kept header value keeps: ``allowedTextKeys`` and the parameters of
+    /// the default allowed headers.
+    let headerValueKeys: Set<String>
 
     /// Creates a policy.
     ///
     /// - Parameters:
     ///   - additionalSecretNames: Names to hide in addition to ``defaultSecretNames``. The default
-    ///     names cannot be removed.
+    ///     names cannot be removed. A name that is not plain ASCII is dropped: it could only match
+    ///     keys that are hidden anyway.
     ///   - allowedHeaders: The headers whose values are kept. Headers that are always hidden
     ///     (`Authorization`, `Cookie`, names with `token`, `key`, …) stay hidden when listed.
     ///   - allowedQueryParameters: The query parameters whose values are kept. A secret name
     ///     stays hidden when listed.
+    ///   - allowedTextKeys: Keys whose values free text keeps, in addition to
+    ///     ``defaultAllowedTextKeys``. A secret name stays hidden when listed.
     ///   - urlDetail: How much of a URL is recorded.
     public init(
         additionalSecretNames: [String] = [],
         allowedHeaders: [String] = RedactionPolicy.defaultAllowedHeaders,
         allowedQueryParameters: [String] = [],
+        allowedTextKeys: [String] = [],
         urlDetail: URLDetail = .full
     ) {
         self.init(
-            isEnabled: true, secretNames: Self.defaultSecretNames + additionalSecretNames,
-            allowedHeaders: allowedHeaders, allowedQueryParameters: allowedQueryParameters, urlDetail: urlDetail)
+            isEnabled: true, secretNames: additionalSecretNames, allowedHeaders: allowedHeaders,
+            allowedQueryParameters: allowedQueryParameters, allowedTextKeys: Self.defaultAllowedTextKeys + allowedTextKeys,
+            urlDetail: urlDetail)
     }
 
-    private init(isEnabled: Bool, secretNames: [String], allowedHeaders: [String], allowedQueryParameters: [String], urlDetail: URLDetail) {
+    private init(
+        isEnabled: Bool, secretNames: [String], allowedHeaders: [String], allowedQueryParameters: [String],
+        allowedTextKeys: [String], urlDetail: URLDetail
+    ) {
         self.isEnabled = isEnabled
-        self.secretNames = Self.plainNames(secretNames)
-        secretNameMatcher = SecretNameMatcher(names: self.secretNames)
-        self.allowedHeaders = Self.plainNames(allowedHeaders)
-        self.allowedQueryParameters = Self.plainNames(allowedQueryParameters)
+        let added = Set(secretNames.compactMap { PlainName($0.unicodeScalars)?.folded })
+        let table = added.isEmpty ? SecretNameTable.standard : SecretNameTable(words: added)
+        func allowable(_ names: [String]) -> Set<String> {
+            Set(names.compactMap { name in
+                PlainName(name.unicodeScalars).flatMap { $0.namesSecret(in: table) ? nil : $0.folded }
+            })
+        }
+        secretNameTable = table
+        self.allowedHeaders = allowable(allowedHeaders)
+        self.allowedQueryParameters = allowable(allowedQueryParameters)
+        let textKeys = allowable(allowedTextKeys)
+        self.allowedTextKeys = textKeys
+        headerValueKeys = textKeys.union(allowable(Self.headerParameterNames))
         self.urlDetail = urlDetail
     }
 
-    /// The folded names that can match a key; names that are empty or not plain ASCII after
-    /// folding can match nothing and are dropped.
-    private static func plainNames(_ names: [String]) -> Set<String> {
-        Set(names.map(FoldedKey.init).filter { $0.isPlain && !$0.folded.isEmpty }.map(\.folded))
-    }
+    /// The parameters of the default allowed headers: `charset` and `boundary` of
+    /// `Content-Type`, the `q` of `Accept` lists and the `Cache-Control` directives with a value.
+    static let headerParameterNames = [
+        "charset", "boundary", "q", "max-age", "s-maxage", "max-stale", "min-fresh", "stale-while-revalidate", "stale-if-error",
+    ]
 
     /// Whether a value under this key (a JSON field, a query or form name, a header name) is
-    /// hidden: the key is a secret name, or it is not plain ASCII after folding.
+    /// hidden: the key is a secret name, or it is not plain ASCII.
     public func isSensitive(name: String) -> Bool {
-        isEnabled && hidesValue(of: FoldedKey(name))
+        isEnabled && hidesValue(ofKey: name.unicodeScalars)
+    }
+
+    /// This policy with `keys` as the keys whose values free text keeps.
+    func allowingTextKeys(_ keys: Set<String>) -> RedactionPolicy {
+        var policy = self
+        policy.allowedTextKeys = keys
+        return policy
     }
 }

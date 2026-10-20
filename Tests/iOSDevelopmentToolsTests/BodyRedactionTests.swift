@@ -28,10 +28,12 @@ struct BodyRedactionTests {
         #expect(object["page"] as? Int == 2)
     }
 
-    @Test("JSON is stored as serialized from the parse; without secrets the outcome is unchanged")
-    func reserializedJSON() {
+    @Test("JSON is stored as sent, with only hidden values replaced; without secrets the outcome is unchanged")
+    func storedJSON() {
         let body = Data(#"{"b": 1.5, "a": [true, null], "c": "x"}"#.utf8)
-        #expect(policy.redact(body: body, contentType: "application/problem+json") == (Data(#"{"a":[true,null],"b":1.5,"c":"x"}"#.utf8), .unchanged))
+        #expect(policy.redact(body: body, contentType: "application/problem+json") == (body, .unchanged))
+        let secret = Data(#"{"b": 1.5, "token": ["x"], "c": "x"}"#.utf8)
+        #expect(policy.redact(body: secret, contentType: "application/json") == (Data(#"{"b": 1.5, "token": "[REDACTED]", "c": "x"}"#.utf8), .redacted))
         #expect(policy.redact(body: Data(#""text""#.utf8), contentType: "application/json") == (Data(#""text""#.utf8), .unchanged))
     }
 
@@ -103,12 +105,15 @@ struct BodyRedactionTests {
         #expect(text(data) == "user=ada&pass%77ord=\(redacted)&remember=1&q=a+b%21&data=%7B%22password%22%3A%22\(redacted)%22%7D")
     }
 
-    @Test("A form value that holds pairs or JSON goes through the value rule")
+    @Test("A form value that holds pairs or JSON goes through the value rule; a `;` makes the form unreadable")
     func formValueRule() {
-        let body = Data("a=1;password=hunter2&b=x%26token%3Dhunter2&token;x=hunter2".utf8)
+        let body = Data("b=x%26token%3Dhunter2&c=1".utf8)
         let (data, outcome) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded")
         #expect(outcome == .redacted)
-        #expect(text(data) == "a=1%3Bpassword%3D\(redacted)&b=x%26token%3D\(redacted)&\(redacted)=\(redacted)")
+        #expect(text(data) == "b=x%26token%3D\(redacted)&c=1")
+        // Some servers also split a form at `;`, so a form with one is omitted.
+        let split = Data("a=1;password=hunter2&token;x=hunter2".utf8)
+        #expect(policy.redact(body: split, contentType: "application/x-www-form-urlencoded").outcome == .omitted)
     }
 
     @Test("Plain text bodies go through the free-text rule")
@@ -146,5 +151,25 @@ struct BodyRedactionTests {
         #expect(cut.prettyPrintedJSON == nil)
         let fragment = CapturedBody(data: Data("42".utf8), byteCount: 2, isTruncated: false, redaction: .unchanged)
         #expect(fragment.prettyPrintedJSON == nil)
+    }
+
+    @Test("JSON whose bytes are in another encoding than its charset names is omitted", arguments: [
+        ("application/json; charset=utf-16", String.Encoding.utf8), ("application/json; charset=utf-8", .utf16LittleEndian),
+        ("application/json; charset=utf-16be", .utf16LittleEndian), ("application/json; charset=utf-32", .utf16BigEndian),
+    ])
+    func jsonCharsetAgreement(contentType: String, encoding: String.Encoding) throws {
+        let body = try #require(#"{"note":"hunter2"}"#.data(using: encoding))
+        #expect(policy.redact(body: body, contentType: contentType).outcome == .omitted)
+    }
+
+    @Test("JSON in UTF-16 or UTF-32 that its charset names is read and stored as UTF-8", arguments: [
+        ("application/json; charset=utf-16", String.Encoding.utf16LittleEndian), ("application/json; charset=utf-16be", .utf16BigEndian),
+        ("application/json", .utf32LittleEndian), ("application/json; charset=utf-32be", .utf32BigEndian),
+    ])
+    func wideJSON(contentType: String, encoding: String.Encoding) throws {
+        let body = try #require(#"{"note":"x","token":"hunter2"}"#.data(using: encoding))
+        let (data, outcome) = policy.redact(body: body, contentType: contentType)
+        #expect(outcome == .redacted)
+        #expect(text(data) == #"{"note":"x","token":"[REDACTED]"}"#)
     }
 }
