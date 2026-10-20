@@ -35,9 +35,9 @@ session to follow it. Cancelling a task records a cancellation.
 
 A logger keeps at most ``NetworkLogger/Configuration/maximumEntries`` entries (500 by default)
 and at most ``NetworkLogger/Configuration/maximumBodySize`` bytes of each body (256 KiB by
-default); with redaction on, a body over that limit, or over
-``RedactionPolicy/maximumCheckedBodySize`` (1 MiB), is replaced by a note. Request bodies up to 4 MiB are read into memory to be sent on; larger uploads are
-streamed in 64 KiB chunks, so the size of an upload does not change how much memory capture uses.
+default); with redaction on, a body over that limit, or over ``RedactionPolicy/maximumBodySize``
+(also 256 KiB by default), is replaced by a note. Request bodies up to 4 MiB are read into memory
+to be sent on; larger uploads are streamed in 64 KiB chunks, so the size of an upload does not change how much memory capture uses.
 Headers and URLs are stored whole; no limit applies to them.
 
 ```swift

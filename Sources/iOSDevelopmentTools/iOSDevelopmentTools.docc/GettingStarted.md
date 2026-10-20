@@ -48,8 +48,9 @@ Network tab lists the request; tap it to see its headers, body and timings.
 ### Log messages
 
 Log with ``LogStore`` instead of `print`. Messages appear in the Logs tab and in Console.app,
-after redaction: from the first secret name in a message, or anything else that cannot be read
-with certainty, the rest of the message is hidden (see <doc:RedactingSensitiveData>):
+after redaction: from the first secret name in a message, a key that is not on the allowlist
+(`status`, `method`, `path`, `duration_ms` and `count` by default) or anything else that cannot be
+read with certainty, the rest of the message is hidden (see <doc:RedactingSensitiveData>):
 
 ```swift
 LogStore.shared.info("Signed in", category: "auth")

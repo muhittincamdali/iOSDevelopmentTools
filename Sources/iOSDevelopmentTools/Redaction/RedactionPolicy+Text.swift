@@ -8,8 +8,7 @@ extension RedactionPolicy {
     /// below included. Hiding more than the secret is how the rule is meant to work. The text is
     /// read once, on a scanning copy without invisible characters (format characters, marks,
     /// default-ignorable code points such as U+3164, control characters), in Unicode compatibility
-    /// form, with U+2028, U+2029, U+0085, vertical tab and form feed read as line breaks. The
-    /// triggers are:
+    /// form. The triggers are:
     ///
     /// - **A key that is not allowed.** In `key=value`, `key: value`, `key = value` and
     ///   `"key":"value"` the text is read on only after a key that is plain ASCII, names no secret
@@ -22,10 +21,10 @@ extension RedactionPolicy {
     ///   key of its text (`<user>bob</user>`).
     /// - **A secret name** (see ``secretNames``), with or without a separator, quoted or not:
     ///   `password=hunter2`, `password hunter2`, `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`.
-    ///   The text is hidden from the value after the name. Words are read after their escapes are
-    ///   decoded, with punctuation inside them (`pass~word`) and a space or `|` between two of them
-    ///   (`pass word`) read as a separator, and one letter that has no ASCII form (`ɑ`, `ı`) read
-    ///   as any letter or, between two letters, as none. This is a best effort: a
+    ///   The text is hidden from the value after the name. Words are read with punctuation inside
+    ///   them (`pass~word`) and a space or `|` between two of them (`pass word`) read as a
+    ///   separator, and one letter that has no ASCII form (`ɑ`, `ı`) read as any letter or,
+    ///   between two letters, as none. This is a best effort: a
     ///   name disguised with two or more such letters and written without a separator
     ///   (`pɑsswoʀd hunter2`) is not found.
     /// - **A secret name written as a value.** After an allowed key that holds a name (`name=`,
@@ -40,12 +39,13 @@ extension RedactionPolicy {
     /// - **A key that is not plain ASCII** or has no letter or digit, or no key at all, before
     ///   `=` or `:` (`pаssword=…` with a Cyrillic `а`, `🔑=…`, `user[name]=…`, `=…`), and the last
     ///   words of a key that, read as one name, name a secret (`pass word=…`, `c v v: …`).
-    /// - **A character outside the safe alphabet.** Letters, marks and digits of any script, white
-    ///   space, line breaks and ASCII are text, and so is a character that Unicode compatibility
-    ///   normalization reads as ASCII (`…`, `™`, `ｐ`). Every other character with text after it
-    ///   is a trigger: punctuation and symbols outside ASCII (`꞉`, `≔`, `→`, `·`, `—`, `’`, `、`,
-    ///   `€`), emoji, control characters and private-use or unassigned code points. A separator
-    ///   written outside ASCII (`＝`, `：`) cuts the text too. There is no list of look-alikes to
+    /// - **A character outside the safe alphabet.** Letters, marks and digits of any script (also
+    ///   `ｐ` and `²`), the ASCII space, tab, LF and CR, printable ASCII and a space such as U+00A0
+    ///   are text. Every other character with text after it is a trigger, judged by its own
+    ///   Unicode category: punctuation and symbols outside ASCII (`꞉`, `≔`, `→`, `·`, `—`, `’`,
+    ///   `、`, `€`), also those that compatibility normalization reads as ASCII (`＝`, `…`, `‥`,
+    ///   `™`, `№`, `ⓟ`), emoji, control characters, the line breaks VT, FF, U+0085, U+2028 and
+    ///   U+2029, and private-use or unassigned code points. There is no list of look-alikes to
     ///   get around.
     /// - **An escape**, which is never decoded: `%XX`, `%uXXXX`, `&name;` (`&amp;`, `&lt;`), `&#…;`,
     ///   `\NNN`, `\xNN`, `\uNNNN` and `\u{…}`, and `\=`. The text is hidden from the escape on.

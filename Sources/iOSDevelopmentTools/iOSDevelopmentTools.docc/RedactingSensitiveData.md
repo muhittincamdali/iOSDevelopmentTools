@@ -52,7 +52,7 @@ is not built to stop someone who writes a log line on purpose to get a secret pa
 | URL | Scheme, host, port, path, query parameter names, values of allowlisted query parameters | User info (`user:password@`), the fragment (`#…`), other query values, path segments that look like identifiers or secrets (shown as `:id`) |
 | Headers | Names; values of the allowlisted headers, after the free-text rule | Values of every other header, and always the values of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key`, any header whose name contains `token`, `secret`, `key`, `auth`, `session` or `signature`, and values that start with an authentication scheme (`Bearer …`, `Basic …`, `Token …`) |
 | JSON, form and multipart bodies | Keys and values, as sent, with hidden values replaced | Values of secret keys and of keys that are not plain ASCII; values named by a field that holds a secret name; file parts and file names of multipart bodies |
-| Other bodies | `text/plain` after the free-text rule; a note for everything else | Bodies with an unknown or missing content type, bodies that do not parse, bodies that servers could split into fields differently, and bodies that were cut off or are larger than 1 MiB |
+| Other bodies | `text/plain` after the free-text rule; a note for everything else | Bodies with an unknown or missing content type, bodies that do not parse, bodies that servers could split into fields differently, and bodies that were cut off or are larger than ``RedactionPolicy/maximumBodySize`` (256 KiB by default) |
 | Log messages and error descriptions | The text up to its first trigger, after the value detectors | Everything from the first trigger to the end of the text, and what the value detectors find |
 
 Every hidden value becomes ``RedactionPolicy/replacement`` (`[REDACTED]`), whatever its type and
@@ -137,21 +137,26 @@ rule.
 - **Multipart form data** is read only with a single unquoted boundary of at most 70 characters,
   and only when every `--boundary` in it is a delimiter line after a CRLF, every part header ends
   with CRLF and each part has exactly one `form-data` name. Every part is written again with its
-  field name and its type; its other headers follow the header rule. File parts are always
-  replaced by a note, and the file name is never written. Each field is read by its own content
-  type (`text/plain` when it has none).
+  field name and its type. Another part header keeps its name only when the name is on
+  ``RedactionPolicy/allowedHeaders`` and no value detector finds something in it; any other is
+  written as `[REDACTED]: [REDACTED]`, and a kept one's value follows the header rule. File parts
+  are always replaced by a note, and the file name is never written. Each field is read by its own
+  content type (`text/plain` when it has none).
 - **`text/plain`** goes through the free-text rule.
 
 Any other content type, a missing content type, a body that does not parse completely, a body that
 was cut off at ``NetworkLogger/Configuration/maximumBodySize`` and a body larger than
-``RedactionPolicy/maximumCheckedBodySize`` are not stored. A note takes their place, such as
-`[body omitted: 512 bytes, application/xml]`, and the body is marked ``RedactionOutcome/omitted``.
+``RedactionPolicy/maximumBodySize`` (256 KiB by default) are not stored. A note takes their place,
+such as `[body omitted: 512 bytes, application/xml]`, and the body is marked
+``RedactionOutcome/omitted``.
 
 ### Headers
 
 Only the headers on ``RedactionPolicy/allowedHeaders`` keep their values: by default `Accept`,
 `Accept-Encoding`, `Accept-Language`, `Cache-Control`, `Content-Encoding`, `Content-Length`,
-`Content-Type`, `ETag` and `User-Agent`. A kept value goes through the free-text rule, so
+`Content-Type`, `ETag` and `User-Agent`. A kept value goes through the free-text rule, read on
+after ``RedactionPolicy/allowedTextKeys`` and after the parameters these headers are written with
+(``RedactionPolicy/headerParameterNames``: `charset`, `boundary`, `q`, `max-age`, …), so
 `application/json; charset=utf-8` and `max-age=60` stay as they are. The headers listed in the
 table above are hidden even when you allow them, and so is a header whose name is not an ASCII
 token.
@@ -166,7 +171,9 @@ only when allowed, and a query that servers could split differently is written a
 six or more digits, tokens of 16 or more letters and digits, long hex or Base64 strings, JWTs and
 segments in which the free-text rule or a detector finds something; the segment after one that
 names a secret becomes `:id` too (`/pin/4831`). With `urlDetail: .hostOnly` only the scheme, host
-and port are written.
+and port are written. A host that is neither a name of ASCII letters, digits and hyphens nor an IP
+address, or in which a value detector finds something, is not written either:
+`https://password=hunter2.example/x` is recorded as `https://[REDACTED]`.
 
 ```swift
 let url = URL(string: "https://bob:pw@api.example.com/users/12345678/reset?code=x&page=2#y")!
@@ -186,34 +193,50 @@ is meant to work. Text with no trigger is kept as it is, apart from what the val
 find.
 
 ```swift
+RedactionPolicy.default.redact(text: "status=200 method=GET path=/api/items")
+// status=200 method=GET path=/api/items
 RedactionPolicy.default.redact(text: "login user=ada status=401 password=hunter2")
+// login user=[REDACTED]
+RedactionPolicy(allowedTextKeys: ["user"]).redact(text: "login user=ada status=401 password=hunter2")
 // login user=ada status=401 password=[REDACTED]
-RedactionPolicy.default.redact(text: "status=200 user=bob path=/api/items")
-// status=200 user=bob path=/api/items
 ```
 
 The triggers:
 
+- **A key that is not allowed.** In `key=value`, `key: value`, `key = value` and `"key":"value"`
+  the text is read on only after a key that is plain ASCII, names no secret and is on
+  ``RedactionPolicy/allowedTextKeys``: `status`, `method`, `path`, `duration_ms` and `count` by
+  default, and the keys you add. Any other key cuts the text at its value: `x=hunter2` is stored
+  as `x=[REDACTED]`, `curl -u bob:hunter2` as `curl -u bob:[REDACTED]`. A `:` between two digits,
+  as in `12:30`, is part of a time. JSON in the text follows the same rule member by member, a
+  two-element array by its first string (`["user","bob"]`), and an element by its tag
+  (`<user>bob</user>`).
 - **A secret name**, with or without a separator, quoted or not: `password=…`, `password …`,
   `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`, `Bearer: …`. The text is hidden from the value
-  after the name. Words are read after their escapes are decoded (`pass%77ord`, `p&#97;ssword`,
-  `\u0070assword`), with punctuation inside them read as a separator (`pass~word`), two
-  words read together (`pass word`), and one letter that has no ASCII form read as any letter
+  after the name. Punctuation inside a word is read as a separator (`pass~word`), two words are
+  read together (`pass word`), and one letter that has no ASCII form is read as any letter
   (`passꞏword`).
-- **A secret name written as a value.** After a key that holds a name (`name`, `key`, `label`,
-  `type`, `id`, … but not `path`, the route of a request), a name that names a secret, is not
-  plain ASCII or is JSON: `name="password"`, `key='token'`, `label="Пароль"`, `name=["pin"]`,
-  `Content-Disposition: form-data; name="pin"`. The text of a property list's `<key>` element is
-  such a name too (`<key>password</key>`, `<key>Şifre</key>`), while the element name `key` itself
-  and the name of an end tag (`</password>`) are not triggers. A trigger inside a tag hides the
-  tag from its `<`, so an attribute written before the name is hidden too:
-  `<input value="…" name="password">` is stored as `[REDACTED]`.
+- **A secret name written as a value.** After a key that holds a name and that the app allows
+  (`name`, `key`, `label`, `type`, `id`, …, but never `path`, the route of a request), a name that
+  names a secret, is not plain ASCII or is JSON: `name="password"`, `label="Пароль"`,
+  `name=["pin"]`. The text of a property list's `<key>` element is such a name too
+  (`<key>password</key>`, `<key>Şifre</key>`), while the name of an end tag (`</password>`) is
+  not a trigger. A trigger inside a tag hides the tag from its `<`, so an attribute written before
+  the name is hidden too: `<input value="…" name="password">` is stored as `[REDACTED]`.
 - **A key that is not plain ASCII**, has no letter or digit, or is missing, before `=` or `:`
   (`pаssword=…` with a Cyrillic `а`, `🔑=…`, `user[name]=…`, `=…`), and the last words of a key
   that, read as one name, name a secret (`pass word=…`, `c v v: …`).
-- **A separator that is escaped or only looks like one**, after other text: `%3D`, `&#61;`,
-  `%u003D`, `\=`, `꞉`, `≔`. A character whose compatibility form is `=` or `:` (`＝`, `：`) is
-  read as that character.
+- **A character outside the safe alphabet.** Letters, marks and digits of any script, the ASCII
+  space, tab and line breaks (LF, CR), printable ASCII and spaces such as U+00A0 are text. Every
+  other character with text after it is a trigger, judged by its own Unicode category:
+  punctuation and symbols outside ASCII (`꞉`, `≔`, `→`, `·`, `—`, `’`, `€`), also those that
+  compatibility normalization turns into ASCII (`＝`, `：`, `…`, `‥`, `™`, `№`, `ⓟ`), emoji,
+  control characters, the line breaks VT, FF, U+0085, U+2028 and U+2029, and private-use or
+  unassigned code points. No list of look-alikes is kept.
+- **An escape**, which is never decoded: `%XX`, `%uXXXX`, `&name;` (`&amp;`, `&lt;`), `&#…;`,
+  `\NNN`, `\xNN`, `\uNNNN`, `\u{…}` and `\=`. The text is hidden from the escape on:
+  `pass%77ord=hunter2` is stored as `pass[REDACTED]`.
+- **A word longer than 256 characters**, which is no name or value that can be read.
 - **A token that cannot be read with certainty**: a word that mixes scripts (`tоken` with a
   Cyrillic `о`; Latin with Japanese, Chinese or Korean is not mixed) or holds an invisible
   character other than a mark, such as a zero-width space; a quote or bracket that does not
@@ -230,13 +253,14 @@ breaks are kept as they are written.
 | `GET /v1/items status=200 duration_ms=35` | unchanged |
 | `password hunter2` | `password [REDACTED]` |
 | `login password=hunter2 status=200` and a line below | `login password=[REDACTED]` |
+| `x=hunter2` | `x=[REDACTED]` |
 | `pаssword=hunter2` (Cyrillic `а`) | `[REDACTED]` |
-| `saved {"status":200,"name":"ada","card":"x"}` | `saved {"status":200,"name":"ada","card":"[REDACTED]"}` |
+| `saved {"status":200,"name":"ada","card":"x"}` | `saved {"status":200,"name":[REDACTED]` |
 | `payload {"a": "hunter2"` | `payload [REDACTED]` |
-| `msg="unterminated hunter2` | `msg=[REDACTED]` |
+| `msg="unterminated hunter2` | `msg="[REDACTED]` |
 | `field name="password" hunter2` | `field name="[REDACTED]` |
 | `<key>password</key>` and a `<string>` below | `<key>[REDACTED]` |
-| `Payment failed: card declined` | `Payment failed: card [REDACTED]` |
+| `Payment failed: card declined` | `Payment failed: [REDACTED]` |
 | `git clone https://bob:hunter2@github.com/x/y.git` | `git clone https://github.com/x/y.git` |
 
 ### Limits keep hostile input from exhausting the stack, the time and the memory
@@ -245,7 +269,14 @@ Strings are read as free text, and free text may hold JSON or a URL again, so a 
 document inside a document many times over. One budget bounds that descent, and with it the stack
 and the time that a request or a log message can use:
 
-- A body larger than ``RedactionPolicy/maximumCheckedBodySize`` (1 MiB) is omitted unread.
+- A body larger than ``RedactionPolicy/maximumBodySize`` is omitted unread: 256 KiB by default,
+  at most ``RedactionPolicy/bodySizeLimit`` (16 MiB). Reading a body takes up to about 60 bytes of
+  memory for each byte of it, so a larger limit costs memory in proportion.
+- A log message is redacted up to ``LogStore/maximumRedactedMessageLength`` (1 MiB of Unicode
+  scalars), on the thread that logs it. A longer message is redacted up to its last line break
+  before that length, and the rest of it is hidden.
+- JSON in a line of free text is parsed when it is at most 65,536 scalars long. Longer JSON cuts
+  the text at its first bracket, as JSON that does not parse does.
 - JSON objects and arrays may be open ``RedactionPolicy/maximumJSONDepth`` (64) levels deep in
   all, counting the levels of every document a JSON string is in.
 - At most ``RedactionPolicy/maximumNestedDocuments`` (4) documents are read one inside another. A
@@ -272,34 +303,43 @@ NetworkLogger.shared.configuration.redaction = RedactionPolicy(
     allowedHeaders: RedactionPolicy.defaultAllowedHeaders + ["X-Request-ID"],
     allowedQueryParameters: ["page", "sort"]
 )
-LogStore.shared.configuration.redaction = RedactionPolicy(additionalSecretNames: ["license_number"])
+LogStore.shared.configuration.redaction = RedactionPolicy(
+    additionalSecretNames: ["license_number"],
+    allowedTextKeys: ["user", "request_id"]
+)
 ```
 
 An added name of five or more letters counts anywhere in a key, a shorter one as a word or at the
-end. A secret name stays hidden when it is on an allowlist. Use `urlDetail: .hostOnly` to record
+end. A secret name stays hidden when it is on an allowlist. `allowedTextKeys` adds the keys your
+log lines write to `status`, `method`, `path`, `duration_ms` and `count`, so free text is read on
+after them; a key that names a secret or is not plain ASCII is never allowed. Use `urlDetail: .hostOnly` to record
 only the scheme, host and port of each URL.
 
 Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
 
 ### What it does not find
 
-- A secret that has no label, or a label it does not know: a secret under a plain ASCII key that
-  is not a secret name, such as `creds=hunter2`, or after a user name, such as
-  `curl -u bob:hunter2`, is stored unless a detector finds it, in bodies and in free text alike.
-  Add the name with `additionalSecretNames`.
+- A secret with no label, or a label not followed by `=` or `:`: `curl -u bob hunter2`,
+  `login -p hunter2` and `{bob hunter2}` are stored as they are, unless a detector finds the
+  value. With a separator, a key that is not on the allowed text keys hides its value in free text
+  (`creds=hunter2` is stored as `creds=[REDACTED]`). In a body, a plain ASCII key that is not a
+  secret name keeps its value (`{"creds":"hunter2"}`); add the name with `additionalSecretNames`.
+- The value of an allowed key: `status=hunter2` keeps `hunter2`.
 - A secret name in free text written without a separator and disguised with two or more letters
   that have no ASCII form: `pɑsswoʀd hunter2` is stored as it is. With a separator
   (`pɑsswoʀd=hunter2`) the value is hidden. A secret word in another language, such as
   `пароль hunter2`, is not one either.
-- A value written before its name, outside a tag: `hunter2 is my password` is stored as it is,
-  and `value=hunter2 name=password` keeps `hunter2`.
+- A value written before its name, with no key before it: `hunter2 is my password` is stored as
+  it is.
+- A card number grouped with `+` or `.` (`4111+1111+1111+1111`).
 - A short secret in a path segment, such as `/reset/abc123`; only identifiers, tokens of the shapes
   listed above and segments in which a rule finds something become `:id`.
 
 Where it cannot tell, it hides more than it has to: everything after the first trigger, the lines
-below included (`Payment failed: card declined` keeps only `Payment failed: card`), a whole tag
-that holds a secret name, the rest of a text after a quote or bracket that does not close
-(`Order 1234 shipped :(`), and the value of a name that only describes a secret (`token_type`).
+below included (`Payment failed: card declined` keeps only `Payment failed:`, and
+`заказ №42 отправлен` only `заказ`), a whole tag that holds a secret name, the rest of a text after
+a quote or bracket that does not close (`Order 1234 shipped :(`), and the value of a name that
+only describes a secret (`token_type`).
 
 ## See Also
 
