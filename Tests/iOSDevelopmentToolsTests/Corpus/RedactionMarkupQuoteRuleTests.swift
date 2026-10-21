@@ -106,6 +106,9 @@ struct RedactionMarkupQuoteRuleTests {
         ("say \"hunter2", "say [REDACTED]"), ("\"note\nQZ9WK7RXV\": 1", "[REDACTED]"), ("status=200 'a\nQZ9WK7RXV': 1", "status=200 [REDACTED]"),
         ("x `a\nQZ9WK7RXV`: 1", "x [REDACTED]"), ("x \\\"a\nQZ9WK7RXV\\\": 1", "x [REDACTED]"), ("\"note\rQZ9WK7RXV\": 1", "[REDACTED]"),
         ("x \"a \u{2254} b\" c", "x \"a [REDACTED]"), ("status=\"ok\u{2028}QZ9WK7RXV\"", "status=[REDACTED]"),
+        // An escaped quote is a kind of its own: one with no partner on its line does not close,
+        // also inside a plain quote.
+        ("\"a \\\" b\" done", "\"a [REDACTED]"), ("status=\"a\\\"b\" count=1", "status=\"a[REDACTED]"),
     ])
     func unclosedQuotes(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -121,8 +124,8 @@ struct RedactionMarkupQuoteRuleTests {
 
     @Test("quotes that close on their line, apostrophes and escaped quotes keep the text", arguments: [
         "say \"hello world\" done", "msg 'ok' and \"fine\"\nnext \"line\"", "don't stop\nwe're done", "it\\'s ok",
-        "\"a \\\" b\" done", "status=200 count=3 `cmd` ran", "{\"status\":\"say \\\"hi\\\"\"} done", "İstanbul'a gitti",
-        "status=\"a\\\"b\" count=1",
+        "\"a \\\"b\\\" c\" done", "status=200 count=3 `cmd` ran", "{\"status\":\"say \\\"hi\\\"\"} done", "İstanbul'a gitti",
+        "status=\"a\\\"b\\\"\" count=1", "'a \"b\" c' done", "\"say 'hi' now\" done", "`echo \"x\"` ran", "\"Ayşe'nin 'kitabı'\"",
     ])
     func closedQuotesStay(input: String) {
         #expect(redactor.redact(input) == input)

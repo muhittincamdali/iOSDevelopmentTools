@@ -5,7 +5,8 @@
 /// quote to the end of the text: markup it did not know (`<!--`, `<?pi`, `</x>`, `<br/>`) kept
 /// what followed it, an allowed tag kept its text, and a quote that closed on a later line kept
 /// the lines in between. Markup is now never parsed (see ``startsMarkup(at:)``), and one pass of
-/// its own finds the first quote that does not close on its line (see ``noteMarks()``).
+/// its own reads each kind of quote apart and finds the first quote that does not close on its
+/// line (see ``noteMarks()``).
 extension FreeTextScanner {
     /// Whether the byte at `i` comes after an odd number of backslashes.
     func isEscaped(_ i: Int) -> Bool {
@@ -54,35 +55,59 @@ extension FreeTextScanner {
     private static let openings: [UInt8] = Array("([{".utf8)
     private static let closings: [UInt8] = Array(")]}".utf8)
 
-    /// Reads the quotes and brackets of the text, in one pass that keeps one quote and the last
-    /// closing bracket of each kind:
+    /// Reads the quotes and brackets of the text, in one pass that keeps where a quote of each
+    /// kind is open and the last closing bracket of each kind:
     ///
-    /// - A `"` or a backtick opens a quote anywhere, a `'` only where no letter or digit of any
-    ///   script comes before it and its backslashes, so the apostrophe of `don't`, `Ayşe'nin` and
-    ///   `it\'s` opens nothing.
-    /// - A quote closes at the next of its own character written the same way, escaped as in
-    ///   escaped JSON (`\"…\"`) or not; nothing else inside it counts.
-    /// - A quote still open at a line break or at the end of the text does not close on its line.
-    ///   What it holds, a key and its value over lines among them (`"note\nQx31": 1`), cannot be
-    ///   told, so the first such quote is where the text is cut at the latest (``unclosedQuote``).
+    /// - A quote is of one of six kinds: `"`, `'` or a backtick, each written plain or escaped
+    ///   (`\"`, after an odd number of backslashes). Each kind is read on its own, so a quote of
+    ///   one kind opens inside a quote of another: the `"` in `'x "y'` and in a backtick quote,
+    ///   the `\"` in `"x \"y"`, the `'` in `"x 'y"`.
+    /// - A `"` or a backtick opens a quote of its kind anywhere, a `'` only where no letter or
+    ///   digit of any script comes before it and its backslashes, so the apostrophe of `don't`,
+    ///   `Ayşe'nin` and `it\'s` opens nothing.
+    /// - A quote closes at the next quote of its own kind; no quote of another kind counts.
+    /// - A quote of any kind still open at a line break or at the end of the text does not close
+    ///   on its line. What it holds, a key and its value over lines among them (`"note\nQx31": 1`,
+    ///   `'"note'\nQx31": 1`), cannot be told, so the earliest of the quotes still open there is
+    ///   where the text is cut at the latest (``unclosedQuote``).
     mutating func noteMarks() {
-        var quote: (byte: UInt8, escaped: Bool, at: Int)?
+        // Where the quote of each kind opened, -1 while it is closed (see `quoteKind(at:)`).
+        var openings = [Int](repeating: -1, count: Self.quoteKinds)
+        var openCount = 0
         for k in 0..<text.count {
             let byte = text.bytes[k]
             if let kind = Self.closings.firstIndex(of: byte) { lastCloses[kind] = k }
             guard unclosedQuote == nil else { continue }
-            if let open = quote {
-                if text.isLineTerminator(k) {
-                    unclosedQuote = open.at
-                } else if byte == open.byte, isEscaped(k) == open.escaped {
-                    quote = nil
+            if openCount > 0, text.isLineTerminator(k) {
+                unclosedQuote = Self.earliest(openings)
+            } else if let kind = quoteKind(at: k) {
+                if openings[kind] >= 0 {
+                    openings[kind] = -1
+                    openCount -= 1
+                } else if opensQuote(at: k) {
+                    openings[kind] = kind % 2 == 1 ? backslashesStart(before: k) : k
+                    openCount += 1
                 }
-            } else if Self.quotes.contains(byte), opensQuote(at: k) {
-                let escaped = isEscaped(k)
-                quote = (byte, escaped, escaped ? backslashesStart(before: k) : k)
             }
         }
-        if unclosedQuote == nil, let open = quote { unclosedQuote = open.at }
+        if unclosedQuote == nil, openCount > 0 { unclosedQuote = Self.earliest(openings) }
+    }
+
+    private static let quoteBytes: [UInt8] = Array("\"'`".utf8)
+    /// Each quote character, plain or escaped.
+    private static let quoteKinds = 2 * quoteBytes.count
+
+    /// The kind of the quote character at byte `k`: twice its place in ``quoteBytes``, plus one
+    /// when it is escaped; nil when the byte is no quote.
+    private func quoteKind(at k: Int) -> Int? {
+        let byte = text.bytes[k]
+        guard Self.quotes.contains(byte), let index = Self.quoteBytes.firstIndex(of: byte) else { return nil }
+        return 2 * index + (isEscaped(k) ? 1 : 0)
+    }
+
+    /// The first byte where a quote that is still open opened.
+    private static func earliest(_ openings: [Int]) -> Int? {
+        openings.lazy.filter { $0 >= 0 }.min()
     }
 
     /// A quote or an opening bracket at the position. A quote may open a quoted key (see
