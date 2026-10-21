@@ -45,6 +45,11 @@ struct RedactionGuideTests {
             #expect(policy.redact(text: kept) == kept)
         }
         #expect(policy.redact(text: "\"x \\\"y\\\" z\"") == "\"x [REDACTED]")
+        // An escape of any form cuts the text, and a letter or digit read as punctuation does too.
+        #expect(policy.redact(text: "status=200&count=3") == "status=200[REDACTED]")
+        #expect(policy.redact(text: "saved logs\\app.txt") == "saved logs[REDACTED]")
+        #expect(policy.redact(text: "R&D team") == "R[REDACTED]")
+        #expect(policy.redact(text: "\u{1F101}status=hunter2") == "[REDACTED]")
         #expect(policy.redact(text: #""x":"hunter2""#) == "[REDACTED]")
         #expect(policy.redact(text: #""hunter2":"v""#) == "[REDACTED]")
         #expect(policy.redact(text: #""status": 200, "x": hunter2"#) == #""status": 200, [REDACTED]"#)
@@ -107,6 +112,8 @@ struct RedactionGuideTests {
         let url = try #require(URL(string: "https://bob:pw@api.example.com/users/12345678/reset?code=x&page=2#y"))
         #expect(policy.redact(url: url) == "https://api.example.com/users/:id/reset?code=[REDACTED]&page=[REDACTED]")
         #expect(RedactionPolicy(allowedQueryParameters: ["page"]).redact(url: url) == "https://api.example.com/users/:id/reset?code=[REDACTED]&page=2")
+        // A path with a dot segment is recorded as its scheme and host only.
+        #expect(policy.redact(url: try #require(URL(string: "https://api.example.com/pin/./4831"))) == "https://api.example.com")
         let headers = RedactionPolicy(allowedHeaders: RedactionPolicy.defaultAllowedHeaders + ["X-Request-ID"]).redact(headers: [
             HTTPHeader(name: "Content-Type", value: "application/json; charset=utf-8"), HTTPHeader(name: "X-Request-ID", value: "42"),
             HTTPHeader(name: "Cache-Control", value: "max-age=60"), HTTPHeader(name: "X-Upstream", value: "eu-1"),

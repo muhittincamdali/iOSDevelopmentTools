@@ -179,10 +179,15 @@ only when allowed, and a query that servers could split differently is written a
 `?[REDACTED]`. Path segments that look like identifiers or secrets become `:id`: UUIDs, numbers of
 six or more digits, tokens of 16 or more letters and digits, long hex or Base64 strings, JWTs and
 segments in which the free-text rule or a detector finds something; the segment after one that
-names a secret becomes `:id` too (`/pin/4831`). With `urlDetail: .hostOnly` only the scheme, host
-and port are written. A host that is neither a name of ASCII letters, digits and hyphens nor an IP
-address, or in which a value detector finds something, is not written either:
-`https://password=hunter2.example/x` is recorded as `https://[REDACTED]`.
+names a secret becomes `:id` too (`/pin/4831`). A path that servers resolve differently from how
+it is written is not read: one with a `.` or `..` segment, `%2E` in any case, a segment whose
+part before `;` is empty (`/;/`) or an escape escaped again (`%252E`) is recorded as its scheme,
+host and port only. `URL.standardized` and servers read `/pin/./4831` and `/pin/x/../4831` as
+`/pin/4831` (RFC 3986 §5.2.4), so the value after the name could not be told from the text. With
+`urlDetail: .hostOnly` only the scheme, host and port are written. A host that is neither a name
+of ASCII letters, digits and hyphens nor an IP address, or in which a value detector finds
+something, is not written either: `https://password=hunter2.example/x` is recorded as
+`https://[REDACTED]`.
 
 ```swift
 let url = URL(string: "https://bob:pw@api.example.com/users/12345678/reset?code=x&page=2#y")!
@@ -259,12 +264,18 @@ The triggers:
   punctuation and symbols outside ASCII (`꞉`, `≔`, `→`, `·`, `—`, `’`, `€`), also those that
   compatibility normalization turns into ASCII (`＝`, `：`, `…`, `‥`, `™`, `№`, `ⓟ`), emoji,
   control characters, the line breaks VT, FF, U+0085, U+2028 and U+2029, and private-use or
-  unassigned code points. No list of look-alikes is kept.
-- **An escape**, which is never decoded: `%XX`, `%uXXXX`, `&name;` (`&amp;`, `&lt;`), `&#…;`,
-  `\=` and a backslash before an octal digit or before `x`, `u`, `U`, `N` or `o`, whatever
-  follows (`\101`, `\x41`, `\x{41}`, `\u0041`, `\u{41}`, `\U00000041`, `\N{…}`, `\o{101}`).
-  The text is hidden from the escape on:
-  `pass%77ord=hunter2` is stored as `pass[REDACTED]`.
+  unassigned code points. A letter or digit is also judged by the compatibility form the rule
+  reads it as: one whose form holds ASCII punctuation or a character outside the alphabet is a
+  trigger too (`🄁` is read as `0,`, `⒈` as `1.`, `⑴` as `(1)`, `½` as `1⁄2`), so
+  `🄁status=hunter2` is stored as `[REDACTED]`. No list of look-alikes is kept.
+- **An escape**, which is never decoded. No list of escape forms is kept: a backslash before
+  anything but an ASCII space, a tab, a line break or the end of the text (`\x41`, `\u{41}`,
+  `\N{…}`, `\p{L}`, `\8`, `\=`, `\"`, `\\`, a written `\n` and a Windows path such as
+  `dir\data`), `%` and two hex digits (`%3D`) or `%u` and four, and `&` before a letter or `#`
+  (`&amp`, `&lt;`, `&#61;`, `&#q`, `R&D`). The text is hidden from the escape on:
+  `pass%77ord=hunter2` is stored as `pass[REDACTED]`, `status=200&count=3` as
+  `status=200[REDACTED]` and `saved logs\app.txt` as `saved logs[REDACTED]`. JSON in the text is
+  read by its parser, so its escapes are not escapes of free text.
 - **A word longer than 256 characters**, which is no name or value that can be read.
 - **A token that cannot be read with certainty**: a word that mixes scripts (`tоken` with a
   Cyrillic `о`; Latin with Japanese, Chinese or Korean is not mixed) or holds an invisible
@@ -272,9 +283,11 @@ The triggers:
   JSON that does not parse. The text is hidden from there. A joiner between two emoji (`👩‍💻`)
   and a skin tone (`👍🏽`) are part of the emoji.
 - **A quote that does not close on its line, or quotes that overlap.** There are six kinds of
-  quote: `"`, `'` and a backtick, each plain or escaped (`\"`). A `"` or a backtick opens a quote
+  quote: `"`, `'` and a backtick, each plain or escaped (`\"`). The backslash of an escaped quote
+  is an escape, which cuts the text by itself (`"x \"y\" z"` is stored as `"x [REDACTED]`); the
+  escaped kinds pair the quotes of JSON written into the text. A `"` or a backtick opens a quote
   of its kind anywhere, a `'` only at the start of a word (so `don't` and `İstanbul'a` open
-  none). A quote of one kind opens inside a quote of another (`'a "b" c'`, `"x \"y\" z"`), and a
+  none). A quote of one kind opens inside a quote of another (`'a "b" c'`, `"say 'hi'"`), and a
   quote closes at the next one of its kind on the same line when it is the innermost quote
   open. When a quote of a kind that is open comes while a quote opened after it is still open
   (`'x "y' z"`, `"a \" b"`), the quotes overlap: which quote it closes cannot be told, and the
@@ -330,6 +343,9 @@ allowed parameters. Line breaks are kept as they are written.
 | `see https://a.example/cb#access_token= hunter2` | `see [REDACTED]` |
 | `see https://a.example/v1/password= hunter2` | `see [REDACTED]` |
 | `see https://a.example/v1/x), ok` | `see [REDACTED]` |
+| `status=200&count=3` | `status=200[REDACTED]` |
+| `saved logs\app.txt` | `saved logs[REDACTED]` |
+| `🄁status=hunter2` | `[REDACTED]` |
 
 ### Limits keep hostile input from exhausting the stack, the time and the memory
 
@@ -416,7 +432,9 @@ below included (`Payment failed: card declined` keeps only `Payment failed:`, an
 Array<Item> in 3 ms` keeps only `Loaded Array`), the rest of a text after a quote that does not
 close on its line or a bracket that does not close (`Order 1234 shipped :(`), the rest of a text
 after a URL that is not clean or that two marks follow (`health http://localhost:8080/health ok`
-keeps only `health`), and the value of a name that only describes a secret (`token_type`).
+keeps only `health`), the rest of a text from a backslash or an `&` before a letter
+(`R&D team` keeps only `R`), and the value of a name that only describes a secret
+(`token_type`).
 
 ## See Also
 
