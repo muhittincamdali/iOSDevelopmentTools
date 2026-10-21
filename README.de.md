@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
+<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 522 Swift-Testing-Tests auf macOS und 519 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 554 Swift-Testing-Tests auf macOS und 551 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -213,7 +213,10 @@ func configureNetworkLogger() {
   Schlüssel, der nicht auf der Allowlist steht (standardmäßig `status`, `method`, `path`,
   `duration_ms` und `count`; eigene fügen Sie mit `allowedTextKeys` hinzu), ein Zeichen außerhalb
   von ASCII, das weder Buchstabe noch diakritisches Zeichen, Ziffer oder Leerzeichen ist (`꞉`,
-  `…`, ein Emoji), eine Escape-Sequenz wie `%3D` oder ein Anführungszeichen oder eine Klammer, die
+  `…`, ein Emoji), eine Escape-Sequenz wie `%3D`, ein Schlüssel in Anführungszeichen, der nicht
+  erlaubt ist (geschnitten am öffnenden Anführungszeichen: `"x":"hunter2"` wird als `[REDACTED]`
+  gespeichert), Markup (ein `<`, das kein Vergleich ist: `<b>`, `</x>`, `<!--`; kein Tag behält
+  seinen Text), ein Anführungszeichen, das nicht in seiner Zeile schließt, oder eine Klammer, die
   nicht schließt, schwärzt alles danach, auch die Zeilen darunter
   (`login password=hunter2 status=200` wird als `login password=[REDACTED]` gespeichert,
   `x=hunter2` als `x=[REDACTED]`). Eine Meldung ohne Auslöser bleibt, wie sie ist, bis auf
@@ -221,8 +224,9 @@ func configureNetworkLogger() {
 - **URLs in Log-Meldungen** haben keine Insel-Logik. Eine URL bleibt nur sichtbar, wenn sie sauber
   ist: `scheme://host` mit einem optionalen Pfad aus ASCII-Buchstaben, Ziffern, `.`, `_`, `-` und
   `/`, ohne Host oder Pfadsegment, das ein geheimer Name ist, und danach ein Leerzeichen, ein
-  Zeilenende oder ein Satzzeichen, das einen Satz beendet. Jede andere URL (eine Query, ein
-  Fragment, ein Port, Benutzerdaten, ein Escape wie `%3D`) verbirgt die Meldung ab dem Anfang der
+  Zeilenende, das Ende des Textes oder genau eines von `.`, `,`, `!` und `)`, gefolgt von einem
+  davon. Jede andere URL (eine Query, ein Fragment, ein Port, Benutzerdaten, ein Escape wie `%3D`,
+  ein Anführungszeichen oder zwei Satzzeichen danach) verbirgt die Meldung ab dem Anfang der
   URL (`GET https://api.example.com/v1/items?page=2 done` wird als `GET [REDACTED]` gespeichert);
   `allowedQueryParameters` gilt für aufgezeichnete Request-URLs, nicht für URLs im Text.
 

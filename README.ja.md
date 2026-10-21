@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
+<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -58,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 522 件、iOS シミュレーターで 519 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 554 件、iOS シミュレーターで 551 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -206,15 +206,18 @@ func configureNetworkLogger() {
 - **ログメッセージ**は最初のトリガーまで保持されます。秘密の名前、許可リストにないキー（デフォルトは
   `status`、`method`、`path`、`duration_ms`、`count`。独自のキーは `allowedTextKeys` で追加
   します）、文字・結合記号・数字・空白以外の ASCII 外の文字（`꞉`、`…`、絵文字）、`%3D` のような
-  エスケープ、閉じられていない引用符や括弧があると、それ以降は下の行も含めてすべてマスキング
-  されます（`login password=hunter2 status=200` は `login password=[REDACTED]`、`x=hunter2` は
+  エスケープ、許可されていない引用符付きのキー（開き引用符の位置で切られます。`"x":"hunter2"` は
+  `[REDACTED]` として保存されます）、マークアップ（比較ではない `<`。`<b>`、`</x>`、`<!--` など。
+  どのタグもテキストを残しません）、同じ行で閉じられていない引用符、閉じられていない括弧があると、
+  それ以降は下の行も含めてすべてマスキングされます（`login password=hunter2 status=200` は `login password=[REDACTED]`、`x=hunter2` は
   `x=[REDACTED]` として保存されます）。トリガーのないメッセージは、検出されたトークン、カード番号、
   メールアドレスを除いてそのまま保持されます。
 - **ログメッセージ内の URL** を特別に扱う仕組みはありません。URL がそのまま表示されるのは
   クリーンな場合だけです。つまり `scheme://host` と、ASCII の英字・数字・`.`・`_`・`-`・`/`
   だけからなる省略可能なパスでできていて、秘密の名前であるホストやパスセグメントがなく、直後が
-  空白、行末、または文を終える句読点である場合です。それ以外の URL（クエリ、フラグメント、
-  ポート、ユーザー情報、`%3D` のようなエスケープを含むもの）は、URL の始まりからメッセージを
+  空白、行末、テキストの終わり、または `.`・`,`・`!`・`)` のいずれか 1 つとその後の空白・行末・
+  テキストの終わりである場合です。それ以外の URL（クエリ、フラグメント、ポート、ユーザー情報、
+  `%3D` のようなエスケープを含むもの、直後に引用符や 2 つの記号が続くもの）は、URL の始まりからメッセージを
   マスキングします（`GET https://api.example.com/v1/items?page=2 done` は `GET [REDACTED]`
   として保存されます）。`allowedQueryParameters` は記録されたリクエストの URL に適用され、
   テキスト内の URL には適用されません。

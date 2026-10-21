@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
+<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -56,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 522개, iOS 시뮬레이터에서 519개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 554개, iOS 시뮬레이터에서 551개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -202,15 +202,18 @@ func configureNetworkLogger() {
 - **로그 메시지**는 첫 번째 트리거까지만 보관됩니다. 비밀 이름, 허용 목록에 없는 키(기본값은
   `status`, `method`, `path`, `duration_ms`, `count`이며 `allowedTextKeys`로 직접 추가할 수
   있습니다), 문자·결합 부호·숫자·공백이 아닌 ASCII 밖의 문자(`꞉`, `…`, 이모지), `%3D` 같은
-  이스케이프, 닫히지 않은 따옴표나 괄호가 나오면 그 뒤의 모든 내용이 아래 줄까지 가려집니다
+  이스케이프, 허용되지 않은 따옴표 속 키(여는 따옴표에서 잘립니다. `"x":"hunter2"`는
+  `[REDACTED]`로 저장됩니다), 마크업(비교가 아닌 `<`: `<b>`, `</x>`, `<!--`. 어떤 태그도 텍스트를
+  남기지 않습니다), 같은 줄에서 닫히지 않은 따옴표, 닫히지 않은 괄호가 나오면 그 뒤의 모든 내용이
+  아래 줄까지 가려집니다
   (`login password=hunter2 status=200`은 `login password=[REDACTED]`로, `x=hunter2`는
   `x=[REDACTED]`로 저장됩니다). 트리거가 없는 메시지는 감지된 토큰, 카드 번호, 이메일 주소를 빼고
   그대로 보관됩니다.
 - **로그 메시지 속 URL**에는 섬 논리가 없습니다. URL은 깨끗할 때만 그대로 보입니다. 즉
   `scheme://host`와 ASCII 문자, 숫자, `.`, `_`, `-`, `/`로만 된 선택적 경로로 이루어지고,
-  비밀 이름인 호스트나 경로 세그먼트가 없으며, 바로 뒤에 공백, 줄 끝 또는 문장을 끝내는 문장
-  부호가 와야 합니다. 그 밖의 URL(쿼리, 프래그먼트, 포트, 사용자 정보, `%3D` 같은 이스케이프가
-  있는 URL)은 URL이 시작하는 곳부터 메시지를 가립니다
+  비밀 이름인 호스트나 경로 세그먼트가 없으며, 바로 뒤에 공백, 줄 끝, 텍스트의 끝, 또는 `.`, `,`,
+  `!`, `)` 중 하나와 그 뒤의 공백·줄 끝·텍스트의 끝이 와야 합니다. 그 밖의 URL(쿼리, 프래그먼트,
+  포트, 사용자 정보, `%3D` 같은 이스케이프가 있거나 뒤에 따옴표나 문장 부호 두 개가 오는 URL)은 URL이 시작하는 곳부터 메시지를 가립니다
   (`GET https://api.example.com/v1/items?page=2 done`은 `GET [REDACTED]`로 저장됩니다).
   `allowedQueryParameters`는 기록된 요청 URL에 적용되며 텍스트 속 URL에는 적용되지 않습니다.
 

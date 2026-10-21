@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 522 Swift Testing tests on macOS and 519 on an iOS simulator. Requests travel
+- **Tested** — 554 Swift Testing tests on macOS and 551 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -204,17 +204,20 @@ func configureNetworkLogger() {
 - **Log messages** are kept up to their first trigger: a secret name, a key that is not on the
   allowlist (`status`, `method`, `path`, `duration_ms` and `count` by default; add yours with
   `allowedTextKeys`), a character outside ASCII that is not a letter, mark, digit or space (`꞉`,
-  `…`, an emoji), an escape such as `%3D`, or a quote or bracket that does not close hides
-  everything after it, the lines below too (`login password=hunter2 status=200` is stored as
-  `login password=[REDACTED]`, `x=hunter2` as `x=[REDACTED]`). A message with no trigger is kept
-  as it is, apart from detected tokens, card numbers and email addresses.
+  `…`, an emoji), an escape such as `%3D`, a key in quotes that is not allowed (cut at its
+  opening quote: `"x":"hunter2"` is stored as `[REDACTED]`), markup (a `<` that is not a
+  comparison: `<b>`, `</x>`, `<!--`; no tag keeps its text), a quote that does not close on its
+  line or a bracket that does not close hides everything after it, the lines below too
+  (`login password=hunter2 status=200` is stored as `login password=[REDACTED]`, `x=hunter2` as
+  `x=[REDACTED]`). A message with no trigger is kept as it is, apart from detected tokens, card
+  numbers and email addresses.
 - **URLs in log messages** have no island logic. A URL stays visible only when it is clean:
   `scheme://host` with an optional path of ASCII letters, digits, `.`, `_`, `-` and `/`, no host or
-  path segment that names a secret, and a space, a line end or punctuation that ends a sentence
-  after it. Any other URL (a query, a fragment, a port, user info, an escape such as `%3D`) hides
-  the message from where the URL starts (`GET https://api.example.com/v1/items?page=2 done` is
-  stored as `GET [REDACTED]`); `allowedQueryParameters` applies to recorded request URLs, not to
-  URLs in text.
+  path segment that names a secret, and after it a space, a line end, the end of the text, or one
+  `.`, `,`, `!` or `)` followed by one of those. Any other URL (a query, a fragment, a port, user
+  info, an escape such as `%3D`, a quote or two marks after it) hides the message from where the
+  URL starts (`GET https://api.example.com/v1/items?page=2 done` is stored as `GET [REDACTED]`);
+  `allowedQueryParameters` applies to recorded request URLs, not to URLs in text.
 
 Redaction is a safety net, not a guarantee. It is built for secrets recorded by accident:
 structured input is parsed, and what the parser does not fully understand is hidden; free text is a

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
+<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 522, iOS simülatöründe 519 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 554, iOS simülatöründe 551 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -213,16 +213,20 @@ func configureNetworkLogger() {
 - **Günlük mesajları** ilk tetikleyiciye kadar tutulur: gizli bir ad, izin listesinde olmayan bir
   anahtar (varsayılan olarak `status`, `method`, `path`, `duration_ms` ve `count`; kendi
   anahtarlarınızı `allowedTextKeys` ile ekleyin), harf, işaret, rakam ya da boşluk olmayan ASCII
-  dışı bir karakter (`꞉`, `…`, bir emoji), `%3D` gibi bir kaçış dizisi ya da kapanmayan bir tırnak
-  veya parantez, ondan sonraki her şeyi alttaki satırlarla birlikte gizler
+  dışı bir karakter (`꞉`, `…`, bir emoji), `%3D` gibi bir kaçış dizisi, izin verilmeyen tırnaklı bir
+  anahtar (açılış tırnağından kesilir: `"x":"hunter2"`, `[REDACTED]` olarak saklanır), işaretleme
+  (karşılaştırma olmayan bir `<`: `<b>`, `</x>`, `<!--`; hiçbir etiket metnini korumaz), kendi
+  satırında kapanmayan bir tırnak ya da kapanmayan bir parantez, ondan sonraki her şeyi alttaki
+  satırlarla birlikte gizler
   (`login password=hunter2 status=200`, `login password=[REDACTED]`; `x=hunter2` ise
   `x=[REDACTED]` olarak saklanır). Tetikleyici içermeyen bir mesaj, bulunan token'lar, kart
   numaraları ve e-posta adresleri dışında olduğu gibi tutulur.
 - **Günlük mesajlarındaki URL'ler** için ada mantığı yoktur. Bir URL yalnızca temizse görünür
   kalır: `scheme://host` ve isteğe bağlı olarak ASCII harf, rakam, `.`, `_`, `-` ve `/`
   karakterlerinden oluşan bir yol; gizli bir ad olan bir host ya da yol parçası yok; ardından bir
-  boşluk, satır sonu ya da cümleyi bitiren bir noktalama işareti geliyor. Başka her URL (sorgu,
-  fragment, port, kullanıcı bilgisi, `%3D` gibi bir kaçış dizisi) mesajı URL'nin başladığı yerden
+  boşluk, satır sonu, metnin sonu ya da `.`, `,`, `!` ve `)` işaretlerinden yalnızca biri ve onun
+  ardından bunlardan biri geliyor. Başka her URL (sorgu, fragment, port, kullanıcı bilgisi, `%3D`
+  gibi bir kaçış dizisi, ardından gelen bir tırnak ya da iki işaret) mesajı URL'nin başladığı yerden
   itibaren gizler (`GET https://api.example.com/v1/items?page=2 done`, `GET [REDACTED]` olarak
   saklanır); `allowedQueryParameters` metindeki URL'lere değil, kaydedilen istek URL'lerine
   uygulanır.

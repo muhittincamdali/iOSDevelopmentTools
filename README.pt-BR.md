@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
+<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 522 testes de Swift Testing no macOS e 519 em um simulador de iOS. As requisições vão de
+- **Testado** — 554 testes de Swift Testing no macOS e 551 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -211,16 +211,20 @@ func configureNetworkLogger() {
 - **Mensagens de log** são guardadas até o primeiro gatilho: um nome secreto, uma chave que não
   está na lista permitida (`status`, `method`, `path`, `duration_ms` e `count` por padrão;
   adicione as suas com `allowedTextKeys`), um caractere fora do ASCII que não é letra, marca,
-  dígito nem espaço (`꞉`, `…`, um emoji), uma sequência de escape como `%3D`, ou uma aspa ou um
-  colchete que não se fecha oculta tudo o que vem depois, inclusive as linhas de baixo
+  dígito nem espaço (`꞉`, `…`, um emoji), uma sequência de escape como `%3D`, uma chave entre aspas
+  que não está permitida (cortada na aspa de abertura: `"x":"hunter2"` é armazenada como
+  `[REDACTED]`), marcação (um `<` que não é uma comparação: `<b>`, `</x>`, `<!--`; nenhuma tag
+  guarda seu texto), uma aspa que não se fecha na sua linha ou um colchete que não se fecha oculta
+  tudo o que vem depois, inclusive as linhas de baixo
   (`login password=hunter2 status=200` é armazenada como `login password=[REDACTED]`, e
   `x=hunter2` como `x=[REDACTED]`). Uma mensagem sem gatilho é guardada como está, exceto os
   tokens, números de cartão e endereços de e-mail detectados.
 - **URLs em mensagens de log** não têm lógica de ilha. Uma URL só fica visível quando está limpa:
   `scheme://host` com um caminho opcional de letras ASCII, dígitos, `.`, `_`, `-` e `/`, sem host
-  ou segmento de caminho que seja um nome secreto, seguida de um espaço, um fim de linha ou uma
-  pontuação que encerra uma frase. Qualquer outra URL (uma query, um fragmento, uma porta,
-  informações de usuário, um escape como `%3D`) oculta a mensagem a partir do início da URL
+  ou segmento de caminho que seja um nome secreto, seguida de um espaço, um fim de linha, o fim do
+  texto ou um único `.`, `,`, `!` ou `)` seguido de um deles. Qualquer outra URL (uma query, um
+  fragmento, uma porta, informações de usuário, um escape como `%3D`, uma aspa ou dois sinais
+  depois dela) oculta a mensagem a partir do início da URL
   (`GET https://api.example.com/v1/items?page=2 done` é guardado como `GET [REDACTED]`);
   `allowedQueryParameters` vale para as URLs das requisições registradas, não para URLs no texto.
 
