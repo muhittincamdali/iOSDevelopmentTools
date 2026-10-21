@@ -2,12 +2,12 @@ import Foundation
 @testable import iOSDevelopmentTools
 
 /// A megabyte of free text of `<`, quotes, quoted keys and URLs, timed and measured as the other
-/// shapes are. Quotes are read in one pass of their own that keeps where a quote of each of six
-/// kinds is open, and a quoted key is compared where it is in the text: a quote before a megabyte
+/// shapes are. Quotes are read in one pass of their own that keeps the quotes open on the line,
+/// six at most, and a quoted key is compared where it is in the text: a quote before a megabyte
 /// of escaped ones, backslash runs before quotes, quotes of every style, quotes inside quotes of
-/// other kinds, quoted keys, comparisons and URLs that a mark ends are
-/// read in time and memory linear in the text, also with every offset of the scanning copy kept
-/// (`ﬁ` before them).
+/// other kinds, quotes that overlap, quoted keys, comparisons and URLs that a mark ends are read
+/// in time and memory linear in the text, also with every offset of the scanning copy kept (`ﬁ`
+/// before them).
 enum MarkupQuoteShapes {
     private static func lines(_ line: String) -> String {
         String(repeating: line, count: max(1, RedactionTimeLimitTests.size / line.utf8.count))
@@ -25,6 +25,8 @@ enum MarkupQuoteShapes {
             ("lines that close their quotes", { lines("msg \"ok\" and 'fine'\n") }),
             ("quotes inside quotes of other kinds that close", { lines("'a \"b\" c' \"d 'e' f\" `g \\\"h\\\" i` ") }),
             ("a quote of every kind open before a megabyte line", { "'x \"y `z \\\"w " + lines("ab cd ") }),
+            ("quotes of four kinds nested and closed on a megabyte line", { lines("'a \"b `c \\\"d\\\" e` f\" g' ") }),
+            ("quotes that overlap before a megabyte line", { "'x \"y' \"c " + lines("ab cd ") }),
             ("allowed quoted keys", { lines("\"status\": 200, 'count': 3, `method`: GET ") }),
             ("a megabyte line of quotes that close with no separator after them", { lines("\"a b\" ") }),
             ("comparisons", { lines("a < b and 1<2 ") }),

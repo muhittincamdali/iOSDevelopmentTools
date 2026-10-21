@@ -147,6 +147,45 @@ struct RedactionMarkupQuoteRuleTests {
         Self.expectHidden(input, secret)
     }
 
+    /// The twelfth review's inputs: with each kind of quote read on its own, a second quote of the
+    /// inner kind after the outer one closed (`'x "y' "c`) was read as closing the inner quote, so
+    /// the quote it opens over the line break was taken for closed and the value on the next line
+    /// showed. The inner quote is still open where the outer one closes, so the quotes overlap
+    /// and the text is cut at the outer one.
+    static let overlappingQuoteInputs = [
+        ("status='x \"y' \"c\nhunter2Zq\" ok", "status=[REDACTED]", "hunter2Zq"),
+        ("status=200 `a\"b` \"c\nhunter2Zq\"", "status=200 [REDACTED]", "hunter2Zq"),
+        ("status=\"x 'y\" 'c\nhunter2Zq' ok", "status=[REDACTED]", "hunter2Zq"),
+        ("status=`x \"y` \"c\nhunter2Zq\" ok", "status=[REDACTED]", "hunter2Zq"),
+        ("status=\"x \\\"y\" \\\"c\nhunter2Zq\\\" ok", "status=[REDACTED]", "hunter2Zq"),
+        ("'\"note' \"a\nQx31\": 1", "[REDACTED]", "Qx31"),
+        ("status='x \"y' \"c\r\nhunter2Zq\" ok", "status=[REDACTED]", "hunter2Zq"),
+        ("msg 'x \"y' \"c\nhunter2Zq\" ok", "msg [REDACTED]", "hunter2Zq"),
+        ("ad='Ayşe \"q' \"c\nhunter2Zq\" ok", "ad=[REDACTED]", "hunter2Zq"),
+        ("x 'y \"z' \"c\nhunter2Zq\" ok", "x [REDACTED]", "hunter2Zq"),
+    ]
+
+    @Test("quotes that overlap cut the text at the earliest one, also when a quote of the inner kind follows", arguments: overlappingQuoteInputs)
+    func overlappingQuotes(input: String, expected: String, secret: String) throws {
+        #expect(redactor.redact(input) == expected)
+        #expect(Redactor(allowedTextKeys: ["ad"]).redact(input) == expected)
+        #expect(redactor.redact(body: Data(input.utf8), contentType: "text/plain") == expected)
+        let json = try JSONSerialization.data(withJSONObject: ["status": input])
+        let output = redactor.redact(body: json, contentType: "application/json")
+        let object = try JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: String]
+        #expect(object?["status"] == expected, "\(output)")
+        Self.expectHidden(input, secret)
+    }
+
+    @Test("quotes that overlap on one line cut the text there", arguments: [
+        ("'a \"b' c\" done", "[REDACTED]"), ("msg \"a 'b\" c' done", "msg [REDACTED]"), ("x `a 'b` c' d", "x [REDACTED]"),
+        ("'say \"don't\" ok'", "[REDACTED]"), ("status='x \"y' ok \"z\" done", "status=[REDACTED]"),
+    ])
+    func overlappingQuotesOnOneLine(input: String, expected: String) {
+        #expect(redactor.redact(input) == expected)
+        #expect(redactor.redact(body: Data(input.utf8), contentType: "text/plain") == expected)
+    }
+
     @Test("quotes that close on their line, apostrophes and escaped quotes keep the text", arguments: [
         "say \"hello world\" done", "msg 'ok' and \"fine\"\nnext \"line\"", "don't stop\nwe're done", "it\\'s ok",
         "\"a \\\"b\\\" c\" done", "status=200 count=3 `cmd` ran", "{\"status\":\"say \\\"hi\\\"\"} done", "İstanbul'a gitti",

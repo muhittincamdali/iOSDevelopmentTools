@@ -158,6 +158,89 @@ struct RedactionMarkupQuotePropertyTests {
         }
     }
 
+    @Test("no value after quotes that overlap and a quote of the inner kind opened over the line break shows on any path", arguments: 0..<4)
+    func overlappingQuotesOverLines(seed: Int) {
+        var random = SeededRandom(seed: 0x1C_3F00 + UInt64(seed))
+        for _ in 0..<150 {
+            let value = RedactionCorpusPropertyTests.value(using: &random)
+            let outer = Self.quotes.randomElement(using: &random)!
+            let inner = Self.quotes.filter { $0 != outer }.randomElement(using: &random)!
+            // `<outer><inner…><outer> <inner>…`, then the line break, the value and the inner quote:
+            // read kind by kind, the second inner quote closes the first one.
+            let opening = outer + ["", "x ", "note "].randomElement(using: &random)! + inner + ["y", "note", ""].randomElement(using: &random)! + outer
+                + [" ", "  ", " ok "].randomElement(using: &random)! + inner + ["c", "a", ""].randomElement(using: &random)!
+            let text = Self.prefixes.randomElement(using: &random)! + ["", "status="].randomElement(using: &random)! + opening
+                + Self.lineBreaks.randomElement(using: &random)! + value + inner + [" ok", "", ": 1", "\nnext"].randomElement(using: &random)!
+            for (path, output) in RedactionCutRuleTests.everyPath(text) {
+                #expect(!RedactionCorpusPropertyTests.leaks(value, in: output), "\(path): \(text.debugDescription) -> \(output.debugDescription)")
+            }
+        }
+    }
+
+    /// A first line of quotes of the four kinds that the generator writes, words and spaces, read
+    /// as the two earlier designs read it: one quote open at a time, the quotes inside it opening
+    /// nothing; and each kind on its own. When either reading leaves a quote open at the line
+    /// break, the value on the next line never shows.
+    @Test("no value after a line that either earlier reading of quotes leaves open shows on any path", arguments: 0..<4)
+    func linesEitherReadingLeavesOpen(seed: Int) {
+        var random = SeededRandom(seed: 0x1D_3F00 + UInt64(seed))
+        var checked = 0
+        for _ in 0..<400 {
+            // A token is the index of a quote in `quotes`, `word` or `space`.
+            let tokens: [Int] = (0..<Int.random(in: 2...7, using: &random)).map { _ in
+                Bool.random(using: &random) ? Int.random(in: 0..<Self.quotes.count, using: &random) : [Self.word, Self.space].randomElement(using: &random)!
+            }
+            guard Self.oneSlotLeavesOpen(tokens) || Self.eachKindLeavesOpen(tokens) else { continue }
+            checked += 1
+            let value = RedactionCorpusPropertyTests.value(using: &random)
+            let line = tokens.map { token in
+                switch token {
+                case Self.word: ["x", "note", "ok"].randomElement(using: &random)!
+                case Self.space: [" ", "  "].randomElement(using: &random)!
+                default: Self.quotes[token]
+                }
+            }.joined()
+            let text = Self.prefixes.randomElement(using: &random)! + ["", "status="].randomElement(using: &random)! + line
+                + Self.lineBreaks.randomElement(using: &random)! + value + [" ok", "\"", "'", ": 1"].randomElement(using: &random)!
+            for (path, output) in RedactionCutRuleTests.everyPath(text) {
+                #expect(!RedactionCorpusPropertyTests.leaks(value, in: output), "\(path): \(text.debugDescription) -> \(output.debugDescription)")
+            }
+        }
+        #expect(checked > 100)
+    }
+
+    private static let word = -1
+    private static let space = -2
+
+    /// Whether the quote at token `i` can open: a `'` only where no word ends right before it.
+    private static func opens(_ tokens: [Int], at i: Int) -> Bool {
+        tokens[i] != 1 || i == 0 || tokens[i - 1] != word
+    }
+
+    private static func oneSlotLeavesOpen(_ tokens: [Int]) -> Bool {
+        var open: Int?
+        for (i, token) in tokens.enumerated() where token >= 0 {
+            if let kind = open {
+                if kind == token { open = nil }
+            } else if opens(tokens, at: i) {
+                open = token
+            }
+        }
+        return open != nil
+    }
+
+    private static func eachKindLeavesOpen(_ tokens: [Int]) -> Bool {
+        var open = Set<Int>()
+        for (i, token) in tokens.enumerated() where token >= 0 {
+            if open.contains(token) {
+                open.remove(token)
+            } else if opens(tokens, at: i) {
+                open.insert(token)
+            }
+        }
+        return !open.isEmpty
+    }
+
     @Test("comparisons and quotes that close on their lines keep the text")
     func plainTextStays() {
         var random = SeededRandom(seed: 0x18_3C00)
