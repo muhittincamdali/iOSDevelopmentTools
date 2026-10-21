@@ -231,6 +231,22 @@ out of logs in the first place.
   address, in free text, JSON strings, text/plain bodies and LogStore lines. A line feed or a
   carriage return written as such still ends a finding. Card groups are read through a window of
   the groups a card number can span, so a megabyte of them is not held in one array.
+- A word of free text is compared with the secret names by one reading, its ASCII skeleton, in
+  place of three that took a letter, mark or number with no ASCII form as any letter, as none or
+  as a mark after a letter, one reading at a time. Every such character is left out, and a name
+  also counts with one of its letters missing where one was left out, so each counts as nothing or
+  as one letter on its own, as the one wildcard rule of the spec says. A decimal digit of another
+  script is one of them: the scanned text reads it as its ASCII digit, for numbers and the value
+  detectors, and the word read that digit too, so `t၀ken`, `p١n`, `c๐okie`, `passw०rd`,
+  `sessi၀n`, `cre০ential` and `to၀ken` named nothing. A name with one character in place of a
+  letter and another put in (`tͦkenͦ`, also with 300 marks after it, `pını`, `t〇ken〇`) was not
+  found either. These names and the values after them were stored as they were in free text,
+  LogStore lines, JSON strings, forms, multipart text parts, text/plain bodies, allowed query
+  values and the `User-Agent` header, and beside a name written as a value
+  (`{"name":"t၀ken","note":…}`, `["a","t၀ken",…]`). A digit that decomposes to an ASCII digit is
+  still that digit (`passw０rd` reads as `passw0rd`), numbers written in other scripts stay as
+  they are, and a card number written in them is still found. `ᴘwᴅ` now reads as `pw`, which the
+  eleventh review listed as not found.
 - Hostile input is bounded: JSON may be open 64 levels deep across every document a text is in, at
   most four documents are read one inside another, and the documents found in one input read at
   most four times its length. The tests run on a thread with 512 KiB of stack and, in a release
@@ -259,7 +275,7 @@ out of logs in the first place.
   name, generated triggers after which no value may show and generated keys, tests that ordinary
   keys, allowlisted headers and text with no trigger stay readable, parser-differential, stack,
   time-limit and peak-memory tests, the probes of every review of the shared rules, and the
-  examples of the guide. 612 tests run on macOS and 609 on an iOS simulator.
+  examples of the guide. 623 tests run on macOS and 620 on an iOS simulator.
 
 ### Changed
 
