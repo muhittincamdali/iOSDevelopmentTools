@@ -40,6 +40,18 @@ struct RedactionNameMatchingTests {
         #expect(!redactor.redact(separated).contains("hunter2"), "\(separated)")
     }
 
+    // Section 0 of the redaction rules: a combining mark (Mn) written in place of one letter of a
+    // name is deliberate disguise, which the guide lists under "What it does not find". Only a
+    // letter put in place of a letter is read as any letter.
+    @Test("a name written without a separator with a combining mark in place of one of its letters is not found", arguments: [
+        "t\u{0366}ken hunter2", "p\u{0301}ssword hunter2",
+    ])
+    func combiningMarkInPlaceOfALetter(line: String) {
+        #expect(redactor.redact(line).contains("hunter2"), "\(line) is found: update the guide")
+        let separated = line.replacingOccurrences(of: " hunter2", with: ": hunter2")
+        #expect(!redactor.redact(separated).contains("hunter2"), "\(separated)")
+    }
+
     @Test("words in Turkish and other languages that hold a wildcard stay readable", arguments: [
         "Kullanıcı sisteme başarıyla giriş yaptı", "kapıdaki ılgın ağaçları", "Ayşe ılgın", "bjørn dæhlie kom hjem",
     ])
