@@ -214,7 +214,7 @@ out of logs in the first place.
   name, generated triggers after which no value may show and generated keys, tests that ordinary
   keys, allowlisted headers and text with no trigger stay readable, parser-differential, stack,
   time-limit and peak-memory tests, the probes of every review of the shared rules, and the
-  examples of the guide. 512 tests run on macOS and 509 on an iOS simulator.
+  examples of the guide. 583 tests run on macOS and 580 on an iOS simulator.
 
 ### Changed
 
@@ -231,6 +231,14 @@ out of logs in the first place.
   a string scalar by scalar. A megabyte of an array of strings quoted in JSON three times took
   0.72 s on a 512 KiB thread in a release build and takes about 0.3 s on the same machine; no
   shape of the time-limit tests takes more than 0.4 s there.
+- Whether another field of a form, URL query, multipart body or JSON object hides a field's value
+  is told from the positions of the first two fields of each kind that name a secret, instead of
+  reading every such field again for every field. Many fields whose `name`, `id` or `type` is
+  written outside plain ASCII (`name=Ay%C5%9Fe&…`, `{"name":"Ayşe",…}`) made the time grow with
+  the square of the body: on a 512 KiB thread in a release build a megabyte took 1.5 to 2.9 s and
+  two megabytes 5.4 to 10.6 s, so a body near the 16 MiB that `maximumBodySize` allows would have
+  taken minutes. They now take 0.2 to 0.4 s a megabyte, also at 16 MB, and the redacted bodies
+  are the same.
 
 ### Deprecated
 
