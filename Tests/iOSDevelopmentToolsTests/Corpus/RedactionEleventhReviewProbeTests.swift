@@ -11,10 +11,10 @@ struct RedactionEleventhReviewProbeTests {
         var limitations: [Int: String] = [:]
         let byReason: [(String, [Int])] = [
             ("a name without a separator with two or more letters replaced by letters that have no ASCII form, on any path that reads free text",
-             Array(1...14) + Array(23...25) + Array(27...35) + Array(37...43) + [336]),
+             Array(1...14) + Array(23...25) + Array(27...35) + Array(37...42) + [336]),
             ("a name and its value in two JSON objects or arrays", [79, 93]),
             ("a name in another script as an element of an array of more than two", [92]),
-            ("a label it does not know: a word in another language or a name not on the list", [121, 123, 169]),
+            ("a label it does not know: a word in another language or a name not on the list", [121, 123]),
             ("a member that holds a name stays beside a secret name", [122]),
             ("a control: the name written as a value shows, only what follows it is hidden", [147]),
             ("a name wholly in another script that only looks Latin, with no = or :", [202]),
@@ -35,14 +35,16 @@ struct RedactionEleventhReviewProbeTests {
     /// after a separator outside ASCII (`user：…`, `user⩵…`) and after `bob:` in `curl -u`, and,
     /// since a character outside the safe alphabet cuts it, the value after a dash or an arrow
     /// that looks like `=` (`user゠…`, `user⭢…`), and, since the ASCII skeleton of a word leaves out
-    /// its letters without an ASCII form, a name with two of them put in (`passꞏwoꞏrd`).
+    /// its letters without an ASCII form, a name with two of them put in (`passꞏwoꞏrd`), and,
+    /// since a path segment that is not plain ASCII is a label, the segment after
+    /// `p%C9%91sswo%CA%80d` and after `%C5%9Eifre` in a URL path.
     static let fixed = [184, 185, 186, 189, 328, 329, 354, 360] + Array(367...374) + Array(376...383) + [319, 337]
-        + Array(254...260) + [266, 291] + [261, 262, 272] + [36]
+        + Array(254...260) + [266, 291] + [261, 262, 272] + [36] + [43, 169]
 
     @Test("the set has 475 probes")
     func count() {
         #expect(EleventhReviewProbeSet.all.count == 475)
-        #expect(Self.documentedLimitations.count == 46)
+        #expect(Self.documentedLimitations.count == 44)
     }
 
     @Test("no probe outside the documented limitations shows its secret")
@@ -55,7 +57,7 @@ struct RedactionEleventhReviewProbeTests {
 
     @Test("the probes that showed their secret when they were written hide it")
     func fixedProbes() {
-        #expect(Self.fixed.count == 39)
+        #expect(Self.fixed.count == 41)
         for id in Self.fixed {
             let probe = EleventhReviewProbeSet.all[id - 1]
             #expect(probe.leakedPiece(in: probe.redacted()) == nil, "#\(id) \(probe.input.debugDescription)")

@@ -157,7 +157,8 @@ struct RedactionPolicyTests {
         ("/reset/abc123def456ghi789", "/reset/:id"), ("/files/report-final", "/files/report-final"),
         ("/k/0123456789abcdef0123456789abcdef", "/k/:id"),
         ("/t/eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2ln", "/t/:id"),
-        ("/u/ada%40example.com/profile", "/u/:id/profile"), ("/bad/%FF", "/bad/:id"),
+        // A segment that is not plain ASCII once decoded (`@`) is a label: the one after it is a value.
+        ("/u/ada%40example.com/profile", "/u/:id/:id"), ("/bad/%FF", "/bad/:id"),
         // A `;` in the path is not read: only the scheme and host are written.
         ("/shop;jsessionid=ABC123/cart", ""),
     ])

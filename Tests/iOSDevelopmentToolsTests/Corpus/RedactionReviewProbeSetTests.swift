@@ -14,7 +14,8 @@ struct RedactionReviewProbeSetTests {
     /// The probes that show their secret, by review and number, with the limitation each one is.
     static let documentedLimitations: [String: String] = {
         var limitations: [String: String] = [:]
-        let twoLookAlikeLetters = Array(1...14) + Array(23...25) + Array(27...29) + Array(37...43) + [336]
+        // #43 is a URL path: a segment that is not plain ASCII is a label, so the one after it is hidden.
+        let twoLookAlikeLetters = Array(1...14) + Array(23...25) + Array(27...29) + Array(37...42) + [336]
         let byReason: [(String, [String])] = [
             ("a value written before its name", ["a-3#311"]),
             ("the value of an allowed query parameter, also repeated or in another case", ["a-3#379", "a-3#381"]),
@@ -32,7 +33,7 @@ struct RedactionReviewProbeSetTests {
     func counts() {
         let counts = Dictionary(grouping: ReviewProbes.all, by: \.review).mapValues(\.count)
         #expect(counts == ["a-3": 453, "a-5": 452, "a-7": 560, "a-9": 353, "a-10": 475, "a-12": 613, "a-13": 579, "c-12": 66, "c-13": 245])
-        #expect(Self.documentedLimitations.count == 33)
+        #expect(Self.documentedLimitations.count == 32)
         #expect(Self.large.count == 50)
     }
 

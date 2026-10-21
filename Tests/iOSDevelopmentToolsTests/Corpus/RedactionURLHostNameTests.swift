@@ -144,7 +144,7 @@ struct RedactionURLHostNameTests {
     @Test("a host that names no secret, or is an address, keeps its path read segment by segment")
     func otherHostsStay() throws {
         let kept = [
-            "myapp://callback/x", "myapp://settings/profile", "myapp://open/items/42", "https://api.example.com/users/:id/reset",
+            "myapp://callback/x", "myapp://settings/profile", "myapp://open/items/42", "https://api.example.com/users/me/reset",
             "https://api.example.com/v1/items", "http://192.168.0.1:8080/status", "http://[::1]:8080/status",
             "https://keycloak.example.com/realms/main", "https://www.example.org/docs/intro", "file:///tmp/report.txt",
         ]

@@ -30,7 +30,10 @@ extension RedactionPolicy {
     ///   number of six or more digits, a token of 16 or more letters and digits, a run of 32 or
     ///   more hex or Base64 characters, a JSON Web Token, anything the value detectors find, and
     ///   text the free-text rule would change. The segment after one that names a secret is a
-    ///   value too and becomes `:id` whatever it looks like (`/pin/4831`, `/token/…/info`).
+    ///   value too and becomes `:id` whatever it looks like (`/pin/4831`, `/token/…/info`), and so
+    ///   is the segment after one that, decoded, is not plain ASCII by the key rule: letters,
+    ///   digits, `_`, `-`, `.` and spaces with a letter or digit among them (`/caf%C3%A9/menu` is
+    ///   written `/caf%C3%A9/:id`, `/t%CD%A6ken/…` and `/a+b/…` hide what follows too).
     /// - **Dot segments:** a path that servers resolve differently from how it is written is not
     ///   read: only the scheme, host and port are written. That is a path with a `.` or `..`
     ///   segment, `%2E` in any case, a `;` anywhere, raw or as `%3B` in any case
@@ -209,9 +212,10 @@ extension RedactionPolicy {
         return query.utf8.count(where: { $0 == UInt8(ascii: "&") }) >= maximumQueryParameters
     }
 
-    /// The path segment by segment. A segment after one that names a secret or cannot be read
-    /// (`/pin/4831`, `/password-reset/…`, `/token/…/info`) is a value, so it becomes `:id`
-    /// whatever it looks like. A segment that comes again is not read again.
+    /// The path segment by segment. A segment after one that names a secret, is not plain ASCII or
+    /// cannot be read (`/pin/4831`, `/password-reset/…`, `/token/…/info`, `/t%CD%A6ken/…`) is a
+    /// value, so it becomes `:id` whatever it looks like. A segment that comes again is not read
+    /// again.
     private func redacted(path: String, nesting: Nesting, compatibility: CompatibilityText) -> String {
         var readings: [Substring: PathSegmentReading] = [:]
         var segments: [String] = []
@@ -233,13 +237,17 @@ extension RedactionPolicy {
     private struct PathSegmentReading {
         /// It looks like an identifier or holds a secret, so it becomes `:id`.
         let hides: Bool
-        /// It has a word that names a secret or cannot be read, so the segment after it is a value.
+        /// It is not plain ASCII, or has a word that names a secret or cannot be read, so the
+        /// segment after it is a value.
         let isLabel: Bool
     }
 
     /// Reads a path segment once: it is decoded and scanned a single time, and the free-text rule,
     /// every value detector and the word reading all run on that scan. A segment that does not
-    /// decode is both.
+    /// decode is both. A segment is a label by the key rule (``hidesValue(ofKey:)``), as the name
+    /// of a field is: once decoded it is not plain ASCII (`t%CD%A6ken`, `passw%E3%80%87rd`,
+    /// `caf%C3%A9`), has no letter or digit, or names a secret. So is one in which free text reads
+    /// a word that names a secret or cannot be read (`pass word`).
     private func read(pathSegment segment: Substring, nesting: Nesting, compatibility: CompatibilityText) -> PathSegmentReading {
         guard let decoded = segment.removingPercentEncoding else { return PathSegmentReading(hides: true, isLabel: true) }
         let scalars = Array(decoded.unicodeScalars)
@@ -248,7 +256,7 @@ extension RedactionPolicy {
         guard !isQuietWord(scalars) else { return PathSegmentReading(hides: isIdentifier, isLabel: false) }
         let text = NormalizedText(scalars, compatibility: compatibility)
         let holdsSecret = !textSpans(in: scalars, text: text, compatibility: compatibility, nesting: nesting, detectsInRegions: true).isEmpty
-        let isLabel = FreeTextScanner.mentionsSecret(scalars, text: text, policy: self, compatibility: compatibility)
+        let isLabel = hidesValue(ofKey: scalars) || FreeTextScanner.mentionsSecret(scalars, text: text, policy: self, compatibility: compatibility)
         return PathSegmentReading(hides: isIdentifier || holdsSecret, isLabel: isLabel)
     }
 
