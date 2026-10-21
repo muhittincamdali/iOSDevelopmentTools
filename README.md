@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 605 Swift Testing tests on macOS and 602 on an iOS simulator. Requests travel
+- **Tested** — 612 Swift Testing tests on macOS and 609 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -219,6 +219,9 @@ func configureNetworkLogger() {
   (`login password=hunter2 status=200` is stored as `login password=[REDACTED]`, `x=hunter2` as
   `x=[REDACTED]`). A message with no trigger is kept as it is, apart from detected tokens, card
   numbers and email addresses.
+  The detectors read across VT, FF, U+0085, U+2028 and U+2029, which cut a message, so a card
+  number, IBAN, email address or token split by one is hidden from its start
+  (`paid 4111 1111 1111`, U+2028, `1111` is stored as `paid [REDACTED]`); LF and CR end a finding.
 - **URLs in log messages** have no island logic. A URL stays visible only when it is clean:
   `scheme://host` with an optional path of ASCII letters, digits, `.`, `_`, `-` and `/`, no host or
   path segment that names a secret, and after it a space, a line end, the end of the text, or one

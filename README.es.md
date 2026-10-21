@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bea5059f2a664a09567512cec6eee792c46ef301 status=reviewed -->
+<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 605 tests de Swift Testing en macOS y 602 en un simulador de iOS. Las solicitudes van
+- **Probado** — 612 tests de Swift Testing en macOS y 609 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -227,6 +227,10 @@ func configureNetworkLogger() {
   solapan (`'x "y' z"`) o un corchete que no se cierra oculta todo lo que viene después, también las líneas siguientes (`login password=hunter2 status=200` se guarda como `login password=[REDACTED]`, y
   `x=hunter2` como `x=[REDACTED]`). Un mensaje sin disparador se guarda tal cual, salvo los tokens,
   los números de tarjeta y las direcciones de correo detectados.
+  Los detectores leen a través de VT, FF, U+0085, U+2028 y U+2029, que cortan el mensaje, así que
+  un número de tarjeta, un IBAN, una dirección de correo o un token partido por uno de ellos se
+  oculta desde su inicio (`paid 4111 1111 1111`, U+2028, `1111` se guarda como `paid [REDACTED]`);
+  LF y CR terminan un hallazgo.
 - **Las URL en los mensajes de log** no tienen lógica de isla. Una URL solo queda visible si está
   limpia: `scheme://host` con una ruta opcional de letras ASCII, dígitos, `.`, `_`, `-` y `/`, sin
   host ni segmento de ruta que sea un nombre secreto, y seguida de un espacio, un fin de línea, el

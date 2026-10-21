@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bea5059f2a664a09567512cec6eee792c46ef301 status=reviewed -->
+<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -59,7 +59,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 605 тест Swift Testing на macOS и 602 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 612 тестов Swift Testing на macOS и 609 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -228,6 +228,10 @@ func configureNetworkLogger() {
   (`login password=hunter2 status=200` сохраняется как `login password=[REDACTED]`, а `x=hunter2`
   как `x=[REDACTED]`). Сообщение без триггера сохраняется как есть, кроме найденных токенов, номеров
   карт и адресов почты.
+  Детекторы читают через VT, FF, U+0085, U+2028 и U+2029, которые обрезают сообщение, поэтому
+  номер карты, IBAN, адрес почты или токен, разделённый одним из них, скрывается с начала
+  (`paid 4111 1111 1111`, U+2028, `1111` сохраняется как `paid [REDACTED]`); LF и CR завершают
+  найденное значение.
 - **URL в сообщениях лога** не обрабатываются как отдельный островок. URL остаётся видимым, только
   если он чистый: `scheme://host` с необязательным путём из ASCII-букв, цифр, `.`, `_`, `-` и `/`,
   без хоста или сегмента пути, который является секретным именем, а после него стоит пробел, конец

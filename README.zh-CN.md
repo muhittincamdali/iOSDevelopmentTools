@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bea5059f2a664a09567512cec6eee792c46ef301 status=reviewed -->
+<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -52,7 +52,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 605 个 Swift Testing 测试，iOS 模拟器上有 602 个。请求从应用的会话
+- **经过测试** — macOS 上有 612 个 Swift Testing 测试，iOS 模拟器上有 609 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -208,6 +208,9 @@ func configureNetworkLogger() {
   下面的行）都被隐藏（`login password=hunter2 status=200` 会存储为
   `login password=[REDACTED]`，`x=hunter2` 会存储为 `x=[REDACTED]`）。没有触发点的消息会原样保留，
   只有检测到的令牌、卡号和电子邮件地址会被隐藏。
+  检测器会跨过会截断消息的 VT、FF、U+0085、U+2028 和 U+2029 读取，因此被其中之一分开的卡号、IBAN、
+  电子邮件地址或令牌会从开头起被隐藏（`paid 4111 1111 1111`、U+2028、`1111` 会存储为
+  `paid [REDACTED]`）；LF 和 CR 会结束一个检测结果。
 - **日志消息中的 URL** 没有孤岛逻辑。URL 只有在干净时才会保留原样：形式为 `scheme://host`，
   可选路径只含 ASCII 字母、数字、`.`、`_`、`-` 和 `/`，主机和路径段都不是秘密名称，并且其后
   紧跟空格、行尾、文本结尾，或 `.`、`,`、`!`、`)` 中的一个再接上述之一。其他任何 URL（带查询、片段、

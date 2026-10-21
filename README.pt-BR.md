@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bea5059f2a664a09567512cec6eee792c46ef301 status=reviewed -->
+<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 605 testes de Swift Testing no macOS e 602 em um simulador de iOS. As requisições vão de
+- **Testado** — 612 testes de Swift Testing no macOS e 609 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -227,6 +227,10 @@ func configureNetworkLogger() {
   (`login password=hunter2 status=200` é armazenada como `login password=[REDACTED]`, e
   `x=hunter2` como `x=[REDACTED]`). Uma mensagem sem gatilho é guardada como está, exceto os
   tokens, números de cartão e endereços de e-mail detectados.
+  Os detectores leem através de VT, FF, U+0085, U+2028 e U+2029, que cortam a mensagem, então um
+  número de cartão, IBAN, endereço de e-mail ou token dividido por um deles é ocultado desde o
+  início (`paid 4111 1111 1111`, U+2028, `1111` é guardado como `paid [REDACTED]`); LF e CR
+  encerram uma detecção.
 - **URLs em mensagens de log** não têm lógica de ilha. Uma URL só fica visível quando está limpa:
   `scheme://host` com um caminho opcional de letras ASCII, dígitos, `.`, `_`, `-` e `/`, sem host
   ou segmento de caminho que seja um nome secreto, seguida de um espaço, um fim de linha, o fim do

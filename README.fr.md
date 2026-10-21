@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bea5059f2a664a09567512cec6eee792c46ef301 status=reviewed -->
+<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 605 tests Swift Testing sur macOS et 602 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 612 tests Swift Testing sur macOS et 609 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -232,6 +232,10 @@ func configureNetworkLogger() {
   forme `login password=[REDACTED]`, et `x=hunter2` sous la forme `x=[REDACTED]`). Un message sans
   déclencheur est conservé tel quel, hormis les jetons, numéros de carte et adresses e-mail
   détectés.
+  Les détecteurs lisent à travers VT, FF, U+0085, U+2028 et U+2029, qui coupent le message : un
+  numéro de carte, un IBAN, une adresse e-mail ou un jeton coupé par l'un d'eux est masqué depuis
+  son début (`paid 4111 1111 1111`, U+2028, `1111` est enregistré sous la forme
+  `paid [REDACTED]`) ; LF et CR terminent une détection.
 - **Les URL dans les messages de log** n'ont pas de logique d'îlot. Une URL ne reste visible que si
   elle est propre : `scheme://host` avec un chemin facultatif fait de lettres ASCII, de chiffres,
   de `.`, `_`, `-` et `/`, sans hôte ni segment de chemin qui soit un nom secret, suivie d'une

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bea5059f2a664a09567512cec6eee792c46ef301 status=reviewed -->
+<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 605, iOS simülatöründe 602 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 612, iOS simülatöründe 609 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -228,6 +228,10 @@ func configureNetworkLogger() {
   (`login password=hunter2 status=200`, `login password=[REDACTED]`; `x=hunter2` ise
   `x=[REDACTED]` olarak saklanır). Tetikleyici içermeyen bir mesaj, bulunan token'lar, kart
   numaraları ve e-posta adresleri dışında olduğu gibi tutulur.
+  Dedektörler mesajı kesen VT, FF, U+0085, U+2028 ve U+2029'un ötesini de okur; bunlardan biriyle
+  bölünmüş bir kart numarası, IBAN, e-posta adresi ya da token başından gizlenir
+  (`paid 4111 1111 1111`, U+2028, `1111`, `paid [REDACTED]` olarak saklanır); LF ve CR bir
+  bulguyu bitirir.
 - **Günlük mesajlarındaki URL'ler** için ada mantığı yoktur. Bir URL yalnızca temizse görünür
   kalır: `scheme://host` ve isteğe bağlı olarak ASCII harf, rakam, `.`, `_`, `-` ve `/`
   karakterlerinden oluşan bir yol; gizli bir ad olan bir host ya da yol parçası yok; ardından bir
