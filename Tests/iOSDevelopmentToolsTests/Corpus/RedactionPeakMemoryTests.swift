@@ -28,7 +28,8 @@ struct RedactionPeakMemoryTests {
         TimedInput(testDescription: "lines of addresses", make: {
             RedactionTimeLimitTests.repeated("mail alice@example.com\n", to: RedactionTimeLimitTests.size)
         }, redact: redactor.redact),
-    ] + ThirteenthReviewShapes.text + ThirteenthReviewShapes.bodies(size: bodySize, redactor: redactor)
+    ] + ThirteenthReviewShapes.text + ThirteenthReviewShapes.bodies(size: bodySize, redactor: redactor) + MarkupQuoteShapes.text
+        + QuotedKeyShapes.text
 
     /// Bodies just under ``RedactionPolicy/defaultMaximumBodySize``.
     static let bodySize = RedactionPolicy.defaultMaximumBodySize - 144

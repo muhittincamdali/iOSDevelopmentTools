@@ -18,6 +18,8 @@ extension RedactionTimeLimitTests {
         all += oneStringPayloads
         all += attributeShapes
         all += thirteenthReview
+        all += MarkupQuoteShapes.text
+        all += QuotedKeyShapes.text
         return all
     }()
 }
