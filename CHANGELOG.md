@@ -55,7 +55,8 @@ out of logs in the first place.
   so does the segment after one that names a secret. A path of more than 64 segments or a query of
   more than 128 parameters is recorded with its scheme, host and port only, and so is a path that
   servers resolve differently from how it is written: one with a `.` or `..` segment, `%2E` in any
-  case, a segment whose part before `;` is empty or an escape escaped again (`%252E`).
+  case, a `;` anywhere, raw or as `%3B` in any case, or an escape escaped again (`%252E`). No
+  parameter after a `;` (matrix parameter) is parsed.
 - Free text (`LogStore` messages, error descriptions of failed requests, kept header values,
   `text/plain` bodies and the strings of structured input) has one cut point: from the first
   trigger, everything to the end of the text is hidden, the lines below included. The triggers
@@ -163,6 +164,14 @@ out of logs in the first place.
   `/v1/pin/./4831` was stored as `/v1/pin/:id/4831` and `/token/x/../4831` as
   `/token/:id/../4831`, while servers and `URL.standardized` resolve both to the value after the
   name.
+- A recorded URL whose path has a `;` anywhere, raw or as `%3B` in either case, is recorded with
+  its scheme, host and port only, and no parameter after a `;` is parsed. Before, only a `;` with
+  nothing before it in its segment did this, and `%3B` was not checked (`/a%3Bb/c` was stored as
+  it is). The other matrix parameters were read one by one, without the rule that a field naming
+  a secret hides the value beside it: with `value` allowed, `/a;label=password;value=…`,
+  `/a;name=api_key;value=…`, `/a;value=…;name=password` and `/a;name=%C5%9Eifre;value=…` kept
+  the value, which `?label=password&value=…` hides. The default policy, which allows no
+  parameter, hid all of these values.
 - A quoted key that is not on `allowedTextKeys` cuts the text at its opening quote, whichever
   quote it is written in: `"x":"hunter2"`, `"x"="hunter2"`, `'x': 'hunter2'` and `"hunter2":"v"`
   are stored as `[REDACTED]`. Before, the cut came after the separator, so the key showed.
