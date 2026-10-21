@@ -31,7 +31,7 @@ struct RedactionPeakMemoryTests {
             RedactionTimeLimitTests.repeated("mail alice@example.com\n", to: RedactionTimeLimitTests.size)
         }, redact: redactor.redact),
     ] + ThirteenthReviewShapes.text + ThirteenthReviewShapes.bodies(size: bodySize, redactor: redactor) + MarkupQuoteShapes.text
-        + QuotedKeyShapes.text + DistinctScalarShapes.all + [
+        + QuotedKeyShapes.text + DistinctScalarShapes.all + BridgedLineBreakShapes.text + [
             TimedInput(testDescription: "a log message of a million different characters", make: DistinctScalarShapes.logMessage, redact: {
                 LogStore.redacted($0, with: .default)
             }),

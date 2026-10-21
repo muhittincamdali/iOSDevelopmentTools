@@ -21,6 +21,7 @@ extension RedactionTimeLimitTests {
         all += MarkupQuoteShapes.text
         all += QuotedKeyShapes.text
         all += DistinctScalarShapes.all
+        all += BridgedLineBreakShapes.text
         return all
     }()
 }
