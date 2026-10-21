@@ -16,8 +16,8 @@ enum WrittenName {
     enum Place {
         /// The value of the field `field` of an object, a form, a URL query or a multipart body.
         /// When the field holds a name (see ``holdsName(_:)``), the value is read by the key rule;
-        /// otherwise it names a secret only when it is a name (see ``isName(_:compatibility:)``)
-        /// whose words name a secret or cannot be read.
+        /// otherwise it names a secret only when it may be a name (see
+        /// ``mayBeName(_:compatibility:)``) whose words name a secret or cannot be read.
         case field([Unicode.Scalar])
         /// The first element of a two-element array, as fetch headers and `URLSearchParams`
         /// entries are written: read by the key rule.
@@ -35,7 +35,7 @@ enum WrittenName {
         switch place {
         case .field(let field):
             if holdsName(field) { return heldNameNamesSecret(value, field: field, policy: policy, compatibility: compatibility) }
-            return isName(value, compatibility: compatibility) && FreeTextScanner.nameNamesSecret(value, policy: policy, compatibility: compatibility)
+            return mayBeName(value, compatibility: compatibility) && FreeTextScanner.nameNamesSecret(value, policy: policy, compatibility: compatibility)
         case .pairName:
             return heldNameNamesSecret(value, field: nil, policy: policy, compatibility: compatibility)
         case .element:
@@ -181,6 +181,18 @@ enum WrittenName {
     }
 
     private static let notInNames = Set(":=,;\"'()[]{}<>".unicodeScalars)
+
+    /// Whether a string held by a field that holds no name may be a name: it is one (see
+    /// ``isName(_:compatibility:)``), or it is one once its line breaks are read as spaces and its
+    /// escapes are decoded (`password` and a line feed, `api`, a line feed and `key`,
+    /// `&#x0070;in`, `pass&#119;ord`). A name written so cannot be told from one written plainly,
+    /// and a sentence keeps its `:` or `,` either way.
+    static func mayBeName(_ scalars: [Unicode.Scalar], compatibility: CompatibilityText) -> Bool {
+        if isName(scalars, compatibility: compatibility) { return true }
+        guard scalars.count <= PlainName.maximumKeyLength, scalars.contains(where: { $0 == "\n" || $0 == "\r" || $0 == "&" }) else { return false }
+        let decoded = EscapeDecoder.decode(scalars).scalars
+        return isName(decoded.map { $0 == "\n" || $0 == "\r" ? " " : $0 }, compatibility: compatibility)
+    }
 
     /// A letter, mark or number of any script, or a symbol whose compatibility form is ASCII
     /// letters and digits.
