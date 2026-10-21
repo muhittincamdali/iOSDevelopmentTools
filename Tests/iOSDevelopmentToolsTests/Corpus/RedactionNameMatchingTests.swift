@@ -2,9 +2,10 @@ import Foundation
 import Testing
 @testable import iOSDevelopmentTools
 
-/// How a word of free text is matched with the secret words, in two readings of one pass per
-/// secret word: with at most one letter that has no ASCII form (a wildcard) standing for a letter
-/// or, between two letters, for none, and as its ASCII skeleton, with every such letter left out.
+/// How a word of free text is matched with the secret words, in readings of one pass per secret
+/// word: with at most one letter or number that has no ASCII form (a wildcard) standing for a
+/// letter or, between two letters, for none, as its ASCII skeleton, with every such letter left
+/// out, and, when a mark follows an ASCII letter, with that mark as a wildcard too.
 @Suite("Redaction corpus: name matching")
 struct RedactionNameMatchingTests {
     let redactor = Redactor()
@@ -40,16 +41,24 @@ struct RedactionNameMatchingTests {
         #expect(!redactor.redact(separated).contains("hunter2"), "\(separated)")
     }
 
-    // Section 0 of the redaction rules: a combining mark (Mn) written in place of one letter of a
-    // name is deliberate disguise, which the guide lists under "What it does not find". Only a
-    // letter put in place of a letter is read as any letter.
-    @Test("a name written without a separator with a combining mark in place of one of its letters is not found", arguments: [
-        "t\u{0366}ken hunter2", "p\u{0301}ssword hunter2",
+    // The one wildcard rule of section 0 of the redaction spec: a mark (M*) or a number (N*) with
+    // no ASCII form stands for any letter as a letter does. The sixteenth review found
+    // `t\u{0366}ken` and `passw\u{3007}rd` (see RedactionOneWildcardTests).
+    @Test("a mark after an ASCII letter or a number without an ASCII form in place of one letter stands for it", arguments: [
+        "t\u{0366}ken hunter2", "p\u{0301}ssword hunter2", "passw\u{3007}rd hunter2", "toke\u{0366} hunter2",
     ])
-    func combiningMarkInPlaceOfALetter(line: String) {
-        #expect(redactor.redact(line).contains("hunter2"), "\(line) is found: update the guide")
+    func markOrNumberInPlaceOfALetter(line: String) {
+        #expect(!redactor.redact(line).contains("hunter2"), "\(line)")
         let separated = line.replacingOccurrences(of: " hunter2", with: ": hunter2")
         #expect(!redactor.redact(separated).contains("hunter2"), "\(separated)")
+    }
+
+    // A mark of a letter that is a wildcard belongs to it, and marks on every letter are left out.
+    @Test("marks on a wildcard or on every letter leave the name found", arguments: [
+        "p\u{0251}\u{0301}ssword hunter2", "t\u{0337}o\u{0337}k\u{0337}e\u{0337}n\u{0337} hunter2", "pa\u{FE0F}ssphrase hunter2",
+    ])
+    func marksOnLetters(line: String) {
+        #expect(!redactor.redact(line).contains("hunter2"), "\(line)")
     }
 
     @Test("words in Turkish and other languages that hold a wildcard stay readable", arguments: [

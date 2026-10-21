@@ -114,24 +114,36 @@ extension FreeTextScanner {
     }
 }
 
-/// Words of the scanned text read loosely for the secret words in them, in two readings. In both,
+/// Words of the scanned text read loosely for the secret words in them. In every reading,
 /// punctuation between letters is read as a separator (`pass~word`, `t*okens`; see
-/// ``PlainName/init(looseBytes:wildcards:)``), and marks and format characters are already left
-/// out of the scanned text. A letter without an ASCII form is read as any letter in the first
-/// reading (`Authorizɑtion`, `pın`) and left out in the second, the ASCII skeleton of the word
-/// (`tokensı`, `pıaıssword`, `tokenꞏꞏ`). Read with the next word, `pass word` holds a secret word
-/// too.
+/// ``PlainName/init(looseBytes:wildcards:)``), and format characters are already left out of the
+/// scanned text. A letter, mark or number with no ASCII form is a wildcard, read as any one letter
+/// or as none:
+///
+/// - The loose reading takes a letter or number without an ASCII form (`ɑ`, `ı`, `〇`) as any
+///   letter (`Authorizɑtion`, `pın`, `passw〇rd`), and leaves marks out, as the scanned text does.
+/// - The ASCII skeleton leaves them all out (`tokensı`, `pıaıssword`, `tokenꞏꞏ`, `t̷o̷k̷e̷n̷`).
+/// - When the word has a mark written after a character with an ASCII form, which the scanned text
+///   leaves out (`tͦken`, U+0366 after the `t`), the marked reading takes that mark as any letter
+///   too.
+///
+/// Read with the next word, `pass word` holds a secret word too.
 struct LooseReading {
     private let loose: PlainName
-    /// The skeleton; nil when the word has no letter without an ASCII form, or only such letters.
+    /// The skeleton; nil when the word has no letter or number without an ASCII form, or only such.
     private let skeleton: PlainName?
+    /// The marked reading; nil when the word has no mark after a character with an ASCII form.
+    private let marked: PlainName?
     private let names: SecretNameTable
     /// The bytes read, with the byte of the scanned text each came from and those read as any
     /// letter. Where a letter came from is looked up only when a secret word is found.
     private let bytes: [UInt8]
     private let origins: [Int]
-    /// Whether each byte is a letter without an ASCII form.
+    /// Whether each byte is a letter or number without an ASCII form.
     private let wildcards: [Bool]
+    /// Whether each byte stands for a mark after a character with an ASCII form, which the
+    /// scanned text does not hold.
+    private let marks: [Bool]
 
     /// Reads the bytes of `ranges` of `text`, in order, as one word with a separator between the
     /// ranges. `source` is the text `text` was made from; `names` are the secret words looked for.
@@ -139,46 +151,79 @@ struct LooseReading {
         var bytes: [UInt8] = []
         var origins: [Int] = []
         var wildcards: [Bool] = []
+        var marks: [Bool] = []
         let count = ranges.reduce(ranges.count) { $0 + $1.count }
         bytes.reserveCapacity(count)
         origins.reserveCapacity(count)
         wildcards.reserveCapacity(count)
+        marks.reserveCapacity(count)
+        func append(_ byte: UInt8, from origin: Int, wildcard: Bool = false, mark: Bool = false) {
+            bytes.append(byte)
+            origins.append(origin)
+            wildcards.append(wildcard)
+            marks.append(mark)
+        }
         for range in ranges {
-            if !bytes.isEmpty {
-                bytes.append(UInt8(ascii: " "))
-                origins.append(range.lowerBound)
-                wildcards.append(false)
-            }
+            if !bytes.isEmpty { append(UInt8(ascii: " "), from: range.lowerBound) }
             for k in range {
-                bytes.append(text.bytes[k])
-                origins.append(k)
-                wildcards.append(text.bytes[k] == CompatibilityText.unreadable && ScalarClass.isLetter(source[text.offsets[k]]))
+                // Marks before the byte belong to the character before it: one wildcard, unless
+                // that character is a wildcard already.
+                if wildcards.last != true, Self.hasMark(in: Self.gap(before: k, in: text), source: source) {
+                    append(CompatibilityText.unreadable, from: max(k - 1, range.lowerBound), mark: true)
+                }
+                let isWildcard = text.bytes[k] == CompatibilityText.unreadable && ScalarClass.isLetterOrNumber(source[text.offsets[k]])
+                append(text.bytes[k], from: k, wildcard: isWildcard)
+            }
+            if let last = range.last, wildcards.last != true, Self.hasMark(in: Self.gap(before: range.upperBound, in: text), source: source) {
+                append(CompatibilityText.unreadable, from: last, mark: true)
             }
         }
-        guard let loose = PlainName(looseBytes: bytes, wildcards: wildcards) else { return nil }
+        let hasMarks = marks.contains(true)
+        // Most words have no such mark: their loose reading is all of their bytes.
+        let loose = hasMarks ? Self.reading(bytes, wildcards: wildcards, keeping: { !marks[$0] }) : PlainName(looseBytes: bytes, wildcards: wildcards)
+        guard let loose else { return nil }
         self.loose = loose
-        skeleton = wildcards.contains(true) ? Self.skeleton(of: bytes, wildcards: wildcards) : nil
+        skeleton = wildcards.contains(true) ? Self.reading(bytes, wildcards: nil, keeping: { !wildcards[$0] && !marks[$0] }) : nil
+        marked = hasMarks ? PlainName(looseBytes: bytes, wildcards: zip(wildcards, marks).map { $0 || $1 }) : nil
         self.names = names
         self.bytes = bytes
         self.origins = origins
         self.wildcards = wildcards
+        self.marks = marks
     }
 
-    /// The bytes without the letters that have no ASCII form, read as a name: `tokensı` and
-    /// `tokenꞏsꞏ` read as `tokens`, `myTokensı` as `myTokens`, `pıaıssword` as `password`.
-    private static func skeleton(of bytes: [UInt8], wildcards: [Bool]) -> PlainName? {
-        let kept = zip(bytes, wildcards).filter { !$0.1 }.map(\.0)
-        return PlainName(looseBytes: kept, wildcards: Array(repeating: false, count: kept.count))
+    /// The original scalars between byte `k` and the byte before it, which the scanned text left
+    /// out: marks, format characters and other invisible scalars.
+    private static func gap(before k: Int, in text: NormalizedText) -> Range<Int> {
+        let start = k > 0 ? text.offsets[k - 1] + 1 : 0
+        return start..<max(start, text.offset(at: k))
+    }
+
+    private static func hasMark(in gap: Range<Int>, source: [Unicode.Scalar]) -> Bool {
+        source[gap].contains { scalar in
+            switch ScalarTable.category(scalar) {
+            case .nonspacingMark, .spacingMark, .enclosingMark: true
+            default: false
+            }
+        }
+    }
+
+    /// The bytes that `keeps` keeps, read as a name, with `wildcards` (none when nil) read as any
+    /// letter: the skeleton reads `tokensı` and `tokenꞏsꞏ` as `tokens`, `myTokensı` as
+    /// `myTokens`, `pıaıssword` as `password` and `t̷o̷k̷e̷n̷` as `token`.
+    private static func reading(_ bytes: [UInt8], wildcards: [Bool]?, keeping keeps: (Int) -> Bool) -> PlainName? {
+        let kept = bytes.indices.filter(keeps)
+        return PlainName(looseBytes: kept.map { bytes[$0] }, wildcards: kept.map { wildcards?[$0] ?? false })
     }
 
     /// The byte after the last letter of the first secret word that `accepts` takes, in the
     /// reading where it ends first. `accepts` is given the bytes of the scanned text from the
     /// first letter of the secret word to its last.
     func secretEnd(where accepts: (Range<Int>) -> Bool) -> Int? {
-        let looseEnd = secretEnd(in: loose, letters: { ASCII.isAlphanumeric(bytes[$0]) || wildcards[$0] }, accepts)
-        guard let skeleton else { return looseEnd }
-        let skeletonEnd = secretEnd(in: skeleton, letters: { ASCII.isAlphanumeric(bytes[$0]) }, accepts)
-        return [looseEnd, skeletonEnd].compactMap { $0 }.min()
+        var ends = [secretEnd(in: loose, letters: { ASCII.isAlphanumeric(bytes[$0]) || wildcards[$0] }, accepts)]
+        if let skeleton { ends.append(secretEnd(in: skeleton, letters: { ASCII.isAlphanumeric(bytes[$0]) }, accepts)) }
+        if let marked { ends.append(secretEnd(in: marked, letters: { ASCII.isAlphanumeric(bytes[$0]) || wildcards[$0] || marks[$0] }, accepts)) }
+        return ends.compactMap { $0 }.min()
     }
 
     /// `isLetter` tells which bytes are the letters of `reading`.

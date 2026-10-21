@@ -26,9 +26,9 @@ extension RedactionPolicy {
     ///   `password=hunter2`, `password hunter2`, `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`.
     ///   The text is hidden from the value after the name. Words are read with punctuation inside
     ///   them (`pass~word`) and a space or `|` between two of them (`pass word`) read as a
-    ///   separator, and one letter that has no ASCII form (`ɑ`, `ı`) read as any letter or,
-    ///   between two letters, as none. This is a best effort: a
-    ///   name disguised with two or more such letters and written without a separator
+    ///   separator, and one letter, mark or number that has no ASCII form (`ɑ`, `ı`, `〇`, or
+    ///   U+0366 after the `t` of `tͦken`) read as any letter or as none. This is a best effort:
+    ///   a name disguised with two or more such characters and written without a separator
     ///   (`pɑsswoʀd hunter2`) is not found.
     /// - **A secret name written as a value.** After an allowed key that holds a name (`name=`,
     ///   `id=`, `type=`, … when the app allows them; never `path=`, the route of a request), a

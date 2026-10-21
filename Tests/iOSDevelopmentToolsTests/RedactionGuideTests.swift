@@ -21,6 +21,9 @@ struct RedactionGuideTests {
         // A word is read with one letter without an ASCII form as any letter and as its ASCII
         // skeleton, without such letters; both readings hide more than the secret on purpose.
         #expect(policy.redact(text: "tokens\u{0131} hunter2") == "tokens[REDACTED]")
+        // A mark after an ASCII letter and a number without an ASCII form are read so too.
+        #expect(policy.redact(text: "t\u{0366}ken hunter2") == "t\u{0366}ken [REDACTED]")
+        #expect(policy.redact(text: "passw\u{3007}rd hunter2") == "passw\u{3007}rd [REDACTED]")
         #expect(policy.redact(text: "token\u{A78F}\u{A78F} hunter2") == "token[REDACTED]")
         #expect(policy.redact(text: "p\u{0131}n 1234") == "p\u{0131}n [REDACTED]")
         #expect(policy.redact(text: "login password=hunter2 status=200\nnext line") == "login password=[REDACTED]")
@@ -83,9 +86,6 @@ struct RedactionGuideTests {
         #expect(policy.redact(text: "p\u{0251}sswo\u{0280}d=hunter2") == "p\u{0251}sswo\u{0280}d=[REDACTED]")
         // Such letters put in beside the name's own are left out of its skeleton.
         #expect(policy.redact(text: "p\u{0131}a\u{0131}ssword hunter2") == "p\u{0131}a\u{0131}ssword [REDACTED]")
-        // A combining mark in place of one letter of a name is not read as that letter.
-        #expect(policy.redact(text: "t\u{0366}ken hunter2") == "t\u{0366}ken hunter2")
-        #expect(policy.redact(text: "t\u{0366}ken=hunter2") == "t\u{0366}ken=[REDACTED]")
         // A secret word in another language is not one of the names.
         #expect(policy.redact(text: "пароль hunter2") == "пароль hunter2")
         // In a body, a plain name that is not a secret name keeps its value; in free text the key
