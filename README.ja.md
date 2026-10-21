@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
+<!-- i18n-source: README.md@c179d93911ace1f415cf7ad073ad9bca7fccad2b status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -58,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 583 件、iOS シミュレーターで 580 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 591 件、iOS シミュレーターで 588 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -199,8 +199,9 @@ func configureNetworkLogger() {
   すべてのヘッダーの値 (`Authorization`、`Cookie`、`Set-Cookie` は許可リストにあっても記録されません)、
   `password`、`token`、`api_key` などの秘密の名前の値、識別子に見えるパスセグメント (`:id` と表示)、
   ドットセグメント（`/pin/./4831`、`..`、`%2E`）または `;`（`/cart;jsessionid=…`、`%3B`）を含む URL のパスと
-  クエリ（スキームとホストのみ記録。マトリックスパラメーターは解析しません）、
-  multipart ボディのファイルパート。
+  クエリ（スキームとホストのみ記録。マトリックスパラメーターは解析しません）、秘密の名前を表す
+  ホストの後のパスとクエリ（`myapp://pin/4831` は `myapp://pin` として記録。`auth.example.com`
+  のようなホストもパスを隠します）、multipart ボディのファイルパート。
 - **プレーンな ASCII ではないキー** (エスケープのデコード、NFKC、大文字小文字の統一の後。キリル文字の
   `а` を含む `pаssword`、`pass\u200Dword`、`şifre` など) の値は、デフォルトで隠されます。
 - **解析できないボディ** (不明または欠落した Content-Type、不正な JSON や multipart、サイズ上限で
@@ -228,7 +229,8 @@ func configureNetworkLogger() {
 マスキングはセーフティネットであり、保証ではありません。うっかり記録された秘密情報を想定して
 作られています。構造化された入力はパーサーで解析し、パーサーが完全には理解できないものは
 マスキングします。自由形式のテキストはベストエフォートで、`=` や `:` なしで書かれ、2 文字以上を
-似た文字に置き換えた秘密の名前（`pɑsswoʀd hunter2`）が見つかる保証はありません。そもそも記録する
+似た文字に置き換えた秘密の名前（`pɑsswoʀd hunter2`）や、1 文字を結合文字に置き換えた秘密の名前
+（`tͦken hunter2`）が見つかる保証はありません。そもそも記録する
 リクエストやログメッセージに秘密情報を含めず、構造化ログを使ってください。
 
 このモデルにはさらに 2 つの制限があります。**コストの上限:** 1 つの入力に入れ子になったすべての

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
+<!-- i18n-source: README.md@c179d93911ace1f415cf7ad073ad9bca7fccad2b status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 583 Swift-Testing-Tests auf macOS und 580 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 591 Swift-Testing-Tests auf macOS und 588 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -203,8 +203,10 @@ func configureNetworkLogger() {
   wenn sie auf der Allowlist stehen), Werte unter geheimen Namen wie `password`, `token` oder
   `api_key`, Pfadsegmente, die wie Kennungen aussehen (als `:id` angezeigt), Pfad und Query einer URL
   mit einem Punktsegment oder einem `;` (`/pin/./4831`, `..`, `%2E`, `/cart;jsessionid=…`, `%3B`:
-  nur Schema und Host bleiben, Matrix-Parameter werden also nie gelesen) und Datei-Parts von
-  Multipart-Bodys.
+  nur Schema und Host bleiben, Matrix-Parameter werden also nie gelesen), Pfad und Query nach
+  einem Host, der einen geheimen Namen nennt (`myapp://pin/4831` wird als `myapp://pin`
+  gespeichert; ein Host wie `auth.example.com` verbirgt seinen Pfad ebenfalls), und Datei-Parts
+  von Multipart-Bodys.
 - **Schlüssel, die kein reines ASCII sind**, nachdem Escapes dekodiert, NFKC angewendet und
   Groß-/Kleinschreibung angeglichen wurde (`pаssword` mit kyrillischem `а`, `pass\u200Dword`,
   `şifre`), haben standardmäßig verborgene Werte.
@@ -238,7 +240,8 @@ Schwärzen ist ein Sicherheitsnetz, keine Garantie. Es ist für Geheimnisse geba
 aufgezeichnet werden: Strukturierte Eingaben werden geparst, und was der Parser nicht vollständig
 versteht, wird geschwärzt; Freitext ist ein bestmöglicher Versuch, und ein geheimer Name, der ohne
 `=` oder `:` geschrieben ist und in dem zwei oder mehr Buchstaben durch ähnlich aussehende ersetzt
-sind (`pɑsswoʀd hunter2`), wird nicht sicher gefunden. Halte Geheimnisse von vornherein aus den
+sind (`pɑsswoʀd hunter2`) oder in dem ein kombinierendes Zeichen an der Stelle eines Buchstabens
+steht (`tͦken hunter2`), wird nicht sicher gefunden. Halte Geheimnisse von vornherein aus den
 aufgezeichneten Anfragen und aus Log-Meldungen heraus, und bevorzuge strukturiertes Logging.
 
 Zwei weitere Grenzen gehören zu diesem Modell. **Kostengrenze:** Alle in einer Eingabe

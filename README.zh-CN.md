@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
+<!-- i18n-source: README.md@c179d93911ace1f415cf7ad073ad9bca7fccad2b status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -52,7 +52,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 583 个 Swift Testing 测试，iOS 模拟器上有 580 个。请求从应用的会话
+- **经过测试** — macOS 上有 591 个 Swift Testing 测试，iOS 模拟器上有 588 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -189,7 +189,9 @@ func configureNetworkLogger() {
 - **绝不记录：** URL 中的用户信息和片段、不在允许列表中的查询值、其他所有请求头的值（`Authorization`、
   `Cookie` 和 `Set-Cookie` 即使在允许列表中也不记录）、`password`、`token`、`api_key` 等秘密名称下的
   值、看起来像标识符的路径段（显示为 `:id`）、路径含点段（`/pin/./4831`、`..`、`%2E`）或 `;`
-  （`/cart;jsessionid=…`、`%3B`）的 URL 的路径和查询（只记录 scheme 和主机，从不解析矩阵参数），以及 multipart 消息体中的文件部分。
+  （`/cart;jsessionid=…`、`%3B`）的 URL 的路径和查询（只记录 scheme 和主机，从不解析矩阵参数）、
+  主机名为秘密名称时其后的路径和查询（`myapp://pin/4831` 记录为 `myapp://pin`；`auth.example.com`
+  这样的主机也会隐藏路径），以及 multipart 消息体中的文件部分。
 - **不是纯 ASCII 的键**（在解码转义、应用 NFKC 并统一大小写之后，例如含西里尔字母 `а` 的
   `pаssword`、`pass\u200Dword`、`şifre`）的值默认会被隐藏。
 - **无法解析的消息体**（未知或缺失的内容类型、格式错误的 JSON 或 multipart、在大小上限处被截断的
@@ -213,7 +215,8 @@ func configureNetworkLogger() {
 
 脱敏只是一道安全网，而不是保证。它针对的是意外记录下来的秘密：结构化输入会用解析器读取，
 解析器不能完全理解的内容都会被隐藏；自由文本只能尽力而为，不带 `=` 或 `:`、且有两个或更多
-字母被替换为相似字母的秘密名称（`pɑsswoʀd hunter2`）不保证能被发现。从一开始就不要让秘密进入
+字母被替换为相似字母的秘密名称（`pɑsswoʀd hunter2`），或有一个字母被组合用字符替换的秘密名称
+（`tͦken hunter2`），不保证能被发现。从一开始就不要让秘密进入
 你记录的请求和日志消息，并优先使用结构化日志。
 
 这个模型还包括两个限制。**开销上限：** 一个输入中嵌套的所有文档（字符串中的 JSON、文本中的

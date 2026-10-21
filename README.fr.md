@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
+<!-- i18n-source: README.md@c179d93911ace1f415cf7ad073ad9bca7fccad2b status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 583 tests Swift Testing sur macOS et 580 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 591 tests Swift Testing sur macOS et 588 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -207,8 +207,9 @@ func configureNetworkLogger() {
   secrets comme `password`, `token` ou `api_key`, les segments de chemin qui ressemblent à des
   identifiants (affichés `:id`), le chemin et la query d'une URL dont le chemin a un segment point
   (`/pin/./4831`, `..`, `%2E`) ou un `;` (`/cart;jsessionid=…`, `%3B`) : seuls le schéma et l'hôte
-  sont gardés, les paramètres matriciels ne sont donc jamais lus ; et les
-  parties fichier des corps multipart.
+  sont gardés, les paramètres matriciels ne sont donc jamais lus ; le chemin et la query après
+  un hôte qui nomme un secret (`myapp://pin/4831` est gardé comme `myapp://pin` ; un hôte comme
+  `auth.example.com` masque aussi son chemin) ; et les parties fichier des corps multipart.
 - **Les clés qui ne sont pas en ASCII simple** une fois les échappements décodés, NFKC appliqué et
   la casse normalisée (`pаssword` avec un `а` cyrillique, `pass\u200Dword`, `şifre`) ont leur
   valeur masquée par défaut.
@@ -242,8 +243,9 @@ func configureNetworkLogger() {
 Le masquage est un filet de sécurité, pas une garantie. Il est conçu pour les secrets enregistrés
 par accident : les entrées structurées sont analysées, et ce que l'analyseur ne comprend pas
 entièrement est masqué ; le texte libre est traité au mieux, et un nom secret écrit sans `=` ni `:`
-dont deux lettres ou plus sont remplacées par des lettres qui se ressemblent (`pɑsswoʀd hunter2`)
-n'est pas forcément trouvé. Gardez les secrets hors des requêtes que vous enregistrez et des
+dont deux lettres ou plus sont remplacées par des lettres qui se ressemblent (`pɑsswoʀd hunter2`),
+ou dont une lettre est remplacée par une marque combinante (`tͦken hunter2`), n'est pas
+forcément trouvé. Gardez les secrets hors des requêtes que vous enregistrez et des
 messages de journal dès le départ, et préférez une journalisation structurée.
 
 Deux autres limites font partie de ce modèle. **Borne de coût :** tous les documents imbriqués
