@@ -19,8 +19,9 @@ extension RedactionPolicy {
     ///   part of a number only after a number (`12:30`, `2026-10-19T12:30:00Z`, `10.0.0.1:8080`);
     ///   after a key that ends in digits it is a separator (`user1:2345678901` becomes
     ///   `user1:[REDACTED]`). JSON in the text follows the same rule member by member, and
-    ///   a two-element array by its first string (`["user","bob"]`); the tag of an element is the
-    ///   key of its text (`<user>bob</user>`).
+    ///   a two-element array by its first string (`["user","bob"]`). A key in quotes (`"x": …`,
+    ///   `'x'=…`) that is not allowed cuts the text at its opening quote, so nothing written in
+    ///   the quotes shows (`"x":"hunter2"` becomes `[REDACTED]`).
     /// - **A secret name** (see ``secretNames``), with or without a separator, quoted or not:
     ///   `password=hunter2`, `password hunter2`, `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`.
     ///   The text is hidden from the value after the name. Words are read with punctuation inside
@@ -33,11 +34,12 @@ extension RedactionPolicy {
     ///   `id=`, `type=`, … when the app allows them; never `path=`, the route of a request), a
     ///   name that names a secret, is not plain ASCII or is JSON: `name="password"`,
     ///   `label="Пароль"`, `name=["pin"]`. After a key that is not allowed, the key hides the name
-    ///   already (`Content-Disposition: form-data; name="pin"`). In markup, a trigger inside a tag
-    ///   hides the tag from its `<`, so the attributes written before the name are hidden too
-    ///   (`<input value="…" name="password">`). The text of a property list's `<key>` element is
-    ///   always hidden, since `key` is a secret name; the name of an end tag (`</password>`) names
-    ///   no value after it.
+    ///   already (`Content-Disposition: form-data; name="pin"`).
+    /// - **Markup**, which is not parsed. A `<` is a comparison only before an ASCII space, a tab,
+    ///   a line break, an ASCII digit, `=` or the end of the text (`a < b`, `<3`, `1<2`). Before
+    ///   anything else it starts markup and cuts the text there: `<b>`, `</x>`, `<br/>`, `<!--`,
+    ///   `<![CDATA[`, `<?xml`, `<#`, `<-`, `List<String>`. No tag keeps its text, whatever its
+    ///   name and the allowed keys (`<status>200</status>` becomes `[REDACTED]`).
     /// - **A key that is not plain ASCII** or has no letter or digit, or no key at all, before
     ///   `=` or `:` (`pаssword=…` with a Cyrillic `а`, `🔑=…`, `user[name]=…`, `=…`), and the last
     ///   words of a key that, read as one name, name a secret (`pass word=…`, `c v v: …`).
@@ -54,8 +56,11 @@ extension RedactionPolicy {
     /// - **A word longer than 256 characters**, which is no name or value that can be read.
     /// - **An ambiguous token**: a word that mixes scripts (`pаssword` with a Cyrillic `а`) or
     ///   holds an invisible character other than a mark (a zero-width space, `pa\u{115F}ssword`,
-    ///   a control character), a quote or bracket that does not close, and JSON that does not
-    ///   parse. The text is hidden from there.
+    ///   a control character), a bracket that does not close, and JSON that does not parse. The
+    ///   text is hidden from there.
+    /// - **A quote that does not close on its line**: a `"` or a backtick anywhere, a `'` at the
+    ///   start of a word, still open at a line break or at the end of the text. The text is hidden
+    ///   from the quote, so a value or a quoted key written over two lines never shows.
     ///
     /// Text with no trigger is kept as it is (`status=200 method=GET path=/api/items`), except for
     /// what the value detectors find: JWTs, bearer tokens, long hex or Base64 strings, card
@@ -65,11 +70,13 @@ extension RedactionPolicy {
     /// members are compared with ``allowedTextKeys``; its strings are free text again, with this
     /// rule. A URL with a scheme and `//` has no island logic: a clean URL — `scheme://host` with
     /// an optional path of ASCII letters, digits, `.`, `_`, `-` and `/`, a host name or IPv4
-    /// address, no host or segment that names a secret, and white space, a line break or
-    /// punctuation that ends a sentence after it — is recorded as ``redact(url:)`` records it.
-    /// Any other URL hides the text from where it starts: a query, a fragment, `;`, `%`, `=`, `:`,
-    /// `@`, `\`, a port, user info, an escape or a character outside ASCII makes it so
-    /// (`GET https://a.example/x?page=2 done` is stored as `GET [REDACTED]`).
+    /// address, no host or segment that names a secret, and white space, a line break, the end of
+    /// the text or one of `.`, `,`, `!` and `)` followed by one of those after it — is recorded
+    /// as ``redact(url:)`` records it. Any other URL hides the text from where it starts: a query,
+    /// a fragment, `;`, `%`, `=`, `:`, `@`, `\`, a port, user info, an escape, a character outside
+    /// ASCII, a quote, `>` or two marks after it make it so
+    /// (`GET https://a.example/x?page=2 done` and `see https://a.example/x), ok` are stored as
+    /// `GET [REDACTED]` and `see [REDACTED]`).
     /// ``allowedQueryParameters`` does not apply to a URL in text.
     public func redact(text: String) -> String {
         guard isEnabled else { return text }

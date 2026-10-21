@@ -43,13 +43,14 @@ is not built to stop someone who writes a log line on purpose to get a secret pa
 - **Layouts over several lines need nothing special.** A property list writes `<key>` and its
   value on lines of their own, JSON may be spread over lines, and a multipart body may be written
   into a log line. Everything after the first trigger is hidden, so the value is hidden wherever
-  it is written.
+  it is written; in free text the first `<` of markup is such a trigger, and so is a quote that
+  does not close on its line.
 
 ### What is recorded and what is never recorded
 
 | Part | Recorded | Never recorded |
 | --- | --- | --- |
-| URL | Scheme, host, port, path, query parameter names, values of allowlisted query parameters | User info (`user:password@`), the fragment (`#…`), other query values, path segments that look like identifiers or secrets (shown as `:id`) |
+| URL | Scheme, host, port, path, query parameter names, values of allowlisted query parameters | User info (`user:password@`), the fragment (`#…`), other query values, path segments that look like identifiers or secrets (shown as `:id`), and a host that is not a name of ASCII labels or an address or in which a value detector finds something (also in ``NetworkEntry/host``) |
 | Headers | Names; values of the allowlisted headers, after the free-text rule | Values of every other header, and always the values of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key`, any header whose name contains `token`, `secret`, `key`, `auth`, `session` or `signature`, and values that start with an authentication scheme (`Bearer …`, `Basic …`, `Token …`) |
 | JSON, form and multipart bodies | Keys and values, as sent, with hidden values replaced | Values of secret keys and of keys that are not plain ASCII; values named by a field that holds a secret name; file parts and file names of multipart bodies |
 | Other bodies | `text/plain` after the free-text rule; a note for everything else | Bodies with an unknown or missing content type, bodies that do not parse, bodies that servers could split into fields differently, and bodies that were cut off or are larger than ``RedactionPolicy/maximumBodySize`` (256 KiB by default) |
@@ -223,9 +224,11 @@ The triggers:
   kept. Any other `:` is a separator, after a key that ends in digits and after a number alike:
   `user1:2345678901` is stored as `user1:[REDACTED]`, `curl -u 42:2345678901` as
   `curl -u 42:[REDACTED]`, `12:34hunter2` as `12:[REDACTED]` and a ratio such as `16:9` as
-  `16:[REDACTED]`. JSON in the text follows the same rule member by member, a
-  two-element array by its first string (`["user","bob"]`), and an element by its tag
-  (`<user>bob</user>`).
+  `16:[REDACTED]`. JSON in the text follows the same rule member by member, and a two-element
+  array by its first string (`["user","bob"]`). A key in quotes (`"x": …`, `'x'=…`, or in
+  backticks) follows it too, but the text is cut at its opening quote, so nothing written in the
+  quotes shows: `"x":"hunter2"` and `"hunter2":"v"` are stored as `[REDACTED]`, while
+  `"status": 200` is kept.
 - **A secret name**, with or without a separator, quoted or not: `password=…`, `password …`,
   `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`, `Bearer: …`. The text is hidden from the value
   after the name. Punctuation inside a word is read as a separator (`pass~word`), two words are
@@ -239,10 +242,14 @@ The triggers:
 - **A secret name written as a value.** After a key that holds a name and that the app allows
   (`name`, `key`, `label`, `type`, `id`, …, but never `path`, the route of a request), a name that
   names a secret, is not plain ASCII or is JSON: `name="password"`, `label="Пароль"`,
-  `name=["pin"]`. The text of a property list's `<key>` element is such a name too
-  (`<key>password</key>`, `<key>Şifre</key>`), while the name of an end tag (`</password>`) is
-  not a trigger. A trigger inside a tag hides the tag from its `<`, so an attribute written before
-  the name is hidden too: `<input value="…" name="password">` is stored as `[REDACTED]`.
+  `name=["pin"]`.
+- **Markup**, which is not parsed. A `<` is a comparison only before an ASCII space, a tab, a line
+  break, an ASCII digit, `=` or the end of the text (`a < b`, `<3`, `1<2`). Before anything
+  else (a letter of any script, `/`, `!`, `?`, `_`, `:`, other punctuation, a symbol, a digit
+  outside ASCII) it starts markup, and the text is cut at it: `<b>`, `</x>`, `<br/>`, `<!--`,
+  `<![CDATA[`, `<?xml`, `<!DOCTYPE`, `<#`, `<-`, `<>` and `List<String>`. No tag keeps its text,
+  whatever its name and whatever keys you allow: `<status>200</status>`, `</password>`,
+  `<key>password</key>` and `<input value="…" name="password">` are stored as `[REDACTED]`.
 - **A key that is not plain ASCII**, has no letter or digit, or is missing, before `=` or `:`
   (`pаssword=…` with a Cyrillic `а`, `🔑=…`, `user[name]=…`, `=…`), and the last words of a key
   that, read as one name, name a secret (`pass word=…`, `c v v: …`).
@@ -261,9 +268,14 @@ The triggers:
 - **A word longer than 256 characters**, which is no name or value that can be read.
 - **A token that cannot be read with certainty**: a word that mixes scripts (`tоken` with a
   Cyrillic `о`; Latin with Japanese, Chinese or Korean is not mixed) or holds an invisible
-  character other than a mark, such as a zero-width space; a quote or bracket that does not
-  close; and JSON that does not parse. The text is hidden from there. A joiner between two emoji
-  (`👩‍💻`) and a skin tone (`👍🏽`) are part of the emoji.
+  character other than a mark, such as a zero-width space; a bracket that does not close; and
+  JSON that does not parse. The text is hidden from there. A joiner between two emoji (`👩‍💻`)
+  and a skin tone (`👍🏽`) are part of the emoji.
+- **A quote that does not close on its line.** A `"` or a backtick opens a quote anywhere, a `'`
+  only at the start of a word (so `don't` and `İstanbul'a` open none), and a quote closes at the
+  next one of its kind on the same line. A quote still open at a line break or at the end of the
+  text cuts the text at the quote, so a value or a quoted key written over two lines never shows:
+  `msg "abc` and `hunter2" done` on the next line are stored as `msg [REDACTED]`.
 
 JSON in the text (`{"…`, `[{…`, `["…`, `[[…`) is parsed with a JSON parser and redacted by the
 key rule of structured input, as a body is; its strings are free text again, with this rule.
@@ -272,9 +284,13 @@ any other URL is a trigger that hides the text from where the URL starts. A clea
 `scheme://host` with an optional path, written only in the ASCII letters, digits, `.`, `_`, `-`
 and `/` after the scheme (so no `?`, `#`, `;`, `%`, `=`, `:`, `@` or `\`, no port, no user info
 and no escape), with a host that is a host name or an IPv4 address and neither the host nor a
-path segment that names a secret or has no letter or digit, followed by white space, a line break
-or punctuation that ends a sentence (`.`, `,`, `!`, `)`, `]`, `}`, `>` or a quote). It is recorded
-as ``RedactionPolicy/redact(url:)`` records it, so an identifier in its path becomes `:id`.
+path segment that names a secret or has no letter or digit. It is followed by white space, a line
+break or the end of the text, or by one of `.`, `,`, `!` and `)` and then one of those. Any other
+character after it (a quote, `>`, a backtick, `]`, `}`, `?`, `;`, `:` or a second mark) leaves
+open where the URL ends, so it cuts the text where the URL starts: `see https://a.example/v1/x), ok`
+is stored as `see [REDACTED]` and `see "https://a.example/v1" ok` as `see "[REDACTED]`. A clean URL is recorded as
+``RedactionPolicy/redact(url:)`` records it, so an identifier in its path becomes `:id`, and its
+last segment is read with the next word, as two words are (`https://x.example/to ken …`).
 ``RedactionPolicy/allowedQueryParameters`` applies to the URL of a request, not to a URL in text:
 `GET https://api.example.com/v1/items?page=2 done` is stored as `GET [REDACTED]` whatever the
 allowed parameters. Line breaks are kept as they are written.
@@ -291,14 +307,21 @@ allowed parameters. Line breaks are kept as they are written.
 | `pаssword=hunter2` (Cyrillic `а`) | `[REDACTED]` |
 | `saved {"status":200,"name":"ada","card":"x"}` | `saved {"status":200,"name":[REDACTED]` |
 | `payload {"a": "hunter2"` | `payload [REDACTED]` |
-| `msg="unterminated hunter2` | `msg="[REDACTED]` |
+| `msg="unterminated hunter2` | `msg=[REDACTED]` |
+| `msg "abc` and `hunter2" done` on the next line | `msg [REDACTED]` |
+| `"x":"hunter2"` | `[REDACTED]` |
+| `"status": 200, "x": hunter2` | `"status": 200, [REDACTED]` |
 | `field name="password" hunter2` | `field name="[REDACTED]` |
-| `<key>password</key>` and a `<string>` below | `<key>[REDACTED]` |
+| `<key>password</key>` and a `<string>` below | `[REDACTED]` |
+| `status=200 <status>200</status> hunter2` | `status=200 [REDACTED]` |
+| `if a < b` | unchanged |
 | `Payment failed: card declined` | `Payment failed: [REDACTED]` |
-| `git clone https://bob:hunter2@github.com/x/y.git` | `git clone https://github.com/x/y.git` |
-| `GET https://a.example/x?api_key= hunter2` | `GET https://a.example/x?[REDACTED]` |
-| `see https://a.example/cb#access_token= hunter2` | `see https://a.example/cb#[REDACTED]` |
-| `see https://a.example/v1/password= hunter2` | `see https://a.example/v1/password= [REDACTED]` |
+| `git clone https://github.com/x/y.git` | unchanged |
+| `git clone https://bob:hunter2@github.com/x/y.git` | `git clone [REDACTED]` |
+| `GET https://a.example/x?api_key= hunter2` | `GET [REDACTED]` |
+| `see https://a.example/cb#access_token= hunter2` | `see [REDACTED]` |
+| `see https://a.example/v1/password= hunter2` | `see [REDACTED]` |
+| `see https://a.example/v1/x), ok` | `see [REDACTED]` |
 
 ### Limits keep hostile input from exhausting the stack, the time and the memory
 
@@ -323,12 +346,13 @@ and the time that a request or a log message can use:
   query or path has more than ``RedactionPolicy/maximumQueryParameters`` (128) parameters, is
   recorded with its scheme, host and port only. A multipart body has at most 1,000 parts.
 
-JSON past a limit is not read: a body is omitted, and a string or other text inside a document
-that holds such JSON is hidden whole. The free-text rule reads a text once and keeps only its
-position, the cut and a few marks. The package's tests run every limit on a thread with 512 KiB
-of stack, and in a release build (`swift test -c release`) they check that a megabyte of text,
-nested input or a body takes less than a second of CPU time, and, on macOS, that a megabyte of
-free text takes less than 16 MB of memory beyond the input.
+JSON past a limit is not read: a body is omitted, and a string or other text inside a document that
+holds such JSON is hidden whole. The free-text rule reads a text once and keeps only its position,
+the cut, the first quote that does not close on its line and the last closing bracket of each kind.
+The package's tests run every limit on a thread with 512 KiB of stack, and in a release build
+(`swift test -c release`) they check that a megabyte of text, nested input or a body takes less
+than a second of CPU time, and, on macOS, that a megabyte of free text takes less than 16 MB of
+memory beyond the input.
 
 ### Change the policy
 
@@ -379,10 +403,11 @@ Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
 
 Where it cannot tell, it hides more than it has to: everything after the first trigger, the lines
 below included (`Payment failed: card declined` keeps only `Payment failed:`, and
-`заказ №42 отправлен` only `заказ`), a whole tag that holds a secret name, the rest of a text after
-a quote or bracket that does not close (`Order 1234 shipped :(`), the rest of a text after a URL
-that is not clean (`health http://localhost:8080/health ok` keeps only `health`), and the value of
-a name that only describes a secret (`token_type`).
+`заказ №42 отправлен` only `заказ`), the rest of a text from its first tag (`Loaded
+Array<Item> in 3 ms` keeps only `Loaded Array`), the rest of a text after a quote that does not
+close on its line or a bracket that does not close (`Order 1234 shipped :(`), the rest of a text
+after a URL that is not clean or that two marks follow (`health http://localhost:8080/health ok`
+keeps only `health`), and the value of a name that only describes a secret (`token_type`).
 
 ## See Also
 
