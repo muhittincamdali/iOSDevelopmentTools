@@ -187,7 +187,7 @@ struct TextRedactionTests {
     func longLines() {
         // CPU time of this thread, so that other tests running at the same time do not count.
         let start = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
-        let long = String(repeating: "count=1&", count: 20_000) + "token=hunter2"
+        let long = String(repeating: "count=1 ", count: 20_000) + "token=hunter2"
         #expect(policy.redact(text: long).hasSuffix("token=\(redacted)"))
         let quotes = String(repeating: "\"x\":", count: 20_000)
         #expect(!policy.redact(text: quotes).isEmpty)

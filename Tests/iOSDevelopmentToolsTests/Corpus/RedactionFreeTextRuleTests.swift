@@ -28,7 +28,8 @@ struct RedactionFreeTextRuleTests {
         ("ｓｔａｔｕｓ=200", "ｓｔａｔｕｓ=[REDACTED]"),
         ("st%61tus=200", "st[REDACTED]"),
         ("status\u{0301}=200", "status\u{0301}=[REDACTED]"),
-        ("status=200&user=bob", "status=200&user=[REDACTED]"),
+        // `&` before a letter is an escape (`&amp`), so a list of pairs joined by `&` is cut there.
+        ("status=200&user=bob", "status=200[REDACTED]"),
         ("status=200;user=bob", "status=200;user=[REDACTED]"),
         ("status=200,user=bob", "status=200,user=[REDACTED]"),
         ("path=/x?token=abc", "path=/x?token=[REDACTED]"),
@@ -83,9 +84,10 @@ struct RedactionFreeTextRuleTests {
         ("status=\"bob smith\" count=1", "status=\"bob smith\" count=1"),
         ("status='bob smith' count=1", "status='bob smith' count=1"),
         ("status=`bob` count=1", "status=`bob` count=1"),
-        ("status=\"a\\\"b\\\"\" count=1", "status=\"a\\\"b\\\"\" count=1"),
-        // An escaped quote with no partner on its line overlaps the plain quote around it: the
-        // text is cut at the plain one.
+        // A backslash before a quote is an escape, which cuts the text at the backslash; an escaped
+        // quote with no partner on its line overlaps the plain quote around it, and the text is
+        // cut at the plain one.
+        ("status=\"a\\\"b\\\"\" count=1", "status=\"a[REDACTED]"),
         ("status=\"a\\\"b\" count=1", "status=[REDACTED]"),
         ("status={\"count\":[1,2]} path=/a", "status={\"count\":[1,2]} path=/a"),
         ("user=\"bob smith\" status=1", "user=\"[REDACTED]"),

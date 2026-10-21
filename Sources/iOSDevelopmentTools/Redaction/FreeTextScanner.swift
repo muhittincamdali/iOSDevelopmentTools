@@ -14,8 +14,9 @@
 /// - a name held by an allowed key that holds one (`name=`, `label=`, …) that names a secret or
 ///   is not plain ASCII: hidden from its value;
 /// - a character outside the safe alphabet (see ``isOutsideSafeAlphabet(_:)``), an escape
-///   (`%3D`, `&#61;`, `\x41`), which is never decoded, and a word longer than ``longestWord``:
-///   hidden from there;
+///   (`%3D`, `&#61;`, `&amp`, a backslash before anything but white space: `\x41`, `\"`,
+///   `dir\data`), which is never decoded, and a word longer than ``longestWord``: hidden from
+///   there;
 /// - markup: a `<` before anything but an ASCII space, tab or line break, an ASCII digit, `=` or
 ///   the end of the text (`<b>`, `</x>`, `<!--`, `<?pi`, `<#`): hidden from the `<` (see
 ///   ``startsMarkup(at:)``);
@@ -126,12 +127,11 @@ struct FreeTextScanner {
             readMark()
         } else if readsWords, startsMarkup(at: position) {
             cut(atByte: position)
+        } else if readsWords, startsEscape(position) {
+            // `&` ends a word, so an escape that starts with it (`&amp`, `&#61;`, `R&D`) is found
+            // here; one inside a word is found by ``word()``.
+            cut(atByte: position)
         } else if Self.boundaries.contains(byte) || Self.quotes.contains(byte), referenceLength(at: position) == nil {
-            // A character reference by name (`&amp;`, `&lt;`) is an escape.
-            if readsWords, namedReferenceLength(at: position) != nil {
-                cut(atByte: position)
-                return
-            }
             position += 1
         } else if let end = urlEnd(from: position, lineEnd: currentLineEnd()) {
             url(to: end)
@@ -150,9 +150,9 @@ struct FreeTextScanner {
     /// naming no secret, on the same line as its separator, which is written in ASCII. Any other
     /// key cuts the text at its value (`x=hunter2`, `Error: …`, `pаssword=…`, `user：bob`), and so
     /// does a separator with no key before it (`=hunter2`) and the last words before the separator
-    /// when, read as one name, they name a secret (`pass word`, `c v v`, `secret&#107.;ey`). A
-    /// separator escaped with a backslash (`status\=…`, which a properties file reads as part of
-    /// the key) cuts it at the backslash. After an allowed key that holds a name (`name=`, `id=`,
+    /// when, read as one name, they name a secret (`pass word`, `c v v`). A key with an escape in
+    /// it (`status\=…`, `pass&#119;ord=`) never reaches the separator: the escape cuts the text
+    /// first (see ``startsEscape(_:)``). After an allowed key that holds a name (`name=`, `id=`,
     /// … when the app allows them), a name that names a secret, is not plain ASCII or is JSON,
     /// which cannot be read as a name, cuts it too.
     private mutating func separator() {
@@ -162,10 +162,6 @@ struct FreeTextScanner {
         position = end
         guard readsWords else {
             cut(afterByte: end - 1)
-            return
-        }
-        if isEscaped(start) {
-            cut(atByte: start)
             return
         }
         let isLookAlike = (start..<end).contains { !source[text.offsets[$0]].isASCII }

@@ -75,7 +75,10 @@ extension FreeTextScanner {
     ///   `'"note'\nQx31": 1`), cannot be told, so the earliest quote still open there is where the
     ///   text is cut at the latest.
     ///
-    /// A kind is open at most once, so no more than six quotes are kept.
+    /// A kind is open at most once, so no more than six quotes are kept. The backslash of an
+    /// escaped quote cuts free text by itself (see ``startsEscape(_:)``); the escaped kinds pair
+    /// the quotes of JSON written into the text (`{"a":"say \"hi\""}`), which its parser reads,
+    /// so that its strings are not taken for quotes that stay open.
     mutating func noteMarks() {
         // The quotes open on the line, innermost last: their kind (see `quoteKind(at:)`) and the
         // byte where they opened.
@@ -128,29 +131,28 @@ extension FreeTextScanner {
         position += 1
     }
 
-    /// A quote that opens a quoted key (`"user": …`, `'user'=…`, `\"user\":` in escaped JSON):
-    /// one that closes on its line with a separator after it, white space and line breaks
-    /// between. A quoted key follows the key rule: unless it is on the allowlist (see
-    /// ``allowsQuotedKey(_:)``), the text is cut at its opening quote, so nothing written in the
-    /// quotes shows (`"x": …`, `"hunter2": "v"`, `"session Qz9W": 1`). The text in any quote is
-    /// read on like any other, for the keys and names written in it.
+    /// A quote that opens a quoted key (`"user": …`, `'user'=…`): one that closes on its line
+    /// with a separator after it, white space and line breaks between. A quoted key follows the
+    /// key rule: unless it is on the allowlist (see ``allowsQuotedKey(_:)``), the text is cut at
+    /// its opening quote, so nothing written in the quotes shows (`"x": …`, `"hunter2": "v"`,
+    /// `"session Qz9W": 1`). The text in any quote is read on like any other, for the keys and
+    /// names written in it. No quote the scan reaches is escaped: the backslash before it is an
+    /// escape, which cuts the text first (escaped JSON, `\"key\":`, is cut at its first
+    /// backslash).
     private mutating func quote() {
         let open = position
         position += 1
         guard opensQuote(at: open) else { return }
-        let escaped = isEscaped(open)
-        guard let close = closingQuote(after: open, escaped: escaped), let next = firstText(from: close + 1), isSeparator(next) else { return }
-        // In escaped JSON the backslash before the closing quote is not the key's.
-        let key = (open + 1)..<(escaped ? close - 1 : close)
-        if !allowsQuotedKey(key) { cut(atByte: escaped ? backslashesStart(before: open) : open) }
+        guard let close = closingQuote(after: open), let next = firstText(from: close + 1), isSeparator(next) else { return }
+        if !allowsQuotedKey((open + 1)..<close) { cut(atByte: open) }
     }
 
-    /// The next quote of the kind at `open` on its line, escaped like it or not escaped.
-    private func closingQuote(after open: Int, escaped: Bool) -> Int? {
+    /// The next quote of the kind at `open` on its line that is not escaped.
+    private func closingQuote(after open: Int) -> Int? {
         let quote = text.bytes[open]
         var k = open + 1
         while k < text.count, !text.isLineTerminator(k) {
-            if text.bytes[k] == quote, isEscaped(k) == escaped { return k }
+            if text.bytes[k] == quote, !isEscaped(k) { return k }
             k += 1
         }
         return nil

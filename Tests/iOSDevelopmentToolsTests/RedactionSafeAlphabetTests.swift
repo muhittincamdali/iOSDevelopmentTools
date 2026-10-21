@@ -83,6 +83,9 @@ struct RedactionSafeAlphabetTests {
 
     @Test("an escape in free text is a trigger where it starts and is never decoded", arguments: [
         "%41", "%u0041", "&#65;", "&#x41;", "&#65", "&amp;", "&lt;", "&hellip;", "&NotNestedGreaterGreater;", "\\101", "\\0", "\\x41", "\\u0041", "\\u{41}",
+        // No list of forms is kept: a backslash before anything but white space, and `&` before
+        // any letter or `#`, are escapes.
+        "\\p{L}", "\\e8m", "\\8", "\\cJ", "\\kx", "\\\"", "\\\\", "\\/", "\\data", "\\n", "&amp", "&#x;", "&#q", "&D",
     ])
     func escapes(escape: String) {
         for text in ["ok \(escape) \(Self.secret)", "ok a\(escape)b \(Self.secret)", "\(escape)\(Self.secret)"] {
@@ -94,7 +97,7 @@ struct RedactionSafeAlphabetTests {
     }
 
     @Test("a percent sign, an ampersand or a backslash that starts no escape is text", arguments: [
-        "100% done", "50%off", "Tom & Jerry", "a&b", "&;", "path\\name", "a\\b", "%ZZ", "%4", "&#;",
+        "100% done", "50%off", "Tom & Jerry", "&;", "a && b", "%ZZ", "%4", "a \\ b", "a\\", "a\\\tb", "a\\\nb", "a\\\r\nb",
     ])
     func notEscapes(text: String) {
         #expect(policy.redact(text: text) == text)

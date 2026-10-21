@@ -85,11 +85,16 @@ extension FreeTextScanner {
         return reading.secretEnd { !endingInLastWord || $0.upperBound > last.lowerBound } != nil
     }
 
-    /// ``mentionsSecret(_:policy:compatibility:)`` on a scanning copy that is already made.
+    /// ``mentionsSecret(_:policy:compatibility:)`` on a scanning copy that is already made. A
+    /// backslash escape is not read in any form: a name with one cannot be read
+    /// (`pa\x{73}sword`), as it cuts free text (see ``backslashEscapes(at:)``). The words of JSON
+    /// written into a line are read without this rule (see ``mentionsSecret(in:)``): a backslash
+    /// in them is a JSON escape, which the JSON parser reads.
     static func mentionsSecret(_ scalars: [Unicode.Scalar], text: NormalizedText, policy: RedactionPolicy, compatibility: CompatibilityText) -> Bool {
         // Only words are read here, never JSON or URLs, so no nesting is entered.
         let scanner = FreeTextScanner(
             source: scalars, text: text, policy: policy, compatibility: compatibility, nesting: .text(length: 0), allowedKeys: policy.allowedTextKeys)
+        if (0..<text.count).contains(where: scanner.startsBackslashEscape) { return true }
         return scanner.mentionsSecret(in: 0..<text.count) || ScalarClass.hidesText(scalars)
     }
 

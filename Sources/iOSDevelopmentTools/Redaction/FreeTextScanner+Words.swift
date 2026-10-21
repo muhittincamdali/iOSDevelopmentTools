@@ -26,10 +26,10 @@ extension FreeTextScanner {
         let range = start..<end
         guard readsWords else {
             // In a name, a separator of its own, escaped or one that only looks like one, starts a
-            // value written into the name.
-            if let embedded = [firstUnsafeCharacter(in: range), escapedValueStart(in: range)].compactMap({ $0 }).min() {
-                cut(atByte: embedded)
-            }
+            // value written into the name. A backslash escape is not decoded in any form, so it
+            // may stand for one (`pass\x3dhunter2`, `pass\075hunter2`).
+            let starts = [firstUnsafeCharacter(in: range), range.first(where: startsBackslashEscape), escapedValueStart(in: range)]
+            if let embedded = starts.compactMap({ $0 }).min() { cut(atByte: embedded) }
             return
         }
         guard !isOpaque(range) else {
@@ -74,12 +74,14 @@ extension FreeTextScanner {
 
     private static let splittingBoundaries = ByteSet("|,;&?")
 
-    /// The end of the word that starts at `start`. An HTML character reference (`&#97;`) and a
-    /// `\u{…}` escape are part of a word, though `&`, `;` and `{` end words elsewhere.
+    /// The end of the word that starts at `start`. An HTML character reference (`&#97;`) is part
+    /// of a word, though `&` and `;` end words elsewhere, so a name reads it with the word. A
+    /// backslash escape needs no such rule: it cuts the text, or a name, at the backslash,
+    /// whatever its form and wherever the word ends after it (see ``backslashEscapes(at:)``).
     func wordEnd(from start: Int, to lineEnd: Int) -> Int {
         var end = start
         while end < lineEnd {
-            if let length = referenceLength(at: end) ?? bracedEscapeLength(at: end) {
+            if let length = referenceLength(at: end) {
                 end += length
             } else if end > start, endsWord(end) {
                 break
@@ -114,16 +116,6 @@ extension FreeTextScanner {
         }
         guard k > digitsStart else { return nil }
         return (k < text.count && text.bytes[k] == UInt8(ascii: ";") ? k + 1 : k) - i
-    }
-
-    /// The length of `\u{…}` at `i`, or nil.
-    func bracedEscapeLength(at i: Int) -> Int? {
-        guard text.bytes[i] == UInt8(ascii: "\\"), i + 3 < text.count, text.bytes[i + 1] == UInt8(ascii: "u"), text.bytes[i + 2] == UInt8(ascii: "{")
-        else { return nil }
-        var k = i + 3
-        while k < text.count, k - i < 12, Self.isHexDigit(text.bytes[k]) { k += 1 }
-        guard k > i + 3, k < text.count, text.bytes[k] == UInt8(ascii: "}") else { return nil }
-        return k + 1 - i
     }
 
     private static func isHexDigit(_ byte: UInt8) -> Bool {

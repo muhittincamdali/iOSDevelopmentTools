@@ -68,48 +68,56 @@ extension FreeTextScanner {
 
     // MARK: Escapes
 
-    /// The first byte of the word `range` that starts an escape: `%XX` and `%uXXXX`, a character
-    /// reference by number (`&#97;`, `&#x61;`, also without `;`) or by name (`&amp;`, `&lt;`), and
-    /// a backslash before an octal digit or before `x`, `u`, `U`, `N` or `o`, whatever follows it
-    /// (`\101`, `\x41`, `\x{41}`, `\u0041`, `\u{41}`, `\U00000041`, `\N{…}`, `\o{101}`: the ways
-    /// languages write a code point). In free text an escape is a trigger and is never decoded:
-    /// what it stands for cannot be told without guessing the format.
+    /// The first byte of the word `range` that starts an escape (see ``startsEscape(_:)``).
     func firstEscape(in range: Range<Int>) -> Int? {
         range.first(where: startsEscape)
     }
 
-    /// Whether an escape starts at byte `i`.
+    /// Whether an escape starts at byte `i`. No list of escape forms is kept, so a form that is
+    /// not known counts as well:
+    ///
+    /// - a backslash before anything but an ASCII space, a tab, a line break or the end of the
+    ///   text (see ``backslashEscapes(at:)``): `\x41`, `\u{41}`, `\N{…}`, `\p{L}`, `\8`, `\cJ`,
+    ///   `\"`, `\\`, `\/`, a Windows path (`dir\data`) and a literal `\n` all count;
+    /// - `%` and two hex digits (`%3D`, `%41`), or `%u` and four (`%u003D`);
+    /// - `&` before a letter or `#` (`&amp`, `&lt;`, `&#61;`, `&#x;`, `&#q`, `R&D`), with or
+    ///   without a `;`.
+    ///
+    /// In free text an escape is a trigger and is never decoded: what it stands for cannot be told
+    /// without guessing the format. Over-hiding a Windows path or `R&D` is by design.
     func startsEscape(_ i: Int) -> Bool {
         switch text.bytes[i] {
         case UInt8(ascii: "%"):
             if hexDigits(from: i + 1, count: 2) { return true }
             return i + 1 < text.count && text.bytes[i + 1] | 0x20 == UInt8(ascii: "u") && hexDigits(from: i + 2, count: 4)
         case UInt8(ascii: "&"):
-            return referenceLength(at: i) != nil || namedReferenceLength(at: i) != nil
+            return i + 1 < text.count && (text.bytes[i + 1] == UInt8(ascii: "#") || text.isAnyLetter(i + 1))
         case UInt8(ascii: "\\"):
-            guard i + 1 < text.count else { return false }
-            let next = text.bytes[i + 1]
-            return (UInt8(ascii: "0")...UInt8(ascii: "7")).contains(next) || Self.codePointEscapes.contains(next)
+            return backslashEscapes(at: i)
         default:
             return false
         }
     }
 
-    /// The length of a character reference by name at byte `i` (`&amp;`, `&hellip;`, as HTML
-    /// writes them): `&`, an ASCII letter, at most 31 more letters or digits and `;`; nil when
-    /// there is none.
-    func namedReferenceLength(at i: Int) -> Int? {
-        guard text.bytes[i] == UInt8(ascii: "&"), i + 2 < text.count, ASCII.isLetter(text.bytes[i + 1]) else { return nil }
-        var k = i + 2
-        while k < text.count, k - i <= Self.longestReferenceName, ASCII.isAlphanumeric(text.bytes[k]) { k += 1 }
-        guard k < text.count, text.bytes[k] == UInt8(ascii: ";") else { return nil }
-        return k + 1 - i
+    /// Whether a backslash escape starts at byte `i`: a backslash that does not end the text and
+    /// that anything but an ASCII space, a tab or a line break follows in the original text. What
+    /// follows it is not read as any form of escape. A mark or an invisible character right after
+    /// it, which the scanning copy leaves out, and a space outside ASCII count as what it escapes.
+    func startsBackslashEscape(_ i: Int) -> Bool {
+        text.bytes[i] == UInt8(ascii: "\\") && backslashEscapes(at: i)
     }
 
-    private static let longestReferenceName = 32
+    /// Whether the backslash at byte `i` starts an escape (see ``startsBackslashEscape(_:)``).
+    func backslashEscapes(at i: Int) -> Bool {
+        let next = text.offsets[i] + 1
+        guard next < source.count else { return false }
+        let scalar = source[next]
+        return !(scalar.isASCII && Self.blanksAfterBackslash.contains(UInt8(scalar.value)))
+    }
 
-    /// The letters after a backslash that start a code point in some language.
-    private static let codePointEscapes = ByteSet("xuUNo")
+    /// What a backslash can come before without starting an escape: an ASCII space, a tab or a
+    /// line break.
+    private static let blanksAfterBackslash = ByteSet(" \t\n\r")
 
     private func hexDigits(from i: Int, count: Int) -> Bool {
         guard i + count <= text.count else { return false }

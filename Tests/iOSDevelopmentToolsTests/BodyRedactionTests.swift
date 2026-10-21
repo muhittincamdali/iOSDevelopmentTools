@@ -128,10 +128,13 @@ struct BodyRedactionTests {
 
     @Test("A form value that holds pairs or JSON goes through the value rule; a `;` makes the form unreadable")
     func formValueRule() {
-        let body = Data("b=x%26token%3Dhunter2&c=1".utf8)
+        let body = Data("b=x%20token%3Dhunter2&c=1".utf8)
         let (data, outcome) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded")
         #expect(outcome == .redacted)
-        #expect(text(data) == "b=x%26token%3D\(redacted)&c=1")
+        #expect(text(data) == "b=x+token%3D\(redacted)&c=1")
+        // `&` before a letter is an escape in the value: the value is cut there.
+        let joined = policy.redact(body: Data("b=x%26token%3Dhunter2&c=1".utf8), contentType: "application/x-www-form-urlencoded")
+        #expect(text(joined.body) == "b=x\(redacted)&c=1")
         // Some servers also split a form at `;`, so a form with one is omitted.
         let split = Data("a=1;password=hunter2&token;x=hunter2".utf8)
         #expect(policy.redact(body: split, contentType: "application/x-www-form-urlencoded").outcome == .omitted)
