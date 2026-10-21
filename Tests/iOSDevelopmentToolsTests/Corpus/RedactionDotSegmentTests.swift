@@ -60,6 +60,44 @@ struct RedactionDotSegmentTests {
         #expect(redactor.redact(url: url) == "https://h.example\(expected)")
     }
 
+    /// Path parameters that name a secret beside the one that holds it. Query, form and multipart
+    /// fields hide such a value (`?label=password&value=S`); the path parameters were read one by
+    /// one and kept it when its name was allowed (`/a;label=password;value=S` was stored as
+    /// `/a;label=[REDACTED];value=S`). They are not read now, whatever the allowlist.
+    static let pathParametersNamingSecrets = [
+        "/a;label=password;value=\(secret)", "/a;name=api_key;value=\(secret)", "/a;k=pin;v=\(secret)",
+        "/a;value=\(secret);name=password", "/a;name=%C5%9Eifre;value=\(secret)", "/a;label=password?value=\(secret)",
+        "/a%3Blabel=password%3Bvalue=\(secret)", "/a;value=\(secret)",
+    ]
+
+    static let secret = "Sx7Qw4Zk"
+
+    @Test("path parameters that name a secret show nothing, whatever the allowlist", arguments: pathParametersNamingSecrets)
+    func pathParametersNamingASecret(path: String) throws {
+        let url = try #require(URL(string: "https://h.example\(path)"))
+        let allowing = RedactionPolicy(allowedQueryParameters: ["value", "v", "label", "name", "k"])
+        for policy in [RedactionPolicy.default, allowing] {
+            #expect(policy.redact(url: url) == "https://h.example")
+            #expect(policy.redactedPath(of: url).isEmpty)
+        }
+        // The query counterpart hides the value as well.
+        let query = try #require(URL(string: "https://h.example/a?label=password&value=\(Self.secret)"))
+        #expect(!allowing.redact(url: query).contains(Self.secret))
+    }
+
+    @Test("a `;` or `%3B` at any place of a path leaves only the scheme and host")
+    func semicolonAnywhere() throws {
+        let path = "/v1/token/abc/info"
+        for separator in [";", "%3B", "%3b", ";x=1"] {
+            for index in path.indices.dropFirst() + [path.endIndex] {
+                var written = path
+                written.insert(contentsOf: separator, at: index)
+                let url = try #require(URL(string: "https://h.example\(written)?page=2"))
+                #expect(redactor.redact(url: url) == "https://h.example", "\(written)")
+            }
+        }
+    }
+
     @Test("a clean URL with a dot segment in free text is cut where it starts")
     func dotSegmentsInText() {
         #expect(redactor.redact("see https://h.example/v1/status/./4831 ok") == "see [REDACTED]")
