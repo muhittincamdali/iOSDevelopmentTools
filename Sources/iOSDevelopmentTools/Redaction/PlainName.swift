@@ -36,14 +36,13 @@ struct PlainName {
     /// Longer keys are not plain: their value is hidden without reading them.
     static let maximumKeyLength = 256
 
-    /// The letters and digits, lowercased; ``wildcard`` for a letter read as any letter.
+    /// The letters and digits, lowercased.
     let letters: [UInt8]
     /// Whether a word starts at each letter.
     private let startsWord: [Bool]
-
-    /// Stands for a letter of free text that has no ASCII form (`ɑ`, `ı`) in a loose reading: it
-    /// matches any one letter of a secret word.
-    static let wildcard: UInt8 = 0
+    /// Of a skeleton, whether letters without an ASCII form were left out right before each
+    /// letter, and at the end; nil for a key, which has no such letters.
+    private let gaps: [Bool]?
 
     /// - Parameter maximumLength: Longer names are not read; nil reads any length.
     init?(_ name: some Collection<Unicode.Scalar>, maximumLength: Int? = maximumKeyLength) {
@@ -59,34 +58,41 @@ struct PlainName {
         let bytes = Array(bytes)
         if let maximumLength, bytes.count > maximumLength { return nil }
         guard bytes.allSatisfy(ASCII.isNameCharacter) else { return nil }
-        self.init(nameBytes: bytes, wildcards: nil)
+        self.init(nameBytes: bytes, leftOutBefore: nil, leftOutAtEnd: false)
     }
 
-    /// A word of free text read loosely, to find the secret words in it: punctuation between its
-    /// letters is read as a separator (`pass~word`, `t*okens`), and the bytes marked in
-    /// `wildcards` as letters that match any letter. ``LooseReading`` also reads the word as its
-    /// ASCII skeleton, with no wildcards and those letters left out. Never used for keys, which
-    /// are compared only when plain.
-    init?(looseBytes bytes: [UInt8], wildcards: [Bool]) {
+    /// The ASCII skeleton of a word of free text (see ``LooseReading``): its bytes once the letters,
+    /// marks and numbers that have no ASCII form are left out, with any other punctuation between
+    /// its letters read as a separator (`pass~word`, `t*okens`). `leftOutBefore` says for each byte
+    /// whether such characters were left out after the letter before it, and `leftOutAtEnd`
+    /// whether some were after the last one. Never used for keys, which are compared only when
+    /// plain.
+    init?(skeleton bytes: [UInt8], leftOutBefore: [Bool], leftOutAtEnd: Bool) {
         var name = bytes
-        for i in name.indices where !ASCII.isNameCharacter(name[i]) {
-            name[i] = wildcards[i] ? UInt8(ascii: "x") : UInt8(ascii: "_")
-        }
-        self.init(nameBytes: name, wildcards: wildcards)
+        for i in name.indices where !ASCII.isNameCharacter(name[i]) { name[i] = UInt8(ascii: "_") }
+        self.init(nameBytes: name, leftOutBefore: leftOutBefore, leftOutAtEnd: leftOutAtEnd)
     }
 
-    private init?(nameBytes bytes: [UInt8], wildcards: [Bool]?) {
+    private init?(nameBytes bytes: [UInt8], leftOutBefore: [Bool]?, leftOutAtEnd: Bool) {
         var letters: [UInt8] = []
         var startsWord: [Bool] = []
+        var gaps: [Bool] = []
         letters.reserveCapacity(bytes.count)
         startsWord.reserveCapacity(bytes.count)
         for i in bytes.indices where ASCII.isAlphanumeric(bytes[i]) {
-            letters.append(wildcards?[i] == true ? Self.wildcard : ASCII.lowercased(bytes[i]))
+            letters.append(ASCII.lowercased(bytes[i]))
             startsWord.append(Self.startsWord(i, in: bytes))
+            if let leftOutBefore { gaps.append(leftOutBefore[i]) }
         }
         guard !letters.isEmpty else { return nil }
         self.letters = letters
         self.startsWord = startsWord
+        if leftOutBefore != nil, gaps.contains(true) || leftOutAtEnd {
+            gaps.append(leftOutAtEnd)
+            self.gaps = gaps
+        } else {
+            self.gaps = nil
+        }
     }
 
     /// The letters and digits as a string, for allowlists.
@@ -101,78 +107,72 @@ struct PlainName {
     /// when the name holds none.
     func secretEnd(in table: SecretNameTable) -> Int? { firstSecret(in: table) { _ in true }?.upperBound }
 
-    /// The letters of the first secret word that `accepts` takes, its plural `s` included. A secret
-    /// word may hold one ``wildcard``.
+    /// The letters of the first secret word that `accepts` takes, its plural `s` included.
     ///
-    /// Each start is tried only with the secret words that can be spelled there (see
-    /// ``SecretNameTable/candidates(at:in:)``), and each of them in one pass, so a name is read in
-    /// time linear in its length, however many of its letters are wildcards.
+    /// A secret word is spelled by the letters as they are, or, in a skeleton, by the letters with
+    /// one of its own letters missing where characters were left out (`pɑssword` is `pssword`,
+    /// which is `password` without its `a`, and an `ɑ` was left out there). Each start is tried
+    /// only with the words that can start there (see ``SecretNameTable/entries(startingWith:)``):
+    /// those that start with its letter, and after a gap those whose second letter it is. Each word
+    /// is read in one pass from each end, so both ways of spelling it are known at once and a name
+    /// is read in time linear in its length, however many characters were left out of it.
     func firstSecret(in table: SecretNameTable, where accepts: (Range<Int>) -> Bool) -> Range<Int>? {
         for start in letters.indices {
-            for entry in table.candidates(at: start, in: letters) {
-                let ends = matchEnds(of: entry.letters, at: start)
-                for end in [ends.whole, ends.wildcardAsLetter, ends.wildcardAsNone] {
-                    guard let end, holds(entry.placement, start: start, end: end), accepts(start..<end) else { continue }
-                    return start..<end
-                }
-            }
+            let letter = letters[start]
+            if let found = firstSecret(in: table.entries(startingWith: letter), at: start, where: accepts) { return found }
+            guard let gaps, gaps[start] else { continue }
+            let afterGap = table.entries(withSecondLetter: letter).lazy.filter { $0.letters[0] != letter }
+            if let found = firstSecret(in: afterGap, at: start, where: accepts) { return found }
         }
         return nil
     }
 
-    /// Where `word` ends when it is spelled at `start`, its plural `s` included, with at most one
-    /// ``wildcard``. The plural `s` is read as a letter of the word: the wildcard stands for one
-    /// letter of the word or of its plural, or, between two of their letters, for none
-    /// (`passꞏword`, `tokenꞏ` for `tokens`, `tokenꞏs`, with a letter that has no ASCII form put in).
-    ///
-    /// The letters before the first one that differs from the word are the word's own, so the
-    /// wildcard can only be that letter: the word is read on from there twice at most, with the
-    /// wildcard as a letter and as none. Every reading is returned, the word spelled without the
-    /// wildcard first, because only one of them may end where the word has to end: `tokeꞏn` read
-    /// with the wildcard as the `n` ends before the last letter, and `tokenꞏs` read as `token`
-    /// ends before two more letters; only the wildcard as none ends either name.
-    private func matchEnds(of word: [UInt8], at start: Int) -> (whole: Int?, wildcardAsLetter: Int?, wildcardAsNone: Int?) {
-        var k = start
-        var matched = 0
-        while matched < word.count, k < letters.count, letters[k] == word[matched] {
-            k += 1
-            matched += 1
+    private func firstSecret(
+        in entries: some Sequence<SecretNameTable.Entry>, at start: Int, where accepts: (Range<Int>) -> Bool
+    ) -> Range<Int>? {
+        for entry in entries {
+            let (whole, withGap) = spelledEnds(of: entry.letters, at: start)
+            if let whole, let found = accepted(entry, from: start, to: whole, where: accepts) { return found }
+            if let withGap, let found = accepted(entry, from: start, to: withGap, where: accepts) { return found }
         }
-        guard k < letters.count, letters[k] == Self.wildcard else { return (matched == word.count ? withPlural(k) : nil, nil, nil) }
-        if matched == word.count {
-            // After the whole word, the wildcard is its plural `s` or stands for none before it.
-            let asNone = k + 1 < letters.count && letters[k + 1] == UInt8(ascii: "s") ? pluralEnd(at: k + 1) : nil
-            return (k, pluralEnd(at: k), asNone)
-        }
-        let asLetter = spelledEnd(of: word, from: matched + 1, at: k + 1).map(withPlural)
-        let asNone = matched > 0 ? spelledEnd(of: word, from: matched, at: k + 1).map(withPlural) : nil
-        return (nil, asLetter, asNone)
+        return nil
     }
 
-    /// Where the letters of `word` from `index` on end when they are spelled exactly from letter
-    /// `start`.
-    private func spelledEnd(of word: [UInt8], from index: Int, at start: Int) -> Int? {
-        let end = start + word.count - index
-        guard end <= letters.count else { return nil }
-        var k = start
-        for expected in word[index...] {
-            guard letters[k] == expected else { return nil }
-            k += 1
-        }
-        return end
+    /// The letters of `entry` spelled from `start` to `spelled`, its plural `s` included, when its
+    /// placement holds and `accepts` takes them.
+    private func accepted(
+        _ entry: SecretNameTable.Entry, from start: Int, to spelled: Int, where accepts: (Range<Int>) -> Bool
+    ) -> Range<Int>? {
+        let end = withPlural(spelled)
+        guard holds(entry.placement, start: start, end: end), accepts(start..<end) else { return nil }
+        return start..<end
     }
 
-    /// `end`, or the letter after it when a plural `s` ends the word there.
-    private func withPlural(_ end: Int) -> Int {
-        guard end < letters.count, letters[end] == UInt8(ascii: "s"), let plural = pluralEnd(at: end) else { return end }
-        return plural
+    /// Where `word` ends when it is spelled from letter `start`: with all its letters, and, in a
+    /// skeleton, with one of them missing at a gap. Only a word of two letters or more is read
+    /// with one missing, so that at least one of its letters is written.
+    private func spelledEnds(of word: [UInt8], at start: Int) -> (whole: Int?, withGap: Int?) {
+        let count = word.count
+        var prefix = 0
+        while prefix < count, start + prefix < letters.count, letters[start + prefix] == word[prefix] { prefix += 1 }
+        let whole = prefix == count ? start + count : nil
+        guard let gaps, count >= 2, start + count - 1 <= letters.count else { return (whole, nil) }
+        // With letter `j` of the word missing, its letters after `j` are the letters read right
+        // before `start + count - 1`: `suffix` counts how many of them match, from the end.
+        var suffix = 0
+        while suffix < count - 1, letters[start + count - 2 - suffix] == word[count - 1 - suffix] { suffix += 1 }
+        let lowest = max(0, count - 1 - suffix)
+        let highest = min(prefix, count - 1)
+        guard lowest <= highest else { return (whole, nil) }
+        for j in lowest...highest where gaps[start + j] { return (whole, start + count - 1) }
+        return (whole, nil)
     }
 
-    /// The letter after letter `k` when a plural `s` read there ends the word: it does not start a
+    /// `end`, or the letter after it when a plural `s` ends the word there: it does not start a
     /// word, and a word or the name ends after it.
-    private func pluralEnd(at k: Int) -> Int? {
-        guard k < letters.count, !startsWord[k], endsWord(k + 1) else { return nil }
-        return k + 1
+    private func withPlural(_ end: Int) -> Int {
+        guard end < letters.count, letters[end] == UInt8(ascii: "s"), !startsWord[end], endsWord(end + 1) else { return end }
+        return end + 1
     }
 
     private func holds(_ placement: SecretNameTable.Placement, start: Int, end: Int) -> Bool {

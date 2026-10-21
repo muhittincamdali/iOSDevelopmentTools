@@ -2,7 +2,8 @@
 ///
 /// The words are lowercase ASCII letters and digits without separators. ``PlainName`` compares a
 /// plain-ASCII key with them; any other key is hidden without being compared. Words of free text
-/// are read for them loosely (see ``LooseReading``), which only ever hides more.
+/// are compared with them by their ASCII skeleton (see ``LooseReading``), which only ever hides
+/// more.
 ///
 /// A table is built once per ``RedactionPolicy`` and shared by every redaction it makes; the
 /// default policy's table is built once for the whole process.
@@ -91,15 +92,15 @@ struct SecretNameTable: Sendable, Hashable {
         return table
     }
 
-    /// The entries that can be spelled from letter `start` of a name's lowercase `letters`: those
-    /// that start with that letter, or, where a ``PlainName/wildcard`` stands for the first
-    /// letter, those whose second letter follows it. A word is read with one wildcard at most, so
-    /// after two of them in a row no entry can start; more of them are found in the word's ASCII
-    /// skeleton, which leaves them out (see ``LooseReading``).
-    func candidates(at start: Int, in letters: [UInt8]) -> [Entry] {
-        let first = letters[start]
-        guard first == PlainName.wildcard else { return Self.bucket(first).map { byFirstLetter[$0] } ?? [] }
-        guard start + 1 < letters.count else { return [] }
-        return Self.bucket(letters[start + 1]).map { bySecondLetter[$0] } ?? []
+    /// The entries that start with the lowercase `letter`.
+    func entries(startingWith letter: UInt8) -> [Entry] {
+        Self.bucket(letter).map { byFirstLetter[$0] } ?? []
+    }
+
+    /// The entries whose second letter is the lowercase `letter`: the ones a name can spell from
+    /// that letter when its first letter is missing where a word of free text left characters out
+    /// (see ``PlainName/firstSecret(in:where:)``).
+    func entries(withSecondLetter letter: UInt8) -> [Entry] {
+        Self.bucket(letter).map { bySecondLetter[$0] } ?? []
     }
 }
