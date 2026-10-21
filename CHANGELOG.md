@@ -117,7 +117,8 @@ out of logs in the first place.
   `password`. Before, the match read one such letter and none after the plural `s`, so these
   words and the values after them were stored as they were in free text, JSON strings, form
   values, text/plain bodies, an allowed header and URL path segments. A name with two or more of
-  its letters replaced by look-alikes (`pɑsswoʀd hunter2`) is still not found, as the guide says.
+  its letters replaced by look-alikes (`pɑsswoʀd hunter2`) is still not found, as the guide says,
+  and neither is one with a combining mark in place of one letter (`tͦken hunter2`).
 - Markup in free text is not parsed, as the redaction spec says, and what may follow a `<` is
   listed instead of what makes a tag: a `<` is a comparison only before an ASCII space, a tab, a
   line break, an ASCII digit, `=` or the end of the text. Before anything else it cuts the text,
@@ -172,6 +173,16 @@ out of logs in the first place.
   `/a;name=api_key;value=…`, `/a;value=…;name=password` and `/a;name=%C5%9Eifre;value=…` kept
   the value, which `?label=password&value=…` hides. The default policy, which allows no
   parameter, hid all of these values.
+- A recorded URL whose host names a secret, by the key rule or as a word, is recorded with its
+  scheme, host and port only. With a scheme of the app's own `URLComponents` reads the first
+  part after `//` as the host, so in `myapp://pin/4831` the host is `pin` and the path `/4831`.
+  Only the host's shape was checked and the path was read as if nothing came before it, so
+  `myapp://pin/4831`, `myapp://password/hunter2`, `myapp://token/abc123`,
+  `myapp://session/s3cr3t` and `https://pin/4831` were stored as they are in the URL and path
+  of a `NetworkEntry`, in HAR files and in cURL commands, while the same URL in a log line cut
+  the text. A host such as `auth.example.com` names `auth` and now hides its path and query too.
+  `NetworkEntry.path` is also empty when the host is hidden: `myapp://pin_x/4831` kept `/4831`
+  there while its URL was `myapp://[REDACTED]`.
 - A quoted key that is not on `allowedTextKeys` cuts the text at its opening quote, whichever
   quote it is written in: `"x":"hunter2"`, `"x"="hunter2"`, `'x': 'hunter2'` and `"hunter2":"v"`
   are stored as `[REDACTED]`. Before, the cut came after the separator, so the key showed.
@@ -214,7 +225,7 @@ out of logs in the first place.
   name, generated triggers after which no value may show and generated keys, tests that ordinary
   keys, allowlisted headers and text with no trigger stay readable, parser-differential, stack,
   time-limit and peak-memory tests, the probes of every review of the shared rules, and the
-  examples of the guide. 583 tests run on macOS and 580 on an iOS simulator.
+  examples of the guide. 591 tests run on macOS and 588 on an iOS simulator.
 
 ### Changed
 
