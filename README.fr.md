@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@c179d93911ace1f415cf7ad073ad9bca7fccad2b status=reviewed -->
+<!-- i18n-source: README.md@bea5059f2a664a09567512cec6eee792c46ef301 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 591 tests Swift Testing sur macOS et 588 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 605 tests Swift Testing sur macOS et 602 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -205,7 +205,8 @@ func configureNetworkLogger() {
   query hors de la liste autorisée, les valeurs de tous les autres en-têtes (`Authorization`,
   `Cookie` et `Set-Cookie` même s'ils sont dans la liste), les valeurs placées sous des noms
   secrets comme `password`, `token` ou `api_key`, les segments de chemin qui ressemblent à des
-  identifiants (affichés `:id`), le chemin et la query d'une URL dont le chemin a un segment point
+  identifiants (affichés `:id`) et le segment qui suit un segment qui nomme un secret ou qui
+  n'est pas en ASCII simple (`/caf%C3%A9/menu` est gardé comme `/caf%C3%A9/:id`), le chemin et la query d'une URL dont le chemin a un segment point
   (`/pin/./4831`, `..`, `%2E`) ou un `;` (`/cart;jsessionid=…`, `%3B`) : seuls le schéma et l'hôte
   sont gardés, les paramètres matriciels ne sont donc jamais lus ; le chemin et la query après
   un hôte qui nomme un secret (`myapp://pin/4831` est gardé comme `myapp://pin` ; un hôte comme
@@ -243,9 +244,9 @@ func configureNetworkLogger() {
 Le masquage est un filet de sécurité, pas une garantie. Il est conçu pour les secrets enregistrés
 par accident : les entrées structurées sont analysées, et ce que l'analyseur ne comprend pas
 entièrement est masqué ; le texte libre est traité au mieux, et un nom secret écrit sans `=` ni `:`
-dont deux lettres ou plus sont remplacées par des lettres qui se ressemblent (`pɑsswoʀd hunter2`),
-ou dont une lettre est remplacée par une marque combinante (`tͦken hunter2`), n'est pas
-forcément trouvé. Gardez les secrets hors des requêtes que vous enregistrez et des
+dont deux lettres ou plus sont remplacées par des lettres qui se ressemblent (`pɑsswoʀd hunter2`)
+n'est pas forcément trouvé ; une seule lettre, marque ou chiffre sans forme ASCII compte comme
+n'importe quelle lettre, donc `tͦken hunter2` et `passw〇rd hunter2` sont trouvés. Gardez les secrets hors des requêtes que vous enregistrez et des
 messages de journal dès le départ, et préférez une journalisation structurée.
 
 Deux autres limites font partie de ce modèle. **Borne de coût :** tous les documents imbriqués

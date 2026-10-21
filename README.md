@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 591 Swift Testing tests on macOS and 588 on an iOS simulator. Requests travel
+- **Tested** — 605 Swift Testing tests on macOS and 602 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -195,7 +195,8 @@ func configureNetworkLogger() {
 - **Never recorded:** URL user info and fragments, query values that are not allowlisted, the
   values of all other headers (`Authorization`, `Cookie` and `Set-Cookie` even when allowlisted),
   values under secret names such as `password`, `token` or `api_key`, path segments that look
-  like identifiers (shown as `:id`), the path and query of a URL
+  like identifiers (shown as `:id`) and the segment after one that names a secret or is not plain
+  ASCII (`/caf%C3%A9/menu` is kept as `/caf%C3%A9/:id`), the path and query of a URL
   whose path has a dot segment or a `;` (`/pin/./4831`, `..`, `%2E`, `/cart;jsessionid=…`,
   `%3B`: only the scheme and host are kept, so matrix parameters are never parsed), the path
   and query after a host that names a secret (`myapp://pin/4831` is kept as `myapp://pin`; a
@@ -229,9 +230,10 @@ func configureNetworkLogger() {
 Redaction is a safety net, not a guarantee. It is built for secrets recorded by accident:
 structured input is parsed, and what the parser does not fully understand is hidden; free text is a
 best effort, and a secret name written without `=` or `:` with two or more of its letters replaced
-by look-alikes (`pɑsswoʀd hunter2`), or with a combining mark in place of one letter
-(`tͦken hunter2`), is not guaranteed to be found. Keep secrets out of the requests
-you record and out of log messages in the first place, and prefer structured logging.
+by look-alikes (`pɑsswoʀd hunter2`) is not guaranteed to be found; one letter, mark or number
+with no ASCII form counts as any letter, so `tͦken hunter2` and `passw〇rd hunter2` are found.
+Keep secrets out of the requests you record and out of log messages in the first place, and prefer
+structured logging.
 
 Two more limits belong to that model. **Cost bound:** all the documents nested in one input
 (JSON in a string, a URL in text) read at most four times the input's length together; past that

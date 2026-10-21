@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@c179d93911ace1f415cf7ad073ad9bca7fccad2b status=reviewed -->
+<!-- i18n-source: README.md@bea5059f2a664a09567512cec6eee792c46ef301 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 591, iOS simülatöründe 588 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 605, iOS simülatöründe 602 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -202,7 +202,8 @@ func configureNetworkLogger() {
 - **Asla kaydedilmeyenler:** URL'deki kullanıcı bilgisi ve fragment, izin listesinde olmayan sorgu
   değerleri, diğer bütün header'ların değerleri (`Authorization`, `Cookie` ve `Set-Cookie` izin
   listesinde olsa bile), `password`, `token` veya `api_key` gibi gizli adlar altındaki değerler,
-  tanımlayıcıya benzeyen yol parçaları (`:id` olarak gösterilir), nokta parçası
+  tanımlayıcıya benzeyen yol parçaları (`:id` olarak gösterilir), gizli bir ad olan ya da düz
+  ASCII olmayan bir parçadan sonraki parça (`/caf%C3%A9/menu`, `/caf%C3%A9/:id` olarak kaydedilir), nokta parçası
   (`/pin/./4831`, `..`, `%2E`) ya da `;` (`/cart;jsessionid=…`, `%3B`) içeren bir URL'nin yolu ve
   sorgusu (yalnız şema ve host kalır; matris parametreleri hiç ayrıştırılmaz), gizli bir ad olan
   host'tan sonraki yol ve sorgu (`myapp://pin/4831` `myapp://pin` olarak kaydedilir;
@@ -240,8 +241,9 @@ func configureNetworkLogger() {
 Maskeleme bir güvenlik ağıdır, garanti değildir. Yanlışlıkla kaydedilen gizli bilgiler için
 tasarlanmıştır: yapılandırılmış girdi ayrıştırılır ve ayrıştırıcının tam anlamadığı her şey
 gizlenir; serbest metin ise en iyi çabadır ve `=` ya da `:` olmadan yazılmış, iki ya da daha fazla
-harfi benzer görünen harflerle değiştirilmiş (`pɑsswoʀd hunter2`) ya da bir harfinin yerine
-birleşen işaret konmuş (`tͦken hunter2`) bir gizli adın bulunacağı garanti edilmez. Gizli bilgileri en baştan kaydettiğiniz isteklerin ve günlük mesajlarının dışında tutun ve
+harfi benzer görünen harflerle değiştirilmiş (`pɑsswoʀd hunter2`) bir gizli adın bulunacağı
+garanti edilmez; ASCII biçimi olmayan tek bir harf, birleşen işaret ya da sayı herhangi bir harf
+yerine geçer, bu yüzden `tͦken hunter2` ve `passw〇rd hunter2` bulunur. Gizli bilgileri en baştan kaydettiğiniz isteklerin ve günlük mesajlarının dışında tutun ve
 yapılandırılmış günlük kaydını tercih edin.
 
 Bu modele iki sınır daha dahildir. **Maliyet sınırı:** bir girdinin içine gömülü bütün

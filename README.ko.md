@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@c179d93911ace1f415cf7ad073ad9bca7fccad2b status=reviewed -->
+<!-- i18n-source: README.md@bea5059f2a664a09567512cec6eee792c46ef301 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -56,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 591개, iOS 시뮬레이터에서 588개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 605개, iOS 시뮬레이터에서 602개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -193,7 +193,8 @@ func configureNetworkLogger() {
   이름, 그리고 가린 뒤의 JSON, 폼, multipart, `text/plain` 본문.
 - **절대 기록되지 않는 것:** URL의 사용자 정보와 프래그먼트, 허용 목록에 없는 쿼리 값, 그 밖의 모든
   헤더 값(`Authorization`, `Cookie`, `Set-Cookie`는 허용 목록에 있어도 제외), `password`, `token`,
-  `api_key` 같은 비밀 이름 아래의 값, 식별자처럼 보이는 경로 세그먼트(`:id`로 표시), 점 세그먼트
+  `api_key` 같은 비밀 이름 아래의 값, 식별자처럼 보이는 경로 세그먼트(`:id`로 표시), 비밀 이름이거나
+  일반 ASCII가 아닌 세그먼트 다음의 세그먼트(`/caf%C3%A9/menu`는 `/caf%C3%A9/:id`로 기록), 점 세그먼트
   (`/pin/./4831`, `..`, `%2E`)나 `;`(`/cart;jsessionid=…`, `%3B`)가 있는 URL의 경로와 쿼리(스킴과 호스트만
   기록하며 매트릭스 파라미터는 해석하지 않음), 비밀 이름을 나타내는 호스트 뒤의 경로와 쿼리
   (`myapp://pin/4831`은 `myapp://pin`으로 기록하며, `auth.example.com` 같은 호스트도 경로를
@@ -223,8 +224,9 @@ func configureNetworkLogger() {
 
 가리기는 안전망일 뿐 보장이 아닙니다. 실수로 기록된 비밀 값을 위해 만들어졌습니다. 구조화된 입력은
 파싱하고, 파서가 완전히 이해하지 못하는 부분은 가립니다. 자유 형식 텍스트는 최선의 노력일 뿐이며,
-`=`나 `:` 없이 쓰고 두 글자 이상을 비슷하게 생긴 글자로 바꾼 비밀 이름(`pɑsswoʀd hunter2`)이나
-한 글자를 결합 문자로 바꾼 비밀 이름(`tͦken hunter2`)은 찾는다고 보장할 수 없습니다. 애초에 기록하는 요청과 로그 메시지에 비밀 값을 넣지 말고, 구조화된
+`=`나 `:` 없이 쓰고 두 글자 이상을 비슷하게 생긴 글자로 바꾼 비밀 이름(`pɑsswoʀd hunter2`)은
+찾는다고 보장할 수 없습니다. ASCII 형태가 없는 글자, 결합 문자, 숫자 하나는 아무 글자로 읽으므로
+`tͦken hunter2`와 `passw〇rd hunter2`는 찾습니다. 애초에 기록하는 요청과 로그 메시지에 비밀 값을 넣지 말고, 구조화된
 로깅을 쓰세요.
 
 이 모델에는 두 가지 한계가 더 있습니다. **비용 상한:** 한 입력 안에 중첩된 모든 문서(문자열 속

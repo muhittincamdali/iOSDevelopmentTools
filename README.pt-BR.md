@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@c179d93911ace1f415cf7ad073ad9bca7fccad2b status=reviewed -->
+<!-- i18n-source: README.md@bea5059f2a664a09567512cec6eee792c46ef301 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 591 testes de Swift Testing no macOS e 588 em um simulador de iOS. As requisições vão de
+- **Testado** — 605 testes de Swift Testing no macOS e 602 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -200,7 +200,8 @@ func configureNetworkLogger() {
 - **Nunca registrado:** informações de usuário e fragmento da URL, valores de query fora da lista
   permitida, os valores de todos os outros cabeçalhos (`Authorization`, `Cookie` e `Set-Cookie`
   mesmo que estejam na lista), valores sob nomes secretos como `password`, `token` ou `api_key`,
-  segmentos de caminho que parecem identificadores (mostrados como `:id`), o caminho e a query de uma URL
+  segmentos de caminho que parecem identificadores (mostrados como `:id`) e o segmento depois de
+  um que nomeia um segredo ou não é ASCII simples (`/caf%C3%A9/menu` fica `/caf%C3%A9/:id`), o caminho e a query de uma URL
   cujo caminho tem um segmento de ponto (`/pin/./4831`, `..`, `%2E`) ou um `;` (`/cart;jsessionid=…`,
   `%3B`): só o esquema e o host ficam, então parâmetros de matriz nunca são lidos; o caminho e a
   query depois de um host que nomeia um segredo (`myapp://pin/4831` fica como `myapp://pin`; um
@@ -238,8 +239,9 @@ func configureNetworkLogger() {
 A ocultação é uma rede de segurança, não uma garantia. Ela foi feita para segredos registrados por
 acidente: a entrada estruturada é analisada, e o que o analisador não entende por completo é
 ocultado; o texto livre é um melhor esforço, e não há garantia de encontrar um nome secreto escrito
-sem `=` ou `:` com duas ou mais letras trocadas por outras parecidas (`pɑsswoʀd hunter2`) ou com
-uma marca combinante no lugar de uma letra (`tͦken hunter2`). Mantenha
+sem `=` ou `:` com duas ou mais letras trocadas por outras parecidas (`pɑsswoʀd hunter2`); uma
+única letra, marca ou número sem forma ASCII conta como qualquer letra, então `tͦken hunter2` e
+`passw〇rd hunter2` são encontrados. Mantenha
 segredos fora das requisições que você registra e das mensagens de log desde o início, e prefira
 logs estruturados.
 
