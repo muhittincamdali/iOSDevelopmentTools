@@ -1,5 +1,4 @@
 import Foundation
-import os
 import Testing
 @testable import iOSDevelopmentTools
 
@@ -64,45 +63,43 @@ struct RedactionCompatibilityFormTests {
         scalar.properties.generalCategory == .spaceSeparator && String(scalar).decomposedStringWithCompatibilityMapping == " "
     }
 
-    /// Every scalar from U+0021 to U+3FFFF, chunked so that the chunks run at the same time.
-    static let everyScalar: [[Unicode.Scalar]] = {
-        let scalars = (UInt32(0x21)...0x3FFFF).compactMap(Unicode.Scalar.init)
-        return stride(from: 0, to: scalars.count, by: 8_192).map { Array(scalars[$0..<min($0 + 8_192, scalars.count)]) }
-    }()
+    /// Every scalar from U+0021 to U+3FFFF outside ASCII but the spaces.
+    static let everyScalar = (UInt32(0x80)...0x3FFFF).compactMap(Unicode.Scalar.init).filter { !isSpace($0) }
+
+    /// The scalars of ``everyScalar`` for which `leaks` holds. The sweep runs on the test's own
+    /// thread: run on many threads, it took the cores from the suites beside it, and the network
+    /// capture tests, which wait 10 s for the stub server, timed out on an iOS simulator.
+    static func sweep(_ leaks: (Unicode.Scalar) -> Bool) -> [String] {
+        everyScalar.filter(leaks).map { String(format: "U+%04X", $0.value) }
+    }
 
     @Test("every scalar from U+0021 to U+3FFFF outside ASCII before an allowed key hides the value, unless it is a space")
     func everyScalarBeforeAnAllowedKey() {
         let policy = RedactionPolicy.default
-        let leaks = OSAllocatedUnfairLock<[String]>(initialState: [])
-        DispatchQueue.concurrentPerform(iterations: Self.everyScalar.count) { chunk in
-            var found: [String] = []
-            for scalar in Self.everyScalar[chunk] where !scalar.isASCII && !Self.isSpace(scalar) {
-                if policy.redact(text: "\(scalar)status=hunter2Zq").contains("hunter2Zq") {
-                    found.append(String(format: "U+%04X", scalar.value))
-                }
-            }
-            let chunkLeaks = found
-            leaks.withLock { $0 += chunkLeaks }
+        let leaks = Self.sweep { policy.redact(text: "\($0)status=hunter2Zq").contains("hunter2Zq") }
+        #expect(leaks.isEmpty, "\(leaks.prefix(40))")
+    }
+
+    // ASCII is in the safe alphabet. Before an allowed key, `,`, `;`, `?` and `|` end the word and
+    // `-`, `.` and `_` are folded away as separators, so the key reads as `status`; any other
+    // ASCII character joins the key, is an escape, or opens a quote or bracket that does not close.
+    @Test("every ASCII character before an allowed key hides the value, unless the key still reads as allowed")
+    func everyASCIICharacterBeforeAnAllowedKey() {
+        for value in UInt32(0x21)...0x7E {
+            let character = String(Unicode.Scalar(value)!)
+            let output = redactor.redact("\(character)status=hunter2Zq")
+            #expect(output.contains("hunter2Zq") == ",-.;?_|".contains(character), "\(character) -> \(output)")
         }
-        #expect(leaks.withLock { $0 }.isEmpty, "\(leaks.withLock { $0.prefix(40) })")
     }
 
     @Test("every scalar whose compatibility form differs, in every shape, hides the value")
     func everyCompatibilityFormInEveryShape() {
         let policy = RedactionPolicy.default
-        let leaks = OSAllocatedUnfairLock<[String]>(initialState: [])
-        DispatchQueue.concurrentPerform(iterations: Self.everyScalar.count) { chunk in
-            var found: [String] = []
-            for scalar in Self.everyScalar[chunk] where !scalar.isASCII && !Self.isSpace(scalar) {
-                let character = String(scalar)
-                guard character.precomposedStringWithCompatibilityMapping != character else { continue }
-                for shape in Self.shapes where policy.redact(text: shape(character)).contains("hunter2Zq") {
-                    found.append(String(format: "U+%04X", scalar.value))
-                }
-            }
-            let chunkLeaks = found
-            leaks.withLock { $0 += chunkLeaks }
+        let leaks = Self.sweep { scalar in
+            let character = String(scalar)
+            guard character.precomposedStringWithCompatibilityMapping != character else { return false }
+            return Self.shapes.contains { policy.redact(text: $0(character)).contains("hunter2Zq") }
         }
-        #expect(leaks.withLock { $0 }.isEmpty, "\(leaks.withLock { $0.prefix(40) })")
+        #expect(leaks.isEmpty, "\(leaks.prefix(40))")
     }
 }
