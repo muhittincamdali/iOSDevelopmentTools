@@ -7,11 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Redaction follows one shared specification instead of a patch per reported bypass. The rule: what
+## [2.1.0] - 2026-10-21
+
+This is a security release for everyone who records traffic that can carry secrets: redaction in
+2.0.0 could be bypassed by names and bodies it did not fully understand, and 2.1.0 replaces its
+patches with one shared specification instead of a patch per reported bypass. The rule: what
 the policy does not fully understand is hidden, never shown. It is built for secrets recorded by
 accident; structured input is default-safe and free text is a best effort with one cut point (see
 "Threat model" in the redaction guide). Redaction is a safety net, not a guarantee; keep secrets
 out of logs in the first place.
+
+### Breaking changes
+
+Redaction hides more than 2.0.0 did, so what an app reads back from the console, a HAR file or a
+cURL command can differ for the same traffic. The API is source compatible; the old names are
+deprecated and still build (see Deprecated).
+
+- A key that is not made of ASCII letters, digits, `_`, `-`, `.` and spaces has its value hidden:
+  `{"Şifre":"…"}`, a full-width or look-alike spelling, a key with a zero-width character, a
+  combining mark or an emoji, an empty key and a key over 256 characters. A field with an ordinary
+  name in another script (`{"名前":"…"}`) is hidden as well, since the policy cannot tell it from
+  a secret; keys in plain ASCII that are not secret names keep their values.
+- A body that cannot be parsed completely is no longer stored. Invalid or truncated JSON, a form
+  or multipart body that a common server parser could read differently, a body over
+  `maximumBodySize`, and a body with an unknown or missing content type (XML and other types,
+  which 2.0.0 stored unchecked) are replaced by a note such as
+  `[body omitted: 512 bytes, application/xml]`. Code that read the stored text of such a body, in
+  the console, `NetworkEntry`, HAR files or cURL commands, now finds the note.
+- `RedactionOutcome.withheld` is now `.omitted`. A `switch` over `RedactionOutcome` needs the new
+  case name; `.withheld` remains as a deprecated static property.
 
 ### Security
 
@@ -324,6 +348,14 @@ out of logs in the first place.
   `withholdsUncheckedBodies` and `RedactionOutcome.withheld`. They still build and map to the new
   rules; an empty fragment list and `withholdsUncheckedBodies: false` no longer weaken redaction.
 
+### Known limitations
+
+No finding of the last two reviews is open: both were fixed and have tests. What remains is what
+the redaction guide lists as limits, which is a best effort by design: free text has one cut point
+and a secret with no label, a label not followed by `=` or `:`, or a short secret in a path segment
+cannot be told from other text. See [Redacting sensitive data](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
+and `SECURITY.md`. Redaction is a safety net, not a guarantee; keep secrets out of logs.
+
 ## [2.0.0] - 2026-10-15
 
 A new package with a new API: an in-app network inspector, log console and device report. The
@@ -394,6 +426,7 @@ new major version.
 First tagged release: a network client built on Alamofire, storage, analytics and logging
 managers and utility extensions in five modules, each also offered as its own library.
 
-[Unreleased]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/muhittincamdali/iOSDevelopmentTools/releases/tag/v1.0.0
