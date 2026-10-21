@@ -52,12 +52,15 @@ struct RedactionURLTests {
         #expect(hostOnly.redact("see https://example.com/reset?code=1 now") == "see [REDACTED]")
     }
 
-    @Test("a URL in text ends at white space, quotes and closing punctuation; one that is not clean cuts the text where it starts")
+    @Test("a clean URL in text ends at white space or at one mark before it; one that is not clean cuts the text where it starts")
     func urlsInText() {
-        #expect(redactor.redact("(see https://example.com/r/1).") == "(see https://example.com/r/1).")
+        #expect(redactor.redact("(see https://example.com/r/1) now.") == "(see https://example.com/r/1) now.")
+        #expect(redactor.redact("see https://example.com/r/1.") == "see https://example.com/r/1.")
+        // Two marks, or a quote, after a URL leave where it ends open.
+        #expect(redactor.redact("(see https://example.com/r/1).") == "(see [REDACTED]")
         #expect(redactor.redact("(see https://example.com/r?code=1).") == "(see [REDACTED]")
         #expect(redactor.redact("url=\"https://example.com/r?code=1\" ok") == "url=\"[REDACTED]")
-        #expect(redactor.redact("path=\"https://example.com/r/1\" ok") == "path=\"https://example.com/r/1\" ok")
+        #expect(redactor.redact("path=\"https://example.com/r/1\" ok") == "path=\"[REDACTED]")
         #expect(redactor.redact("path=\"https://example.com/r?code=1\" ok") == "path=\"[REDACTED]")
         #expect(redactor.redact("path=https://example.com/r?code=1 ok") == "path=[REDACTED]")
         // The allowed query parameters apply to the URL of a request, not to a URL in text.

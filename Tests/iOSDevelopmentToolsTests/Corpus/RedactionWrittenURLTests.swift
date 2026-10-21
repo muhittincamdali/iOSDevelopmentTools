@@ -157,13 +157,11 @@ struct RedactionWrittenURLTests {
             "see https://x.example status=200",
             "see [docs](https://x.example/docs) status=200",
             "see (https://x.example/a) ok",
-            "see \"https://x.example/a\" ok",
             "see https://x.example/a, ok",
             "fetched https://cdn.example.com/assets/app.min.js in 12 ms",
             "ping http://10.0.0.1/health ok",
             "GET https://x.example/a_b/c-d/e.f ok",
             "git clone https://github.com/x/y.git",
-            "open https://x.example/a.) then",
             "https://x.example/a\nnext line",
         ] {
             #expect(redactor.redact(line) == line, "\(line.debugDescription)")

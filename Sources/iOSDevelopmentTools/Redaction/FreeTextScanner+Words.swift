@@ -61,7 +61,7 @@ extension FreeTextScanner {
     /// A secret word split by white space or by one of `|`, `,`, `;`, `&` and `?` (`pass word`,
     /// `to ken`, `p|wd`): the byte after it, when it starts in this word and ends in the next one
     /// on the line.
-    private func secretEndAcrossSpace(after word: Range<Int>, lineEnd: Int) -> Int? {
+    func secretEndAcrossSpace(after word: Range<Int>, lineEnd: Int) -> Int? {
         var nextStart = firstNonSpace(from: word.upperBound, to: lineEnd)
         if nextStart < lineEnd, Self.splittingBoundaries.contains(text.bytes[nextStart]) {
             nextStart = firstNonSpace(from: nextStart + 1, to: lineEnd)

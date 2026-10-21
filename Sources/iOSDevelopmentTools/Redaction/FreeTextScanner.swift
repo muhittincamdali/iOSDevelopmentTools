@@ -24,8 +24,9 @@
 ///   parse: hidden from there;
 /// - a URL that is not clean: anything but `scheme://host` with an optional path of ASCII
 ///   letters, digits, `.`, `_`, `-` and `/` that names no secret, followed by white space, a line
-///   break or punctuation that ends a sentence (`?page=2`, `:8080`, `user@`, `%3D`, `/password`):
-///   hidden from where the URL starts (see ``url(to:)``).
+///   break, the end of the text or one mark that ends a sentence and then one of those
+///   (`?page=2`, `:8080`, `user@`, `%3D`, `/password`, `x"y`, `x),`): hidden from where the URL
+///   starts (see ``url(to:)``).
 ///
 /// Everything from the trigger to the end of the text is hidden, whatever lines follow. JSON and
 /// URLs before the trigger are read with their parsers and recorded as regions, which the value
