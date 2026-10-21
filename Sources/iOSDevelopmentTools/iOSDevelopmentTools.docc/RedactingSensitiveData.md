@@ -33,8 +33,8 @@ is not built to stop someone who writes a log line on purpose to get a secret pa
 - **Free text is a best effort.** A log line has no grammar, so the policy does not try to tell
   where a value ends. After the first trigger, such as a secret name, everything to the end of
   the text is hidden, the lines below included. A secret name written without a separator and
-  disguised on purpose with two or more look-alike letters (`pɑsswoʀd hunter2`) is not guaranteed
-  to be found; see "What it does not find". No table of look-alikes is kept to chase such names,
+  disguised on purpose by writing two or more of its letters as look-alikes (`pɑsswoʀd hunter2`)
+  is not guaranteed to be found; see "What it does not find". No table of look-alikes is kept to chase such names,
   since none is ever complete, and none would make free text safe. Use structured logging
   instead: separate fields, and secrets kept out of messages.
 - **Hostile input has a cost bound.** All the documents found inside one input, one inside
@@ -231,7 +231,11 @@ The triggers:
   after the name. Punctuation inside a word is read as a separator (`pass~word`), two words are
   read together (`pass word`), and one letter that has no ASCII form is read as any letter or,
   between two letters, as none (`passꞏword`). The plural `s` is a letter of the word here too:
-  `tokenꞏ` reads as `tokens` and `tokenꞏs` as `tokens`.
+  `tokenꞏ` reads as `tokens` and `tokenꞏs` as `tokens`. Each word is also read as its ASCII
+  skeleton: every letter that has no ASCII form is left out, however many there are and wherever
+  they stand, and the rest is compared with the secret names, the plural `s` included
+  (`pıaıssword` reads as `password`, `tokensı` as `tokens` and `tokenꞏꞏ` as `token`). Both
+  readings hide more than the secret on purpose: `pın 1234` is read as `pin 1234`.
 - **A secret name written as a value.** After a key that holds a name and that the app allows
   (`name`, `key`, `label`, `type`, `id`, …, but never `path`, the route of a request), a name that
   names a secret, is not plain ASCII or is JSON: `name="password"`, `label="Пароль"`,
@@ -358,9 +362,10 @@ Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
   (`creds=hunter2` is stored as `creds=[REDACTED]`). In a body, a plain ASCII key that is not a
   secret name keeps its value (`{"creds":"hunter2"}`); add the name with `additionalSecretNames`.
 - The value of an allowed key: `status=hunter2` keeps `hunter2`.
-- A secret name in free text written without a separator and disguised with two or more letters
-  that have no ASCII form: `pɑsswoʀd hunter2` is stored as it is. With a separator
-  (`pɑsswoʀd=hunter2`) the value is hidden. A secret word in another language, such as
+- A secret name in free text written without a separator with two or more of its letters
+  replaced by letters that have no ASCII form: `pɑsswoʀd hunter2` is stored as it is. Such letters
+  put in beside the name's own are left out of its skeleton, so `pıaıssword hunter2` is hidden.
+  With a separator (`pɑsswoʀd=hunter2`) the value is hidden. A secret word in another language, such as
   `пароль hunter2`, is not one either.
 - A value written before its name, with no key before it: `hunter2 is my password` is stored as
   it is.

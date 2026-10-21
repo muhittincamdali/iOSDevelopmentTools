@@ -18,6 +18,11 @@ struct RedactionGuideTests {
         #expect(policy.redact(text: "x=hunter2") == "x=[REDACTED]")
         #expect(policy.redact(text: "curl -u bob:hunter2 https://x.example") == "curl -u bob:[REDACTED]")
         #expect(policy.redact(text: "password hunter2") == "password [REDACTED]")
+        // A word is read with one letter without an ASCII form as any letter and as its ASCII
+        // skeleton, without such letters; both readings hide more than the secret on purpose.
+        #expect(policy.redact(text: "tokens\u{0131} hunter2") == "tokens[REDACTED]")
+        #expect(policy.redact(text: "token\u{A78F}\u{A78F} hunter2") == "token[REDACTED]")
+        #expect(policy.redact(text: "p\u{0131}n 1234") == "p\u{0131}n [REDACTED]")
         #expect(policy.redact(text: "login password=hunter2 status=200\nnext line") == "login password=[REDACTED]")
         #expect(policy.redact(text: "p\u{0430}ssword=hunter2") == "[REDACTED]")
         #expect(policy.redact(text: #"saved {"status":200,"name":"ada","card":"x"}"#) == #"saved {"status":200,"name":[REDACTED]"#)
@@ -46,6 +51,8 @@ struct RedactionGuideTests {
         #expect(policy.redact(text: "p\u{0251}sswo\u{0280}d hunter2") == "p\u{0251}sswo\u{0280}d hunter2")
         // With a separator its key is not plain ASCII, and the value is hidden.
         #expect(policy.redact(text: "p\u{0251}sswo\u{0280}d=hunter2") == "p\u{0251}sswo\u{0280}d=[REDACTED]")
+        // Such letters put in beside the name's own are left out of its skeleton.
+        #expect(policy.redact(text: "p\u{0131}a\u{0131}ssword hunter2") == "p\u{0131}a\u{0131}ssword [REDACTED]")
         // A secret word in another language is not one of the names.
         #expect(policy.redact(text: "пароль hunter2") == "пароль hunter2")
         // In a body, a plain name that is not a secret name keeps its value; in free text the key
