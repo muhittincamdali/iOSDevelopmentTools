@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@2c3232f3d33d45071739277aa964b2a231998e0a status=reviewed -->
+<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -59,7 +59,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 581 тест Swift Testing на macOS и 578 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 583 тест Swift Testing на macOS и 580 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -201,8 +201,8 @@ func configureNetworkLogger() {
   разрешённого списка, значения всех остальных заголовков (`Authorization`, `Cookie` и
   `Set-Cookie` даже из разрешённого списка), значения под секретными именами вроде `password`,
   `token` или `api_key`, сегменты пути, похожие на идентификаторы (показываются как `:id`), путь и запрос URL с
-  точечным сегментом (`/pin/./4831`, `..`, `%2E`, пустой сегмент `;`: сохраняются только схема и
-  хост), и
+  точечным сегментом (`/pin/./4831`, `..`, `%2E`) или `;` (`/cart;jsessionid=…`, `%3B`): сохраняются
+  только схема и хост, так что матричные параметры никогда не разбираются; и
   файловые части тел multipart.
 - **Ключи, которые не являются простым ASCII** после декодирования escape-последовательностей,
   NFKC и приведения регистра (`pаssword` с кириллической `а`, `pass\u200Dword`, `şifre`), по

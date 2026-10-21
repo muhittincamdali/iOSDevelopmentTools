@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@2c3232f3d33d45071739277aa964b2a231998e0a status=reviewed -->
+<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 581 tests de Swift Testing en macOS y 578 en un simulador de iOS. Las solicitudes van
+- **Probado** — 583 tests de Swift Testing en macOS y 580 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -203,7 +203,8 @@ func configureNetworkLogger() {
   `Cookie` y `Set-Cookie` aunque estén en la lista), los valores bajo nombres secretos como
   `password`, `token` o `api_key`, los segmentos de ruta que parecen identificadores (se muestran
   como `:id`), la ruta y la query de una URL cuya ruta tiene un segmento de punto (`/pin/./4831`,
-  `..`, `%2E`, un segmento `;` vacío: solo se guardan el esquema y el host) y las partes de archivo de los cuerpos multipart.
+  `..`, `%2E`) o un `;` (`/cart;jsessionid=…`, `%3B`): solo se guardan el esquema y el host, así
+  que los parámetros de matriz nunca se leen; y las partes de archivo de los cuerpos multipart.
 - **Las claves que no son ASCII simple** una vez decodificados los escapes, aplicada NFKC e
   igualadas mayúsculas y minúsculas (`pаssword` con una `а` cirílica, `pass\u200Dword`, `şifre`)
   tienen su valor oculto por defecto.

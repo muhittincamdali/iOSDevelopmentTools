@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@2c3232f3d33d45071739277aa964b2a231998e0a status=reviewed -->
+<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 581 testes de Swift Testing no macOS e 578 em um simulador de iOS. As requisições vão de
+- **Testado** — 583 testes de Swift Testing no macOS e 580 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -201,8 +201,8 @@ func configureNetworkLogger() {
   permitida, os valores de todos os outros cabeçalhos (`Authorization`, `Cookie` e `Set-Cookie`
   mesmo que estejam na lista), valores sob nomes secretos como `password`, `token` ou `api_key`,
   segmentos de caminho que parecem identificadores (mostrados como `:id`), o caminho e a query de uma URL
-  cujo caminho tem um segmento de ponto (`/pin/./4831`, `..`, `%2E`, um segmento `;` vazio: só o
-  esquema e o host ficam) e partes de arquivo de
+  cujo caminho tem um segmento de ponto (`/pin/./4831`, `..`, `%2E`) ou um `;` (`/cart;jsessionid=…`,
+  `%3B`): só o esquema e o host ficam, então parâmetros de matriz nunca são lidos; e partes de arquivo de
   corpos multipart.
 - **Chaves que não são ASCII simples** depois de decodificar escapes, aplicar NFKC e igualar
   maiúsculas e minúsculas (`pаssword` com um `а` cirílico, `pass\u200Dword`, `şifre`) têm o valor

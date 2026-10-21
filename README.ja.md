@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@2c3232f3d33d45071739277aa964b2a231998e0a status=reviewed -->
+<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -58,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 581 件、iOS シミュレーターで 578 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 583 件、iOS シミュレーターで 580 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -198,8 +198,8 @@ func configureNetworkLogger() {
 - **決して記録されないもの:** URL のユーザー情報とフラグメント、許可リストにないクエリの値、その他
   すべてのヘッダーの値 (`Authorization`、`Cookie`、`Set-Cookie` は許可リストにあっても記録されません)、
   `password`、`token`、`api_key` などの秘密の名前の値、識別子に見えるパスセグメント (`:id` と表示)、
-  ドットセグメント（`/pin/./4831`、`..`、`%2E`、空の `;` セグメント）を含む URL のパスとクエリ（スキームと
-  ホストのみ記録）、
+  ドットセグメント（`/pin/./4831`、`..`、`%2E`）または `;`（`/cart;jsessionid=…`、`%3B`）を含む URL のパスと
+  クエリ（スキームとホストのみ記録。マトリックスパラメーターは解析しません）、
   multipart ボディのファイルパート。
 - **プレーンな ASCII ではないキー** (エスケープのデコード、NFKC、大文字小文字の統一の後。キリル文字の
   `а` を含む `pаssword`、`pass\u200Dword`、`şifre` など) の値は、デフォルトで隠されます。

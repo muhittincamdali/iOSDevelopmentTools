@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@2c3232f3d33d45071739277aa964b2a231998e0a status=reviewed -->
+<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 581 Swift-Testing-Tests auf macOS und 578 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 583 Swift-Testing-Tests auf macOS und 580 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -202,8 +202,8 @@ func configureNetworkLogger() {
   stehen, die Werte aller anderen Header (`Authorization`, `Cookie` und `Set-Cookie` auch dann,
   wenn sie auf der Allowlist stehen), Werte unter geheimen Namen wie `password`, `token` oder
   `api_key`, Pfadsegmente, die wie Kennungen aussehen (als `:id` angezeigt), Pfad und Query einer URL
-  mit einem Punktsegment (`/pin/./4831`, `..`, `%2E`, ein leeres `;`-Segment: nur Schema und Host
-  bleiben) und Datei-Parts von
+  mit einem Punktsegment oder einem `;` (`/pin/./4831`, `..`, `%2E`, `/cart;jsessionid=…`, `%3B`:
+  nur Schema und Host bleiben, Matrix-Parameter werden also nie gelesen) und Datei-Parts von
   Multipart-Bodys.
 - **Schlüssel, die kein reines ASCII sind**, nachdem Escapes dekodiert, NFKC angewendet und
   Groß-/Kleinschreibung angeglichen wurde (`pаssword` mit kyrillischem `а`, `pass\u200Dword`,

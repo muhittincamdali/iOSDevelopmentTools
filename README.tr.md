@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@2c3232f3d33d45071739277aa964b2a231998e0a status=reviewed -->
+<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 581, iOS simülatöründe 578 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 583, iOS simülatöründe 580 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -203,8 +203,8 @@ func configureNetworkLogger() {
   değerleri, diğer bütün header'ların değerleri (`Authorization`, `Cookie` ve `Set-Cookie` izin
   listesinde olsa bile), `password`, `token` veya `api_key` gibi gizli adlar altındaki değerler,
   tanımlayıcıya benzeyen yol parçaları (`:id` olarak gösterilir), nokta parçası
-  (`/pin/./4831`, `..`, `%2E`, boş bir `;` parçası) olan bir URL'nin yolu ve sorgusu (yalnız şema
-  ve host kalır) ve multipart gövdelerindeki dosya
+  (`/pin/./4831`, `..`, `%2E`) ya da `;` (`/cart;jsessionid=…`, `%3B`) içeren bir URL'nin yolu ve
+  sorgusu (yalnız şema ve host kalır; matris parametreleri hiç ayrıştırılmaz) ve multipart gövdelerindeki dosya
   parçaları.
 - **Düz ASCII olmayan anahtarların** değerleri varsayılan olarak gizlenir: kaçış dizileri
   çözüldükten, NFKC uygulandıktan ve harfler katlandıktan sonra ASCII dışı karakter içeren

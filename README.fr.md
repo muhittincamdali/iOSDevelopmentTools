@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@2c3232f3d33d45071739277aa964b2a231998e0a status=reviewed -->
+<!-- i18n-source: README.md@88b729ef0dd3c5a13123dca6d6b91b7187535918 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 581 tests Swift Testing sur macOS et 578 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 583 tests Swift Testing sur macOS et 580 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -206,7 +206,8 @@ func configureNetworkLogger() {
   `Cookie` et `Set-Cookie` même s'ils sont dans la liste), les valeurs placées sous des noms
   secrets comme `password`, `token` ou `api_key`, les segments de chemin qui ressemblent à des
   identifiants (affichés `:id`), le chemin et la query d'une URL dont le chemin a un segment point
-  (`/pin/./4831`, `..`, `%2E`, un segment `;` vide : seuls le schéma et l'hôte sont gardés) et les
+  (`/pin/./4831`, `..`, `%2E`) ou un `;` (`/cart;jsessionid=…`, `%3B`) : seuls le schéma et l'hôte
+  sont gardés, les paramètres matriciels ne sont donc jamais lus ; et les
   parties fichier des corps multipart.
 - **Les clés qui ne sont pas en ASCII simple** une fois les échappements décodés, NFKC appliqué et
   la casse normalisée (`pаssword` avec un `а` cyrillique, `pass\u200Dword`, `şifre`) ont leur

@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 581 Swift Testing tests on macOS and 578 on an iOS simulator. Requests travel
+- **Tested** — 583 Swift Testing tests on macOS and 580 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -196,8 +196,9 @@ func configureNetworkLogger() {
   values of all other headers (`Authorization`, `Cookie` and `Set-Cookie` even when allowlisted),
   values under secret names such as `password`, `token` or `api_key`, path segments that look
   like identifiers (shown as `:id`), the path and query of a URL
-  whose path has a dot segment (`/pin/./4831`, `..`, `%2E`, an empty `;` segment: only the
-  scheme and host are kept), and file parts of multipart bodies.
+  whose path has a dot segment or a `;` (`/pin/./4831`, `..`, `%2E`, `/cart;jsessionid=…`,
+  `%3B`: only the scheme and host are kept, so matrix parameters are never parsed), and file
+  parts of multipart bodies.
 - **Keys that are not plain ASCII** once escapes are decoded, NFKC is applied and case is folded
   (`pаssword` with a Cyrillic `а`, `pass\u200Dword`, `şifre`) have their values hidden by default.
 - **Bodies that cannot be parsed** (an unknown or missing content type, malformed JSON or
