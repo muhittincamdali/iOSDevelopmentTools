@@ -58,24 +58,26 @@ out of logs in the first place.
   `text/plain` bodies and the strings of structured input) has one cut point: from the first
   trigger, everything to the end of the text is hidden, the lines below included. The triggers
   are a key before `=` or `:` that is not on `allowedTextKeys` (`status`, `method`, `path`,
-  `duration_ms` and `count` by default), also in JSON members, two-element arrays and element tags
+  `duration_ms` and `count` by default), also in JSON members, two-element arrays and quoted keys
   in the text; a secret name with or without a separator, quoted or not, also written as a value
-  (`name="pin"`, `<key>password</key>`); a key that is not plain ASCII, has no letter or digit, or
+  (`name="pin"`); a key that is not plain ASCII, has no letter or digit, or
   is missing; the words of a key that name a secret when read together (`pass word=`); a
   character outside the safe alphabet (letters, marks and digits of any script, the ASCII space,
   tab, LF and CR, printable ASCII), judged by its own Unicode category, so `꞉`, `≔`, `＝`, `…`,
   `‥`, `№`, emoji, VT, FF, U+0085 and U+2028 cut the text; an escape (`%3D`, `&#61;`, `\u0041`,
   `\=`), which is never decoded; a word longer than 256 characters; a word that mixes scripts or
-  holds an invisible character; a quote or bracket that does not close; and JSON that does not
-  parse. A trigger inside a tag hides the tag from its `<`. Text with no trigger is kept as it is,
-  apart from the value detectors, and JSON in it is read by the key rule of structured input.
+  holds an invisible character; markup, from its first `<` that is not a comparison; a quote that
+  does not close on its line; a bracket that does not close; and JSON that does not parse. Text
+  with no trigger is kept as it is, apart from the value detectors, and JSON in it is read by the
+  key rule of structured input.
 - A URL in free text has no island logic. It stays visible only when it is clean:
   `scheme://host` with an optional path of ASCII letters, digits, `.`, `_`, `-` and `/`, a host
-  name or IPv4 address, no host or path segment that names a secret, and white space, a line
-  break or punctuation that ends a sentence after it. Any other URL hides the text from where the
-  URL starts: one with a query, a fragment, `;`, `%`, `=`, `:`, `@`, `\`, a port, user info, an
-  escape or a character outside ASCII (`GET https://api.example.com/v1/items?page=2 done` is
-  stored as `GET [REDACTED]`). `allowedQueryParameters` applies to recorded URLs, not to URLs in
+  name or IPv4 address, no host or path segment that names a secret, and after it white space, a
+  line break, the end of the text or one of `.`, `,`, `!` and `)` followed by one of those. Any
+  other URL hides the text from where the URL starts: one with a query, a fragment, `;`, `%`, `=`,
+  `:`, `@`, `\`, a port, user info, an escape or a character outside ASCII, and one that a quote,
+  `>`, a backtick, `]`, `}` or two marks follow (`GET https://api.example.com/v1/items?page=2 done`
+  is stored as `GET [REDACTED]`). `allowedQueryParameters` applies to recorded URLs, not to URLs in
   text. Earlier builds of this release read the query, fragment and path parameters of a URL in
   text and read on after them; reviews got values past that reading through an empty or allowed
   section after a secret segment (`/password# hunter2`), an encoded `=` or `:` at the end
@@ -109,6 +111,30 @@ out of logs in the first place.
   words and the values after them were stored as they were in free text, JSON strings, form
   values, text/plain bodies, an allowed header and URL path segments. A name with two or more of
   its letters replaced by look-alikes (`pɑsswoʀd hunter2`) is still not found, as the guide says.
+- Markup in free text is not parsed, as the redaction spec says, and what may follow a `<` is
+  listed instead of what makes a tag: a `<` is a comparison only before an ASCII space, a tab, a
+  line break, an ASCII digit, `=` or the end of the text. Before anything else it cuts the text,
+  so `<status>200</status> hunter2`, `<!-- hunter2 -->`, `<![CDATA[hunter2]]>`, `<?pi hunter2?>`,
+  `</x> hunter2`, `<!DOCTYPE html> hunter2`, `<br/> hunter2`, `a <# c`, `1 <> 2` and
+  `List<String> items` are cut at the `<`. Before, an allowlist of tags and the text of the
+  element that was open decided: an allowed tag kept its text, and comments, CDATA, processing
+  instructions, end tags and self-closing tags kept the text after them.
+- A quote that does not close on its line cuts the text at the quote, and so does a quoted key
+  with a line break in it: `msg "abc` with `hunter2" done` on the next line is stored as
+  `msg [REDACTED]`, in a log line, a `text/plain` body and a JSON string alike. Before, a quote
+  closed at the next one anywhere in the text, so the lines in between were kept.
+- A quoted key that is not on `allowedTextKeys` cuts the text at its opening quote, whichever
+  quote it is written in: `"x":"hunter2"`, `"x"="hunter2"`, `'x': 'hunter2'` and `"hunter2":"v"`
+  are stored as `[REDACTED]`. Before, the cut came after the separator, so the key showed.
+- A clean URL in free text may be followed only by white space, a line break, the end of the text
+  or one of `.`, `,`, `!` and `)` and then one of those; anything else cuts the text where the URL
+  starts. Before, one of `.,!)]}>"'` and a backtick ended a clean URL whatever came after it, so
+  `see https://a.example/v1/x), ok`, `x'y ok`, `x>y ok` and `x> ok` kept the URL, and `x"y` cut
+  the text at the quote with the URL showing. The last segment of a clean URL is read with the
+  next word, as two words are (`https://x.example/to ken hunter2`).
+- `NetworkEntry.host` is the host as the recorded URL writes it: `[REDACTED]` when the URL rule
+  hides it (`myapp://password=hunter2/x`, a card number or a token in the host). Before, it kept
+  the host as the request had it, and the list of requests in the console showed it.
 - A backslash before `x`, `u`, `U`, `N`, `o` or an octal digit is an escape in free text whatever
   follows it, so `\x{70}assword`, `\U00000070assword`, `\N{LATIN SMALL LETTER P}assword` and
   `\o{160}assword` cut the text like `\u0070assword` does.
