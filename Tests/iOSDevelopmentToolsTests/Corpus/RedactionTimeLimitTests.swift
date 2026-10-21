@@ -110,6 +110,12 @@ struct RedactionTimeLimitTests {
         TimedInput(testDescription: "log lines of clean URLs with 40 segments", make: {
             repeated("https://a.example/" + (0..<40).map { "s\($0)" }.joined(separator: "/"), separator: " ", prefix: "", suffix: "")
         }, redact: redactor.redact),
+        // A word with letters that have no ASCII form is read twice: with one of them as any
+        // letter, and as its ASCII skeleton without them.
+        TimedInput(testDescription: "log lines of Turkish and Nordic words", make: {
+            repeated("Kullanıcı ılık bjørn kapıdaki ıııı", separator: " ", prefix: "", suffix: "")
+        }, redact: redactor.redact),
+        TimedInput(testDescription: "a JSON array of Turkish and Nordic words", make: { repeated("\"kapıdaki ılgın bjørn\"") }, redact: body("application/json")),
     ]
 
     /// Secret names written as values, which make the scanner read the markup around them, the
