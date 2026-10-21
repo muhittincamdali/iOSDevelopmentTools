@@ -24,6 +24,8 @@ struct ReviewProbe: Decodable, Sendable {
     let kind: String
     /// The allowed text keys for `text`, the allowed query parameters for `url`.
     let keys: [String]?
+    /// The allowed query parameters for `text` and `body`.
+    let queryKeys: [String]?
     /// The content type of a body; nil for none.
     let type: String?
     let input: String?
@@ -52,9 +54,9 @@ struct ReviewProbe: Decodable, Sendable {
             return URL(string: text).map { redactor.redact(url: $0) } ?? "<URL(string:) nil>"
         case "body":
             let body = data.flatMap { Data(base64Encoded: $0) } ?? Data(text.utf8)
-            return Redactor().redact(body: body, contentType: type)
+            return Redactor(allowedQueryParameters: queryKeys ?? []).redact(body: body, contentType: type)
         default:
-            return Redactor(allowedTextKeys: keys ?? []).redact(text)
+            return Redactor(allowedQueryParameters: queryKeys ?? [], allowedTextKeys: keys ?? []).redact(text)
         }
     }
 
