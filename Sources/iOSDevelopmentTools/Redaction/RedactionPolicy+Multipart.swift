@@ -9,20 +9,21 @@ extension RedactionPolicy {
     /// what was sent; nil when it is omitted. The body is read only with one plain `boundary`
     /// parameter: servers differ in which of several they take, and in whether they undo the
     /// quotes and `\` escapes of a quoted one.
-    func redact(multipart body: Data, _ type: MediaType, nesting: Nesting) -> (Data, Bool)? {
+    func redact(multipart body: Data, _ type: MediaType, nesting: Nesting, compatibility: CompatibilityText) -> (Data, Bool)? {
         let parameters = type.parameters.filter { $0.name == "boundary" || $0.name == "boundary*" }
         guard parameters.count == 1, let parameter = parameters.first, parameter.name == "boundary", !parameter.isQuoted,
               MultipartBody.isValidBoundary(parameter.value),
               let multipart = MultipartBody(Array(body), boundary: parameter.value)
         else { return nil }
         let boundary = parameter.value
-        let naming = namingParts(multipart.parts)
+        let naming = namingParts(multipart.parts, compatibility: compatibility)
         var output = Data()
         for (index, part) in multipart.parts.enumerated() {
             var lines = "--\(boundary)\r\n"
-            lines += renderedHeaders(of: part, nesting: nesting).map { $0 + "\r\n" }.joined() + "\r\n"
+            lines += renderedHeaders(of: part, nesting: nesting, compatibility: compatibility).map { $0 + "\r\n" }.joined() + "\r\n"
             output.append(contentsOf: lines.utf8)
-            output.append(naming.hidesValue(at: index, of: Self.namingField(part)) ? Data(Self.replacement.utf8) : redactedContent(of: part, nesting: nesting))
+            let hidden = naming.hidesValue(at: index, of: Self.namingField(part))
+            output.append(hidden ? Data(Self.replacement.utf8) : redactedContent(of: part, nesting: nesting, compatibility: compatibility))
             output.append(contentsOf: "\r\n".utf8)
         }
         output.append(contentsOf: "--\(boundary)--".utf8)
@@ -35,15 +36,17 @@ extension RedactionPolicy {
     /// `type/subtype`; other headers by the header rule (see ``redact(headers:)``), with a name
     /// that is not on ``allowedHeaders``, or in which a value detector finds something, written as
     /// ``replacement`` too. A file name is never written.
-    private func renderedHeaders(of part: MultipartBody.Part, nesting: Nesting) -> [String] {
-        var lines = ["Content-Disposition: form-data; name=\"\(Self.quotedStringContent(redactedName(part.name, nesting: nesting)))\""]
+    private func renderedHeaders(of part: MultipartBody.Part, nesting: Nesting, compatibility: CompatibilityText) -> [String] {
+        let name = redactedName(part.name, nesting: nesting, compatibility: compatibility)
+        var lines = ["Content-Disposition: form-data; name=\"\(Self.quotedStringContent(name))\""]
         if let contentType = part.contentType { lines.append("Content-Type: " + contentType.essence) }
         for header in part.headers {
             let name = header.name.lowercased()
             guard name != "content-disposition", name != "content-type" else { continue }
             let value = header.value.trimmingCharacters(in: .whitespaces)
-            let shownName = shownPartHeaderName(header.name)
-            lines.append(shownName + ": " + (shownName == header.name ? redactedHeaderValue(name: header.name, value: value) : Self.replacement))
+            let shownName = shownPartHeaderName(header.name, compatibility: compatibility)
+            let shownValue = shownName == header.name ? redactedHeaderValue(name: header.name, value: value, compatibility: compatibility) : Self.replacement
+            lines.append(shownName + ": " + shownValue)
         }
         return lines
     }
@@ -52,16 +55,16 @@ extension RedactionPolicy {
     /// value detector finds something in it; ``replacement`` for any other, whose value is hidden
     /// too. A part header is written by the app or a library into the body, so its name may hold
     /// what its value would.
-    private func shownPartHeaderName(_ name: String) -> String {
+    private func shownPartHeaderName(_ name: String, compatibility: CompatibilityText) -> String {
         guard !hidesHeader(named: name) else { return Self.replacement }
         let scalars = Array(name.unicodeScalars)
-        return detectorSpans(in: NormalizedText(scalars, compatibility: CompatibilityText())).isEmpty ? name : Self.replacement
+        return detectorSpans(in: NormalizedText(scalars, compatibility: compatibility)).isEmpty ? name : Self.replacement
     }
 
     /// The content of a part, read as a body one level inside the multipart body. A part is a
     /// document found in the body, so it takes its length from the reading budget, and is omitted
     /// when the budget does not cover it.
-    private func redactedContent(of part: MultipartBody.Part, nesting: Nesting) -> Data {
+    private func redactedContent(of part: MultipartBody.Part, nesting: Nesting, compatibility: CompatibilityText) -> Data {
         if hidesValue(ofKey: part.name.unicodeScalars) { return Data(Self.replacement.utf8) }
         let type = part.contentType ?? MediaType(part.filename == nil ? "text/plain" : "application/octet-stream")
         let omitted = Data(Self.omissionNote(byteCount: part.content.count, mediaType: type).utf8)
@@ -70,7 +73,7 @@ extension RedactionPolicy {
               encodings.allSatisfy(Self.identityTransferEncodings.contains), encodings.count <= 1,
               let inner = nesting.enteringDocument(), inner.reads(Self.scalarCount(part.content))
         else { return omitted }
-        return redact(body: Data(part.content), as: type, nesting: inner)?.0 ?? omitted
+        return redact(body: Data(part.content), as: type, nesting: inner, compatibility: compatibility)?.0 ?? omitted
     }
 
     /// The parts that name the field another part holds (`label` and `value` parts). A part's
@@ -78,8 +81,8 @@ extension RedactionPolicy {
     /// any other content of a part that holds a name (`label` in base64, as JSON, in another
     /// charset, as a file) cannot be read as one, so it counts as naming a secret, as an array or
     /// object does in JSON.
-    private func namingParts(_ parts: [MultipartBody.Part]) -> NamingFields {
-        NamingFields(parts.lazy.map(Self.namingField), policy: self, compatibility: CompatibilityText())
+    private func namingParts(_ parts: [MultipartBody.Part], compatibility: CompatibilityText) -> NamingFields {
+        NamingFields(parts.lazy.map(Self.namingField), policy: self, compatibility: compatibility)
     }
 
     private static func namingField(_ part: MultipartBody.Part) -> NamingFields.Field {

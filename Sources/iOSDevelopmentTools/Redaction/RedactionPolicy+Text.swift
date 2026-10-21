@@ -80,7 +80,8 @@ extension RedactionPolicy {
     /// ``allowedQueryParameters`` does not apply to a URL in text.
     public func redact(text: String) -> String {
         guard isEnabled else { return text }
-        return redact(text, nesting: .text(length: text.unicodeScalars.count))
+        let length = text.unicodeScalars.count
+        return redact(text, nesting: .text(length: length), compatibility: CompatibilityText(length: length))
     }
 
     /// The findings in free text, in order and without overlaps: those of the JSON and URLs and of
@@ -203,11 +204,12 @@ extension RedactionPolicy {
         return Self.replacing(spans, in: scalars)
     }
 
-    /// A text inside a document (a form value, a query value, a header value) or passed in on its
-    /// own, redacted as free text with the given nesting.
-    func redact(_ text: String, nesting: Nesting) -> String {
+    /// A text inside a document (a form value, a query value, a plain-text part) or passed in on
+    /// its own, redacted as free text with the given nesting. `compatibility` is the one table of
+    /// readings of the whole input.
+    func redact(_ text: String, nesting: Nesting, compatibility: CompatibilityText) -> String {
         let scalars = Array(text.unicodeScalars)
-        let spans = textSpans(in: scalars, compatibility: CompatibilityText(), nesting: nesting)
+        let spans = textSpans(in: scalars, compatibility: compatibility, nesting: nesting)
         return spans.isEmpty ? text : Self.replacing(spans, in: scalars)
     }
 
@@ -220,7 +222,7 @@ extension RedactionPolicy {
 
     /// A key that is written out (a form or multipart field name, a query parameter name) read as
     /// free text in the ``FreeTextScanner/Role/name`` role.
-    func redactedName(_ name: String, nesting: Nesting) -> String {
-        redactedText(Array(name.unicodeScalars), compatibility: CompatibilityText(), role: .name, nesting: nesting) ?? name
+    func redactedName(_ name: String, nesting: Nesting, compatibility: CompatibilityText) -> String {
+        redactedText(Array(name.unicodeScalars), compatibility: compatibility, role: .name, nesting: nesting) ?? name
     }
 }

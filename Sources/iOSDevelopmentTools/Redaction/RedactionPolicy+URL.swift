@@ -47,11 +47,14 @@ extension RedactionPolicy {
     /// ``unparsedURL``.
     public func redact(url: URL) -> String {
         guard isEnabled else { return url.absoluteString }
+        let length = url.absoluteString.unicodeScalars.count
+        // One table of readings serves the host, every path segment and every query parameter.
+        let compatibility = CompatibilityText(length: length)
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             guard let scheme = url.scheme, let host = url.host(percentEncoded: true) else { return Self.unparsedURL }
-            return "\(scheme)://" + (showsHost(host) ? host : Self.replacement)
+            return "\(scheme)://" + (showsHost(host, compatibility: compatibility) ? host : Self.replacement)
         }
-        return redacted(components, nesting: .document(length: url.absoluteString.unicodeScalars.count))
+        return redacted(components, nesting: .document(length: length), compatibility: compatibility)
     }
 
     /// The URL's host as ``redact(url:)`` records it: the host when it is written, ``replacement``
@@ -63,42 +66,46 @@ extension RedactionPolicy {
         // cannot read it.
         let host = URLComponents(url: url, resolvingAgainstBaseURL: false).map(\.percentEncodedHost) ?? url.host(percentEncoded: true)
         guard let host else { return nil }
-        return showsHost(host) ? host : Self.replacement
+        return showsHost(host, compatibility: CompatibilityText(length: host.utf8.count)) ? host : Self.replacement
     }
 
     /// The URL's path as ``redact(url:)`` records it; empty when only the host is recorded.
     func redactedPath(of url: URL) -> String {
         guard isEnabled else { return url.path(percentEncoded: true) }
-        guard urlDetail == .full, let components = URLComponents(url: url, resolvingAgainstBaseURL: false), readsPath(of: components)
+        let length = url.absoluteString.unicodeScalars.count
+        let compatibility = CompatibilityText(length: length)
+        guard urlDetail == .full, let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              readsPath(of: components, compatibility: compatibility)
         else { return "" }
-        return redacted(path: components.percentEncodedPath, nesting: .document(length: url.absoluteString.unicodeScalars.count))
+        return redacted(path: components.percentEncodedPath, nesting: .document(length: length), compatibility: compatibility)
     }
 
     /// A URL written in text, recorded as ``redact(url:)`` records it. `nesting` is the URL's own:
-    /// its query values and path segments are read as text inside it.
-    func redactedURL(_ text: String, nesting: Nesting) -> String {
+    /// its query values and path segments are read as text inside it. `compatibility` is the table
+    /// of readings of the text.
+    func redactedURL(_ text: String, nesting: Nesting, compatibility: CompatibilityText) -> String {
         guard let components = URLComponents(string: text) else { return Self.unparsedURL }
-        return redacted(components, nesting: nesting)
+        return redacted(components, nesting: nesting, compatibility: compatibility)
     }
 
-    private func redacted(_ components: URLComponents, nesting: Nesting) -> String {
+    private func redacted(_ components: URLComponents, nesting: Nesting, compatibility: CompatibilityText) -> String {
         var result = components.scheme.map { "\($0):" } ?? ""
         if let host = components.percentEncodedHost {
-            guard showsHost(host) else { return result + "//" + Self.replacement }
+            guard showsHost(host, compatibility: compatibility) else { return result + "//" + Self.replacement }
             result += "//" + host
             if let port = components.port { result += ":\(port)" }
         }
-        guard urlDetail == .full, readsPath(of: components) else { return result.isEmpty ? Self.unparsedURL : result }
-        result += redacted(path: components.percentEncodedPath, nesting: nesting)
+        guard urlDetail == .full, readsPath(of: components, compatibility: compatibility) else { return result.isEmpty ? Self.unparsedURL : result }
+        result += redacted(path: components.percentEncodedPath, nesting: nesting, compatibility: compatibility)
         if let query = components.percentEncodedQuery, !Self.isStrictForm(query) { return result + "?" + Self.replacement }
         if let items = components.percentEncodedQueryItems {
             // `?label=Password&value=…`: a parameter that names a secret hides the others.
             let field = { (item: URLQueryItem) in Self.namingField(name: Self.formDecoded(item.name) ?? "", value: item.value.flatMap(Self.formDecoded)) }
-            let naming = NamingFields(items.lazy.map(field), policy: self, compatibility: CompatibilityText())
+            let naming = NamingFields(items.lazy.map(field), policy: self, compatibility: compatibility)
             let parameters = items.indices.map { index in
                 redacted(
                     parameter: items[index].name, value: items[index].value, hidesValue: naming.hidesValue(at: index, of: field(items[index])),
-                    nesting: nesting)
+                    nesting: nesting, compatibility: compatibility)
             }
             result += "?" + parameters.joined(separator: "&")
         }
@@ -107,11 +114,11 @@ extension RedactionPolicy {
 
     /// Whether a host is written: empty, as in `file:///…`, or a host name or an address in which
     /// the value detectors find nothing.
-    func showsHost(_ host: String) -> Bool {
+    func showsHost(_ host: String, compatibility: CompatibilityText) -> Bool {
         guard !host.isEmpty else { return true }
         let bytes = Array(host.utf8)
         guard Self.isHostName(bytes) || Self.isIPv4Address(bytes) || Self.isIPv6Literal(bytes) else { return false }
-        return detectorSpans(in: NormalizedText(Array(host.unicodeScalars), compatibility: CompatibilityText())).isEmpty
+        return detectorSpans(in: NormalizedText(Array(host.unicodeScalars), compatibility: compatibility)).isEmpty
     }
 
     /// The longest host name, in bytes, and the longest label in it (RFC 1035).
@@ -149,10 +156,11 @@ extension RedactionPolicy {
     }
 
     /// Whether the path and query of a URL are read: its host, when it has one, is written and
-    /// names no secret (see ``hostNamesSecret(_:)``), the URL is within the limits (see
-    /// ``exceedsLimits(_:)``) and its path has no dot segment (see ``hasDotSegments(_:)``).
-    func readsPath(of components: URLComponents) -> Bool {
-        if let host = components.percentEncodedHost, !showsHost(host) || hostNamesSecret(host) { return false }
+    /// names no secret (see ``hostNamesSecret(_:compatibility:)``), the URL is within the limits
+    /// (see ``exceedsLimits(_:)``) and its path has no dot segment (see ``hasDotSegments(_:)``).
+    func readsPath(of components: URLComponents, compatibility: CompatibilityText) -> Bool {
+        if let host = components.percentEncodedHost,
+           !showsHost(host, compatibility: compatibility) || hostNamesSecret(host, compatibility: compatibility) { return false }
         return !Self.exceedsLimits(components) && !Self.hasDotSegments(components.percentEncodedPath)
     }
 
@@ -160,11 +168,11 @@ extension RedactionPolicy {
     /// makes the path segment after it a value (``FreeTextScanner/mentionsSecret(_:policy:compatibility:)``).
     /// In `myapp://pin/4831` `URLComponents` reads `pin` as the host, so the path after it is the
     /// value a segment `pin` would label. An IPv4 or IPv6 address names nothing.
-    func hostNamesSecret(_ host: String) -> Bool {
+    func hostNamesSecret(_ host: String, compatibility: CompatibilityText) -> Bool {
         let bytes = Array(host.utf8)
         guard !bytes.isEmpty, !Self.isIPv4Address(bytes), !Self.isIPv6Literal(bytes) else { return false }
         let scalars = Array(host.unicodeScalars)
-        return hidesValue(ofKey: scalars) || FreeTextScanner.mentionsSecret(scalars, policy: self, compatibility: CompatibilityText())
+        return hidesValue(ofKey: scalars) || FreeTextScanner.mentionsSecret(scalars, policy: self, compatibility: compatibility)
     }
 
     /// Whether a percent-encoded path holds what servers resolve or decode apart from its text: a
@@ -204,7 +212,7 @@ extension RedactionPolicy {
     /// The path segment by segment. A segment after one that names a secret or cannot be read
     /// (`/pin/4831`, `/password-reset/…`, `/token/…/info`) is a value, so it becomes `:id`
     /// whatever it looks like. A segment that comes again is not read again.
-    private func redacted(path: String, nesting: Nesting) -> String {
+    private func redacted(path: String, nesting: Nesting, compatibility: CompatibilityText) -> String {
         var readings: [Substring: PathSegmentReading] = [:]
         var segments: [String] = []
         var followsLabel = false
@@ -213,7 +221,7 @@ extension RedactionPolicy {
                 segments.append("")
                 continue
             }
-            let reading = readings[segment] ?? read(pathSegment: segment, nesting: nesting)
+            let reading = readings[segment] ?? read(pathSegment: segment, nesting: nesting, compatibility: compatibility)
             readings[segment] = reading
             segments.append(followsLabel || reading.hides ? Self.identifierPlaceholder : String(segment))
             followsLabel = reading.isLabel
@@ -232,13 +240,12 @@ extension RedactionPolicy {
     /// Reads a path segment once: it is decoded and scanned a single time, and the free-text rule,
     /// every value detector and the word reading all run on that scan. A segment that does not
     /// decode is both.
-    private func read(pathSegment segment: Substring, nesting: Nesting) -> PathSegmentReading {
+    private func read(pathSegment segment: Substring, nesting: Nesting, compatibility: CompatibilityText) -> PathSegmentReading {
         guard let decoded = segment.removingPercentEncoding else { return PathSegmentReading(hides: true, isLabel: true) }
         let scalars = Array(decoded.unicodeScalars)
         guard !scalars.isEmpty else { return PathSegmentReading(hides: false, isLabel: false) }
         let isIdentifier = UUID(uuidString: decoded) != nil || Self.isIdentifierShaped(scalars)
         guard !isQuietWord(scalars) else { return PathSegmentReading(hides: isIdentifier, isLabel: false) }
-        let compatibility = CompatibilityText()
         let text = NormalizedText(scalars, compatibility: compatibility)
         let holdsSecret = !textSpans(in: scalars, text: text, compatibility: compatibility, nesting: nesting, detectsInRegions: true).isEmpty
         let isLabel = FreeTextScanner.mentionsSecret(scalars, text: text, policy: self, compatibility: compatibility)
@@ -248,15 +255,18 @@ extension RedactionPolicy {
     /// `name=value` from a query parameter, both percent-encoded. The value is kept only when the
     /// name is allowed and no other parameter names a secret (`hidesValue`). An empty field, as
     /// between `&&`, stays empty.
-    private func redacted(parameter rawName: String, value rawValue: String?, hidesValue: Bool, nesting: Nesting) -> String {
+    private func redacted(
+        parameter rawName: String, value rawValue: String?, hidesValue: Bool, nesting: Nesting, compatibility: CompatibilityText
+    ) -> String {
         if rawName.isEmpty, rawValue == nil { return "" }
         let name = Self.formDecoded(rawName)
-        let shownName = name.map { PlainName($0.unicodeScalars) != nil && redactedName($0, nesting: nesting) == $0 } == true ? rawName : Self.replacement
+        let isShown = { (name: String) in PlainName(name.unicodeScalars) != nil && redactedName(name, nesting: nesting, compatibility: compatibility) == name }
+        let shownName = name.map(isShown) == true ? rawName : Self.replacement
         let allowed = name.flatMap { allowableFold($0.unicodeScalars) }.map(allowedQueryParameters.contains) ?? false
         guard let rawValue else { return allowed ? shownName : Self.replacement }
         guard !rawValue.isEmpty else { return shownName + "=" }
         guard allowed, !hidesValue, let value = Self.formDecoded(rawValue) else { return shownName + "=" + Self.replacement }
-        let redactedValue = redact(value, nesting: nesting)
+        let redactedValue = redact(value, nesting: nesting, compatibility: compatibility)
         return shownName + "=" + (redactedValue == value ? rawValue : Self.formEncoded(redactedValue))
     }
 

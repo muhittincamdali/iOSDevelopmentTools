@@ -14,16 +14,18 @@ extension RedactionPolicy {
     /// the value (`text/plain; x=…`).
     public func redact(headers: [HTTPHeader]) -> [HTTPHeader] {
         guard isEnabled else { return headers }
+        // One table of readings serves every header of the list.
+        let compatibility = CompatibilityText(length: headers.reduce(0) { $0 + $1.value.utf8.count })
         return headers.map { header in
-            HTTPHeader(name: header.name, value: redactedHeaderValue(name: header.name, value: header.value))
+            HTTPHeader(name: header.name, value: redactedHeaderValue(name: header.name, value: header.value, compatibility: compatibility))
         }
     }
 
     /// One header value as ``redact(headers:)`` stores it.
-    func redactedHeaderValue(name: String, value: String) -> String {
+    func redactedHeaderValue(name: String, value: String, compatibility: CompatibilityText) -> String {
         guard !hidesHeader(named: name), !Self.startsWithAuthenticationScheme(value) else { return Self.replacement }
         let scalars = Array(value.unicodeScalars)
-        let spans = textSpans(in: scalars, compatibility: CompatibilityText(), nesting: .text(length: scalars.count), allowedKeys: headerValueKeys)
+        let spans = textSpans(in: scalars, compatibility: compatibility, nesting: .text(length: scalars.count), allowedKeys: headerValueKeys)
         return spans.isEmpty ? value : Self.replacing(spans, in: scalars)
     }
 

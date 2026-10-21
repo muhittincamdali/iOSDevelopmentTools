@@ -68,8 +68,9 @@ extension RedactionPolicy {
         // A plain-text body is free text, as a log message is; other bodies are documents.
         let length = Self.scalarCount(body)
         let nesting = mediaType?.isPlainText == true ? Nesting.text(length: length) : .document(length: length)
+        // One table of readings serves the whole body, with every field and part in it.
         guard isComplete, body.count <= maximumBodySize, let mediaType,
-              let (checked, changed) = redact(body: body, as: mediaType, nesting: nesting)
+              let (checked, changed) = redact(body: body, as: mediaType, nesting: nesting, compatibility: CompatibilityText(length: length))
         else {
             return (Data(Self.omissionNote(byteCount: byteCount, mediaType: mediaType).utf8), .omitted)
         }
@@ -89,17 +90,20 @@ extension RedactionPolicy {
 
     /// A body of a known type with secrets hidden, and whether what is stored differs from it;
     /// nil when it is omitted. `nesting` is the body's own: a body passed in is
-    /// ``Nesting/document(length:)``, a multipart part one level deeper.
-    func redact(body: Data, as type: MediaType, nesting: Nesting) -> (Data, Bool)? {
-        if type.isMultipartFormData { return redact(multipart: body, type, nesting: nesting) }
-        if type.isJSON { return type.isUnicode ? redact(jsonBody: body, charset: type.charset, nesting: nesting) : nil }
+    /// ``Nesting/document(length:)``, a multipart part one level deeper. `compatibility` is the
+    /// one table of readings of the body a part is in, or of the body.
+    func redact(body: Data, as type: MediaType, nesting: Nesting, compatibility: CompatibilityText) -> (Data, Bool)? {
+        if type.isMultipartFormData { return redact(multipart: body, type, nesting: nesting, compatibility: compatibility) }
+        if type.isJSON {
+            return type.isUnicode ? redact(jsonBody: body, charset: type.charset, nesting: nesting, compatibility: compatibility) : nil
+        }
         guard type.isUTF8, let text = String(data: body, encoding: .utf8) else { return nil }
         if type.isForm {
-            guard let redacted = redact(form: text, nesting: nesting) else { return nil }
+            guard let redacted = redact(form: text, nesting: nesting, compatibility: compatibility) else { return nil }
             return (Data(redacted.utf8), redacted != text)
         }
         guard type.isPlainText else { return nil }
-        let redacted = redact(text, nesting: nesting)
+        let redacted = redact(text, nesting: nesting, compatibility: compatibility)
         return (Data(redacted.utf8), redacted != text)
     }
 
@@ -109,13 +113,13 @@ extension RedactionPolicy {
     /// `JSONSerialization` tells them. A body in UTF-16 or UTF-32 is stored as UTF-8. A body whose
     /// bytes are in another encoding than its `charset` names is omitted: a server that decodes it
     /// by the charset reads other text.
-    private func redact(jsonBody body: Data, charset: String?, nesting: Nesting) -> (Data, Bool)? {
+    private func redact(jsonBody body: Data, charset: String?, nesting: Nesting, compatibility: CompatibilityText) -> (Data, Bool)? {
         let encoding = Self.jsonEncoding(Array(body.prefix(4)))
         guard Self.charset(charset, allows: encoding), let text = String(data: body, encoding: encoding) else { return nil }
         let isUTF8 = encoding == .utf8
         let scalars = Array(text.unicodeScalars)
         guard let document = try? JSONDocument(scalars, allowsFragments: true, nesting: nesting) else { return nil }
-        let spans = Self.merged(document.secretSpans(using: self, compatibility: CompatibilityText()))
+        let spans = Self.merged(document.secretSpans(using: self, compatibility: compatibility))
         guard !spans.isEmpty || !isUTF8 else { return (body, false) }
         return (Data(Self.replacing(spans, in: scalars).utf8), true)
     }
@@ -159,7 +163,7 @@ extension RedactionPolicy {
     /// value, as `label=Password&value=…` does (see ``NamingFields``), and once to write it, into
     /// one string. No array of its fields is kept, so a form of many fields takes little more
     /// memory than its text.
-    func redact(form text: String, nesting: Nesting) -> String? {
+    func redact(form text: String, nesting: Nesting, compatibility: CompatibilityText) -> String? {
         guard Self.isStrictForm(text) else { return nil }
         let raws = text.unicodeScalars.split(separator: "&", omittingEmptySubsequences: false)
         var decodes = true
@@ -169,14 +173,15 @@ extension RedactionPolicy {
                 return ([], .other)
             }
             return Self.namingField(name: field.name, value: field.value)
-        }, policy: self, compatibility: CompatibilityText())
+        }, policy: self, compatibility: compatibility)
         guard decodes else { return nil }
         var output = ""
         output.reserveCapacity(text.utf8.count)
         for (index, raw) in raws.enumerated() {
             guard let field = FormField(raw) else { return nil }
             if index > 0 { output += "&" }
-            output += redact(field: field, hidesValue: naming.hidesValue(at: index, of: Self.namingField(name: field.name, value: field.value)), nesting: nesting)
+            let hidesValue = naming.hidesValue(at: index, of: Self.namingField(name: field.name, value: field.value))
+            output += redact(field: field, hidesValue: hidesValue, nesting: nesting, compatibility: compatibility)
         }
         return output
     }
@@ -215,13 +220,13 @@ extension RedactionPolicy {
     /// a card number of its own (`password%3Dhunter2=x`, `{"password":"…"}` sent as a form); a
     /// field without `=` is free text. The value is hidden when the name hides it or another field
     /// names a secret.
-    private func redact(field: FormField, hidesValue: Bool, nesting: Nesting) -> String {
+    private func redact(field: FormField, hidesValue: Bool, nesting: Nesting, compatibility: CompatibilityText) -> String {
         guard let rawValue = field.rawValue, let value = field.value else {
-            return shown(field.name, as: redact(field.name, nesting: nesting), raw: field.rawName)
+            return shown(field.name, as: redact(field.name, nesting: nesting, compatibility: compatibility), raw: field.rawName)
         }
-        let shownName = shown(field.name, as: redactedName(field.name, nesting: nesting), raw: field.rawName)
+        let shownName = shown(field.name, as: redactedName(field.name, nesting: nesting, compatibility: compatibility), raw: field.rawName)
         if hidesValue || self.hidesValue(ofKey: field.name.unicodeScalars) { return shownName + "=" + Self.replacement }
-        return shownName + "=" + shown(value, as: redact(value, nesting: nesting), raw: rawValue)
+        return shownName + "=" + shown(value, as: redact(value, nesting: nesting, compatibility: compatibility), raw: rawValue)
     }
 
     /// Decoded text after redaction: as sent when nothing was found, encoded again otherwise.

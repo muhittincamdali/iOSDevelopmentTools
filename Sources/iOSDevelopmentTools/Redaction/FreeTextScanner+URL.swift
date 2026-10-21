@@ -52,7 +52,7 @@ extension FreeTextScanner {
             return
         }
         let written = String(String.UnicodeScalarView(source[region]))
-        let redacted = policy.redactedURL(written, nesting: inner)
+        let redacted = policy.redactedURL(written, nesting: inner, compatibility: compatibility)
         let span = RedactionPolicy.Span(start: region.lowerBound, end: region.upperBound, replacement: redacted)
         record(spans: redacted == written ? [] : [span], region: region)
         // The last segment and the word after the URL may spell a secret name across the space,
@@ -79,7 +79,7 @@ extension FreeTextScanner {
     ///   `?`, `#`, `;`, `%`, `=`, `:`, `@`, `\`, no escape and no character outside ASCII,
     ///   invisible ones included;
     /// - the host is a name of ASCII labels or an IPv4 address in which the value detectors find
-    ///   nothing (see ``RedactionPolicy/showsHost(_:)``);
+    ///   nothing (see ``RedactionPolicy/showsHost(_:compatibility:)``);
     /// - neither the host nor any path segment names a secret by the key rule
     ///   (``RedactionPolicy/hidesValue(ofKey:)``), which also hides a segment without a letter or
     ///   digit;
@@ -105,12 +105,12 @@ extension FreeTextScanner {
         let rest = bytes[(colon + 3)...]
         guard rest.allSatisfy(Self.isCleanURLCharacter) else { return false }
         let host = rest.prefix { $0 != UInt8(ascii: "/") }
-        guard !host.isEmpty, policy.showsHost(String(decoding: host, as: UTF8.self)), !namesSecret(host) else { return false }
+        guard !host.isEmpty, policy.showsHost(String(decoding: host, as: UTF8.self), compatibility: compatibility), !namesSecret(host) else { return false }
         guard !rest[host.endIndex...].split(separator: UInt8(ascii: "/")).contains(where: namesSecret) else { return false }
         // The host as `URLComponents` reads it, which ``RedactionPolicy/redact(url:)`` writes: an
         // internationalized name in Punycode (`xn--…`) is read in its own letters, no host name.
         guard let parsed = URLComponents(string: String(decoding: bytes, as: UTF8.self))?.percentEncodedHost else { return false }
-        return policy.showsHost(parsed)
+        return policy.showsHost(parsed, compatibility: compatibility)
     }
 
     /// Whether a clean URL may end at byte `end`: the text ends there, white space or a line
