@@ -32,14 +32,15 @@ is not built to stop someone who writes a log line on purpose to get a secret pa
   hidden: a key that is not plain ASCII, a name that cannot be read, a body that does not parse.
 - **Free text is a best effort.** A log line has no grammar, so the policy does not try to tell
   where a value ends. After the first trigger, such as a secret name, everything to the end of
-  the text is hidden, the lines below included. One rule reads disguised letters: a single
-  letter, mark or number with no ASCII form inside a word stands for any one letter or for none,
-  so `tͦken hunter2` (U+0366 after the `t`), `passw〇rd hunter2` and `piꞏn 1234` are found. A
-  secret name written without a separator and disguised on purpose by writing two or more of its
-  letters as look-alikes (`pɑsswoʀd hunter2`) is not guaranteed to be found; see "What it does
-  not find". No table of look-alikes is kept to chase such names,
-  since none is ever complete, and none would make free text safe. Use structured logging
-  instead: separate fields, and secrets kept out of messages.
+  the text is hidden, the lines below included. One rule reads disguised letters: each letter,
+  mark or number with no ASCII form inside a word, a decimal digit of another script included,
+  stands for any one letter or for none, so `tͦken hunter2` (U+0366 after the `t`),
+  `passw〇rd hunter2`, `t၀ken hunter2` (a Myanmar zero), `tͦkenͦ hunter2` and `piꞏn 1234` are
+  found. A secret name written without a separator and disguised on purpose by writing two or
+  more of its letters as look-alikes (`pɑsswoʀd hunter2`) is not guaranteed to be found; see
+  "What it does not find". No table of look-alikes is kept to chase such names, since none is
+  ever complete, and none would make free text safe. Use structured logging instead: separate
+  fields, and secrets kept out of messages.
 - **Hostile input has a cost bound.** All the documents found inside one input, one inside
   another, read at most four times the input's length together. Past that budget, the string
   that holds the next document is hidden whole.
@@ -258,15 +259,18 @@ The triggers:
 - **A secret name**, with or without a separator, quoted or not: `password=…`, `password …`,
   `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`, `Bearer: …`. The text is hidden from the value
   after the name. Punctuation inside a word is read as a separator (`pass~word`), two words are
-  read together (`pass word`), and one letter, mark or number that has no ASCII form is read as
-  any letter or, between two letters, as none (`passꞏword`, `passw〇rd`, and `tͦken` with the mark
-  U+0366 after the `t`). A mark on a letter that has no ASCII form belongs to that letter. The
-  plural `s` is a letter of the word here too:
-  `tokenꞏ` reads as `tokens` and `tokenꞏs` as `tokens`. Each word is also read as its ASCII
-  skeleton: every letter that has no ASCII form is left out, however many there are and wherever
-  they stand, and the rest is compared with the secret names, the plural `s` included
-  (`pıaıssword` reads as `password`, `tokensı` as `tokens` and `tokenꞏꞏ` as `token`). Both
-  readings hide more than the secret on purpose: `pın 1234` is read as `pin 1234`.
+  read together (`pass word`), and each letter, mark or number that has no ASCII form counts as
+  nothing or as any one letter. Each word is read as its ASCII skeleton: every such character is
+  left out, a decimal digit of another script too (the Myanmar zero of `t၀ken`, the Devanagari
+  one of `passw०rd`), however many there are and wherever they stand, and the rest is compared
+  with the secret names, the plural `s` included (`pıaıssword` reads as `password`, `tokensı` as
+  `tokens`, `to၀ken` and `tokenꞏꞏ` as `token`). A name also counts with one of its letters
+  missing where such a character was left out, so one written in place of a letter is found
+  (`passꞏword`, `passw〇rd`, `t၀ken`, and `tͦken` with the mark U+0366 after the `t`), also with
+  more of them put in elsewhere (`tͦkenͦ`, `pını`). A mark on a letter that has no ASCII form
+  belongs to that letter. A digit that decomposes to an ASCII digit is that digit (`passw０rd`
+  reads as `passw0rd`). The skeleton hides more than the secret on purpose: `pın 1234` is read
+  as `pin 1234`.
 - **A secret name written as a value.** After a key that holds a name and that the app allows
   (`name`, `key`, `label`, `type`, `id`, …, but never `path`, the route of a request), a name that
   names a secret, is not plain ASCII or is JSON: `name="password"`, `label="Пароль"`,
@@ -442,6 +446,8 @@ Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
 - A secret name in free text written without a separator with two or more of its letters
   replaced by letters that have no ASCII form: `pɑsswoʀd hunter2` is stored as it is. Such letters
   put in beside the name's own are left out of its skeleton, so `pıaıssword hunter2` is hidden.
+  A digit that has an ASCII form, full-width or superscript, is read as that digit, so
+  `passw０rd hunter2` and `passw⁰rd hunter2` are stored as they are.
   With a separator (`pɑsswoʀd=hunter2`) the value is hidden. A secret word in another language, such as
   `пароль hunter2`, is not one either.
 - A value written before its name, with no key before it: `hunter2 is my password` is stored as
