@@ -64,6 +64,16 @@ struct RedactionTimeLimitTests {
         TimedInput(testDescription: "a plain-text body", make: {
             String(repeating: "login user=bob password=hunter2 card 4242 4242 4242 4242\n", count: size / 57)
         }, redact: body("text/plain")),
+        // A name outside plain ASCII under `name` may be a person, so each of these fields names
+        // a secret without hiding every other field. The fifteenth review timed both at about two
+        // seconds a megabyte, four times that at two: every field read the list of such names
+        // again to find one that hides every field.
+        TimedInput(testDescription: "a form of name=Ayşe repeated", make: {
+            repeated("name=Ay%C5%9Fe", separator: "&", prefix: "", suffix: "")
+        }, redact: body("application/x-www-form-urlencoded")),
+        TimedInput(testDescription: "a JSON object of the member \"name\":\"Ayşe\" repeated", make: {
+            repeated(#""name":"Ayşe""#, prefix: "{", suffix: "}")
+        }, redact: body("application/json")),
     ]
 
     /// `unit` repeated, `separator` between, to about a megabyte with `prefix` and `suffix`.
