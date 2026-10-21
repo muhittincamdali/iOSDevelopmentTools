@@ -24,8 +24,8 @@ documented rules is a vulnerability.
 Values that the documentation lists as limits (a secret under a plain ASCII name that is not a
 secret name in a body; a secret with no label or with a label not followed by `=` or `:` in free
 text; the value of an allowed key; a value written before its name; a card number grouped with
-`+` or `.`; a short secret in a path segment; a look-alike secret word without `=` or `:` in free
-text) are known limits, not
+`+` or `.`; a short secret in a path segment; a secret word without `=` or `:` in free text with
+two or more of its letters replaced by look-alikes) are known limits, not
 vulnerabilities. Free text hidden from its first trigger to its end, more than the secret, is
 hidden that way on purpose and is not a bug either. See
 [Redacting sensitive data](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata).
