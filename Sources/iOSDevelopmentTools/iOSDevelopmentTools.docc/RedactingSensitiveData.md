@@ -129,7 +129,12 @@ check, IBANs that pass the mod-97 check, email addresses (with names and domains
 `ayşe.yılmaz@…`, `张伟@例子.中国`) and the password in `user:password@host`. They are found after
 Unicode compatibility decomposition, without marks and invisible characters, and in the same way
 on every path: free text, bodies, JSON strings, forms and URLs. The digits of a UUID are not a card
-number.
+number. The detectors read across a vertical tab, a form feed, U+0085, U+2028 and U+2029: as white
+space between the groups of a card number or an IBAN and after `Bearer`, and as nothing inside an
+email address, a JWT and a long token. Each of these separators cuts free text, so a finding
+written across one is hidden from its start: `paid 4111 1111 1111`, U+2028 and `1111` is stored
+as `paid [REDACTED]`. A line feed or a carriage return written as such ends a finding, as it ends a
+line.
 
 Strings in JSON, form values, query values and multipart text parts are free text; see below. A
 string that holds JSON, as GraphQL clients send `variables`, is parsed and redacted by the key
@@ -442,6 +447,11 @@ Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
 - A value written before its name, with no key before it: `hunter2 is my password` is stored as
   it is.
 - A card number grouped with `+` or `.` (`4111+1111+1111+1111`).
+- A card number or an IBAN split over two lines by a line feed or a carriage return
+  (`4111 1111 1111` on one line and `1111` on the next), and a card number written as a run of
+  more than six digits beside another group (`411111111111 1111`): such a run is read as an
+  identifier, as the digits of a UUID are. With a line separator such as U+2028 in place of the
+  space, the text is cut at the separator and the run before it stays.
 - A short secret in a path segment, such as `/reset/abc123`; only identifiers, tokens of the shapes
   listed above and segments in which a rule finds something become `:id`. In free text the same
   holds for a clean URL (`see https://x.example/reset/abc123`).
