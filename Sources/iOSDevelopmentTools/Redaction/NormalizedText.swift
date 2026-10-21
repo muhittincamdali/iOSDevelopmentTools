@@ -194,7 +194,14 @@ final class CompatibilityText {
     /// A byte that no detector or separator matches.
     static let unreadable: UInt8 = 0xFF
 
-    private var cache: [UInt32: [UInt8]] = [:]
+    /// A scalar's reading, and whether its compatibility form leaves the safe alphabet of free
+    /// text (see ``formLeavesSafeAlphabet(_:)``), found from one normalization.
+    private struct Reading {
+        let bytes: [UInt8]
+        let leavesSafeAlphabet: Bool
+    }
+
+    private var cache: [UInt32: Reading] = [:]
     private var foldCache: [UInt32: Bool] = [:]
 
     /// Whether compatibility decomposition alone reads the scalar as ASCII (`－` as `-`, `＝` as
@@ -211,13 +218,36 @@ final class CompatibilityText {
 
     func ascii(_ scalar: Unicode.Scalar) -> [UInt8] {
         if scalar.isASCII { return [UInt8(scalar.value)] }
+        return reading(scalar).bytes
+    }
+
+    /// Whether the compatibility form of a scalar outside ASCII holds a character outside the safe
+    /// alphabet of free text: ASCII punctuation (`🄁` is `0,`, `⒈` is `1.`, `⑴` is `(1)`), or a
+    /// character outside ASCII that is not a letter, mark or digit (`½` is `1⁄2`). The scanning
+    /// copy reads the scalar as that form, so a letter or digit with such a form is outside the
+    /// alphabet too (see ``FreeTextScanner/isOutsideSafeAlphabet(_:)``). An ASCII space in the
+    /// form is not: a scalar read as a space is judged as one.
+    func formLeavesSafeAlphabet(_ scalar: Unicode.Scalar) -> Bool {
+        !scalar.isASCII && reading(scalar).leavesSafeAlphabet
+    }
+
+    private func reading(_ scalar: Unicode.Scalar) -> Reading {
         if let cached = cache[scalar.value] { return cached }
-        let reading = Self.read(scalar)
+        let form = String(scalar).decomposedStringWithCompatibilityMapping.unicodeScalars
+        let reading = Reading(bytes: Self.read(scalar, form: form), leavesSafeAlphabet: form.contains(where: Self.leavesSafeAlphabet))
         cache[scalar.value] = reading
         return reading
     }
 
-    private static func read(_ scalar: Unicode.Scalar) -> [UInt8] {
+    /// Whether a scalar of a compatibility form is outside the safe alphabet: ASCII other than a
+    /// letter, a digit or a space, or a scalar outside ASCII other than a letter, mark or digit.
+    private static func leavesSafeAlphabet(_ part: Unicode.Scalar) -> Bool {
+        guard part.isASCII else { return !ScalarClass.isLetterOrNumber(part) }
+        let byte = UInt8(part.value)
+        return !(ASCII.isAlphanumeric(byte) || byte == UInt8(ascii: " "))
+    }
+
+    private static func read(_ scalar: Unicode.Scalar, form: String.UnicodeScalarView) -> [UInt8] {
         if let digit = ScalarClass.decimalDigit(scalar) { return [UInt8(ascii: "0") + digit] }
         switch scalar.properties.generalCategory {
         case .lineSeparator, .paragraphSeparator: return [UInt8(ascii: "\n")]
@@ -228,7 +258,7 @@ final class CompatibilityText {
         if scalar.properties.isWhitespace || scalar == "\u{2800}" { return [UInt8(ascii: " ")] }
         if scalar.properties.generalCategory == .dashPunctuation { return [UInt8(ascii: "-")] }
         var bytes: [UInt8] = []
-        for part in String(scalar).decomposedStringWithCompatibilityMapping.unicodeScalars where !ScalarClass.isInvisible(part) {
+        for part in form where !ScalarClass.isInvisible(part) {
             guard part.isASCII else { return [unreadable] }
             bytes.append(UInt8(part.value))
         }

@@ -74,7 +74,7 @@ struct RedactionSafeAlphabetTests {
 
     @Test("letters, marks and digits of any script are text", arguments: [
         "Kullanıcı İstanbul'da giriş yaptı", "Straße naïve café", "Zaloguj się, użytkownik", "заказ 42 отправлен", "张伟 登录成功",
-        "ユーザー登録", "Γειά σου κόσμε", "שלום עולם", "مرحبا بالعالم", "١٢٣ ٤٥٦", "½ cup, x² + y²", "took 120µs", "ｆｕｌｌ ｗｉｄｔｈ",
+        "ユーザー登録", "Γειά σου κόσμε", "שלום עולם", "مرحبا بالعالم", "١٢٣ ٤٥٦", "x² + y²", "took 120µs", "ｆｕｌｌ ｗｉｄｔｈ",
         "done \u{1F44D}", "status=200 \u{2026}", "a\u{A0}b\u{3000}c\u{2003}d",
     ])
     func safeText(text: String) {

@@ -4,14 +4,20 @@ extension FreeTextScanner {
     /// Whether the character of byte `i` is outside the safe alphabet: letters, marks and digits
     /// of any script, the ASCII space, tab, LF and CR, the rest of printable ASCII, and a space
     /// that compatibility normalization reads as an ASCII space (U+00A0, U+3000). Any other
-    /// character is judged by its own general category, not by the ASCII that compatibility
-    /// normalization makes of it, so every punctuation mark and symbol outside ASCII is outside:
-    /// `꞉`, `≔`, `→`, `·`, `’`, `€`, `、`, and also `＝`, `…`, `‥`, `︰`, `™`, `ⓟ` and `¨`. So is
-    /// an emoji, a skin tone, a private-use or unassigned code point, a dash outside ASCII (`—`,
+    /// character is judged by its own general category, so every punctuation mark and symbol
+    /// outside ASCII is outside, even when compatibility normalization reads it as ASCII: `꞉`,
+    /// `≔`, `→`, `·`, `’`, `€`, `、`, and also `＝`, `…`, `‥`, `︰`, `™`, `ⓟ` and `¨`. So is an
+    /// emoji, a skin tone, a private-use or unassigned code point, a dash outside ASCII (`—`,
     /// `゠`), the blank Braille pattern and U+1680, a line break other than LF and CR (VT, FF,
     /// U+0085, U+2028, U+2029), and a modifier letter (`ʻ`, `ː`), which is written as a separator
     /// as often as a letter, apart from those of East Asian text (`ー`) that are not glued to
     /// ASCII.
+    ///
+    /// A letter or digit is judged by the text the scan reads as well: the scanning copy holds its
+    /// compatibility form, so one whose form holds ASCII punctuation or a character outside the
+    /// alphabet is outside it (`🄁`, read as `0,`, `⒈`, `⑴`, `½`; see
+    /// ``CompatibilityText/formLeavesSafeAlphabet(_:)``). The `,` of `🄁status=` would otherwise
+    /// end a key in front of an allowed one.
     func isOutsideSafeAlphabet(_ i: Int) -> Bool {
         let scalar = source[text.offsets[i]]
         // Of the line breaks, only LF and CR are text: VT, FF, U+0085, U+2028 and U+2029 end a line
@@ -25,9 +31,10 @@ extension FreeTextScanner {
         switch ScalarTable.category(scalar) {
         case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .otherLetter, .nonspacingMark, .spacingMark, .enclosingMark,
              .decimalNumber, .letterNumber, .otherNumber:
-            return false
+            return compatibility.formLeavesSafeAlphabet(scalar)
         case .modifierLetter:
             // `ー` and the other modifier letters of kana belong to the East Asian text around them.
+            if compatibility.formLeavesSafeAlphabet(scalar) { return true }
             return !Self.isEastAsian(scalar) || (i > 0 && text.bytes[i - 1] != CompatibilityText.unreadable && !text.isSpace(i - 1))
         default:
             return true
