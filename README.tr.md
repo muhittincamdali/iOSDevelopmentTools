@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
+<!-- i18n-source: README.md@eba3c90a3ba354f37d003bc4928d281ed278c9e2 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 612, iOS simülatöründe 609 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 623, iOS simülatöründe 620 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -247,7 +247,7 @@ tasarlanmıştır: yapılandırılmış girdi ayrıştırılır ve ayrıştırı
 gizlenir; serbest metin ise en iyi çabadır ve `=` ya da `:` olmadan yazılmış, iki ya da daha fazla
 harfi benzer görünen harflerle değiştirilmiş (`pɑsswoʀd hunter2`) bir gizli adın bulunacağı
 garanti edilmez; ASCII biçimi olmayan tek bir harf, birleşen işaret ya da sayı herhangi bir harf
-yerine geçer, bu yüzden `tͦken hunter2` ve `passw〇rd hunter2` bulunur. Gizli bilgileri en baştan kaydettiğiniz isteklerin ve günlük mesajlarının dışında tutun ve
+yerine geçer, bu yüzden `tͦken hunter2`, `passw〇rd hunter2` ve `t၀ken hunter2` (Myanmar sıfırı) bulunur. Gizli bilgileri en baştan kaydettiğiniz isteklerin ve günlük mesajlarının dışında tutun ve
 yapılandırılmış günlük kaydını tercih edin.
 
 Bu modele iki sınır daha dahildir. **Maliyet sınırı:** bir girdinin içine gömülü bütün

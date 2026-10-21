@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
+<!-- i18n-source: README.md@eba3c90a3ba354f37d003bc4928d281ed278c9e2 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -52,7 +52,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 612 个 Swift Testing 测试，iOS 模拟器上有 609 个。请求从应用的会话
+- **经过测试** — macOS 上有 623 个 Swift Testing 测试，iOS 模拟器上有 620 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -221,8 +221,8 @@ func configureNetworkLogger() {
 脱敏只是一道安全网，而不是保证。它针对的是意外记录下来的秘密：结构化输入会用解析器读取，
 解析器不能完全理解的内容都会被隐藏；自由文本只能尽力而为，不带 `=` 或 `:`、且有两个或更多
 字母被替换为相似字母的秘密名称（`pɑsswoʀd hunter2`）不保证能被发现；没有 ASCII 形式的单个
-字母、组合用字符或数字会被当作任意一个字母，所以 `tͦken hunter2` 和 `passw〇rd hunter2`
-能被发现。从一开始就不要让秘密进入
+字母、组合用字符或数字会被当作任意一个字母，所以 `tͦken hunter2`、`passw〇rd hunter2`
+和 `t၀ken hunter2`（缅甸数字 0）能被发现。从一开始就不要让秘密进入
 你记录的请求和日志消息，并优先使用结构化日志。
 
 这个模型还包括两个限制。**开销上限：** 一个输入中嵌套的所有文档（字符串中的 JSON、文本中的

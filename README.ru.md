@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
+<!-- i18n-source: README.md@eba3c90a3ba354f37d003bc4928d281ed278c9e2 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -59,7 +59,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 612 тестов Swift Testing на macOS и 609 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 623 тестов Swift Testing на macOS и 620 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -246,7 +246,8 @@ func configureNetworkLogger() {
 свободный текст обрабатывается по возможности, и секретное имя, записанное без `=` или `:`, в
 котором две или более буквы заменены похожими (`pɑsswoʀd hunter2`), не обязательно будет
 найдено; одна буква, комбинируемый знак или цифра без формы в ASCII считается любой буквой,
-поэтому `tͦken hunter2` и `passw〇rd hunter2` находятся.
+поэтому `tͦken hunter2`, `passw〇rd hunter2` и `t၀ken hunter2` (мьянманский ноль)
+находятся.
 Не допускайте секретов в записываемых запросах и сообщениях журнала с самого начала и используйте
 структурированное журналирование.
 

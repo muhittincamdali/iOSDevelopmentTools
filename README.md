@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 612 Swift Testing tests on macOS and 609 on an iOS simulator. Requests travel
+- **Tested** — 623 Swift Testing tests on macOS and 620 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -234,7 +234,8 @@ Redaction is a safety net, not a guarantee. It is built for secrets recorded by 
 structured input is parsed, and what the parser does not fully understand is hidden; free text is a
 best effort, and a secret name written without `=` or `:` with two or more of its letters replaced
 by look-alikes (`pɑsswoʀd hunter2`) is not guaranteed to be found; one letter, mark or number
-with no ASCII form counts as any letter, so `tͦken hunter2` and `passw〇rd hunter2` are found.
+with no ASCII form counts as any letter, so `tͦken hunter2`,
+`passw〇rd hunter2` and `t၀ken hunter2` (a Myanmar zero) are found.
 Keep secrets out of the requests you record and out of log messages in the first place, and prefer
 structured logging.
 

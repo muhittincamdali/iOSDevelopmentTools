@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
+<!-- i18n-source: README.md@eba3c90a3ba354f37d003bc4928d281ed278c9e2 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 612 Swift-Testing-Tests auf macOS und 609 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 623 Swift-Testing-Tests auf macOS und 620 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -248,7 +248,7 @@ versteht, wird geschwärzt; Freitext ist ein bestmöglicher Versuch, und ein geh
 `=` oder `:` geschrieben ist und in dem zwei oder mehr Buchstaben durch ähnlich aussehende ersetzt
 sind (`pɑsswoʀd hunter2`), wird nicht sicher gefunden; ein einzelner Buchstabe, ein kombinierendes
 Zeichen oder eine Zahl ohne ASCII-Form zählt als beliebiger Buchstabe, daher werden
-`tͦken hunter2` und `passw〇rd hunter2` gefunden. Halte Geheimnisse von vornherein aus den
+`tͦken hunter2`, `passw〇rd hunter2` und `t၀ken hunter2` (eine birmanische Null) gefunden. Halte Geheimnisse von vornherein aus den
 aufgezeichneten Anfragen und aus Log-Meldungen heraus, und bevorzuge strukturiertes Logging.
 
 Zwei weitere Grenzen gehören zu diesem Modell. **Kostengrenze:** Alle in einer Eingabe

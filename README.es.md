@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
+<!-- i18n-source: README.md@eba3c90a3ba354f37d003bc4928d281ed278c9e2 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 612 tests de Swift Testing en macOS y 609 en un simulador de iOS. Las solicitudes van
+- **Probado** — 623 tests de Swift Testing en macOS y 620 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -246,7 +246,7 @@ accidente: la entrada estructurada se analiza, y lo que el analizador no entiend
 oculta; el texto libre es un mejor esfuerzo, y no se garantiza encontrar un nombre secreto escrito
 sin `=` ni `:` con dos o más de sus letras sustituidas por otras parecidas (`pɑsswoʀd hunter2`);
 una sola letra, marca o cifra sin forma ASCII cuenta como cualquier letra, así que
-`tͦken hunter2` y `passw〇rd hunter2` sí se encuentran.
+`tͦken hunter2`, `passw〇rd hunter2` y `t၀ken hunter2` (un cero birmano) sí se encuentran.
 Mantén los secretos fuera de las solicitudes que registras y de los mensajes de registro desde el
 principio, y prefiere el registro estructurado.
 

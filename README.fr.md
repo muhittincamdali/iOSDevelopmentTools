@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
+<!-- i18n-source: README.md@eba3c90a3ba354f37d003bc4928d281ed278c9e2 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 612 tests Swift Testing sur macOS et 609 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 623 tests Swift Testing sur macOS et 620 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -250,7 +250,7 @@ par accident : les entrées structurées sont analysées, et ce que l'analyseur 
 entièrement est masqué ; le texte libre est traité au mieux, et un nom secret écrit sans `=` ni `:`
 dont deux lettres ou plus sont remplacées par des lettres qui se ressemblent (`pɑsswoʀd hunter2`)
 n'est pas forcément trouvé ; une seule lettre, marque ou chiffre sans forme ASCII compte comme
-n'importe quelle lettre, donc `tͦken hunter2` et `passw〇rd hunter2` sont trouvés. Gardez les secrets hors des requêtes que vous enregistrez et des
+n'importe quelle lettre, donc `tͦken hunter2`, `passw〇rd hunter2` et `t၀ken hunter2` (un zéro birman) sont trouvés. Gardez les secrets hors des requêtes que vous enregistrez et des
 messages de journal dès le départ, et préférez une journalisation structurée.
 
 Deux autres limites font partie de ce modèle. **Borne de coût :** tous les documents imbriqués

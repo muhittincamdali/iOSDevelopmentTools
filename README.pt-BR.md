@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@d32de5a93bc9240bba4246ad99f90f81e937cc78 status=reviewed -->
+<!-- i18n-source: README.md@eba3c90a3ba354f37d003bc4928d281ed278c9e2 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 612 testes de Swift Testing no macOS e 609 em um simulador de iOS. As requisições vão de
+- **Testado** — 623 testes de Swift Testing no macOS e 620 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -244,8 +244,8 @@ A ocultação é uma rede de segurança, não uma garantia. Ela foi feita para s
 acidente: a entrada estruturada é analisada, e o que o analisador não entende por completo é
 ocultado; o texto livre é um melhor esforço, e não há garantia de encontrar um nome secreto escrito
 sem `=` ou `:` com duas ou mais letras trocadas por outras parecidas (`pɑsswoʀd hunter2`); uma
-única letra, marca ou número sem forma ASCII conta como qualquer letra, então `tͦken hunter2` e
-`passw〇rd hunter2` são encontrados. Mantenha
+única letra, marca ou número sem forma ASCII conta como qualquer letra, então `tͦken hunter2`,
+`passw〇rd hunter2` e `t၀ken hunter2` (um zero birmanês) são encontrados. Mantenha
 segredos fora das requisições que você registra e das mensagens de log desde o início, e prefira
 logs estruturados.
 
