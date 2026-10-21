@@ -12,7 +12,12 @@ extension RedactionPolicy {
     ///   brackets, and the value detectors find nothing in it (a card number, a run of 32 hex
     ///   digits, a token). Any other host, such as `password=hunter2` in
     ///   `myapp://password=hunter2` or a host with `_`, `%` or letters outside ASCII, is written as
-    ///   ``replacement`` after the scheme, with nothing after it.
+    ///   ``replacement`` after the scheme, with nothing after it. A host that names a secret, by
+    ///   the key rule or as a word, is written with the scheme and port only, as the path after it
+    ///   is its value: with a scheme of the app's own `URLComponents` reads the first part after
+    ///   `//` as the host, so `myapp://pin/4831` has the host `pin` and is written as
+    ///   `myapp://pin`. A host such as `auth.example.com` names `auth` and hides its whole path
+    ///   too, which over-hides on purpose.
     /// - **Query:** a parameter keeps its value only when its name, decoded, is plain ASCII and on
     ///   ``allowedQueryParameters``, which is empty by default; any other value is `[REDACTED]`,
     ///   and so is a parameter without `=` that is not on the list. A name that is not plain
@@ -64,7 +69,7 @@ extension RedactionPolicy {
     /// The URL's path as ``redact(url:)`` records it; empty when only the host is recorded.
     func redactedPath(of url: URL) -> String {
         guard isEnabled else { return url.path(percentEncoded: true) }
-        guard urlDetail == .full, let components = URLComponents(url: url, resolvingAgainstBaseURL: false), Self.readsPath(of: components)
+        guard urlDetail == .full, let components = URLComponents(url: url, resolvingAgainstBaseURL: false), readsPath(of: components)
         else { return "" }
         return redacted(path: components.percentEncodedPath, nesting: .document(length: url.absoluteString.unicodeScalars.count))
     }
@@ -83,7 +88,7 @@ extension RedactionPolicy {
             result += "//" + host
             if let port = components.port { result += ":\(port)" }
         }
-        guard urlDetail == .full, Self.readsPath(of: components) else { return result.isEmpty ? Self.unparsedURL : result }
+        guard urlDetail == .full, readsPath(of: components) else { return result.isEmpty ? Self.unparsedURL : result }
         result += redacted(path: components.percentEncodedPath, nesting: nesting)
         if let query = components.percentEncodedQuery, !Self.isStrictForm(query) { return result + "?" + Self.replacement }
         if let items = components.percentEncodedQueryItems {
@@ -143,10 +148,23 @@ extension RedactionPolicy {
         }
     }
 
-    /// Whether the path and query of a URL are read: the URL is within the limits (see
+    /// Whether the path and query of a URL are read: its host, when it has one, is written and
+    /// names no secret (see ``hostNamesSecret(_:)``), the URL is within the limits (see
     /// ``exceedsLimits(_:)``) and its path has no dot segment (see ``hasDotSegments(_:)``).
-    static func readsPath(of components: URLComponents) -> Bool {
-        !exceedsLimits(components) && !hasDotSegments(components.percentEncodedPath)
+    func readsPath(of components: URLComponents) -> Bool {
+        if let host = components.percentEncodedHost, !showsHost(host) || hostNamesSecret(host) { return false }
+        return !Self.exceedsLimits(components) && !Self.hasDotSegments(components.percentEncodedPath)
+    }
+
+    /// Whether a host names a secret, by the key rule (``hidesValue(ofKey:)``) or as a word that
+    /// makes the path segment after it a value (``FreeTextScanner/mentionsSecret(_:policy:compatibility:)``).
+    /// In `myapp://pin/4831` `URLComponents` reads `pin` as the host, so the path after it is the
+    /// value a segment `pin` would label. An IPv4 or IPv6 address names nothing.
+    func hostNamesSecret(_ host: String) -> Bool {
+        let bytes = Array(host.utf8)
+        guard !bytes.isEmpty, !Self.isIPv4Address(bytes), !Self.isIPv6Literal(bytes) else { return false }
+        let scalars = Array(host.unicodeScalars)
+        return hidesValue(ofKey: scalars) || FreeTextScanner.mentionsSecret(scalars, policy: self, compatibility: CompatibilityText())
     }
 
     /// Whether a percent-encoded path holds what servers resolve or decode apart from its text: a
