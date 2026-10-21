@@ -271,11 +271,17 @@ The triggers:
   character other than a mark, such as a zero-width space; a bracket that does not close; and
   JSON that does not parse. The text is hidden from there. A joiner between two emoji (`👩‍💻`)
   and a skin tone (`👍🏽`) are part of the emoji.
-- **A quote that does not close on its line.** A `"` or a backtick opens a quote anywhere, a `'`
-  only at the start of a word (so `don't` and `İstanbul'a` open none), and a quote closes at the
-  next one of its kind on the same line. A quote still open at a line break or at the end of the
-  text cuts the text at the quote, so a value or a quoted key written over two lines never shows:
-  `msg "abc` and `hunter2" done` on the next line are stored as `msg [REDACTED]`.
+- **A quote that does not close on its line.** There are six kinds of quote: `"`, `'` and a
+  backtick, each plain or escaped (`\"`). A `"` or a backtick opens a quote of its kind anywhere,
+  a `'` only at the start of a word (so `don't` and `İstanbul'a` open none), and a quote closes at
+  the next one of its kind on the same line. Each kind is read on its own, so a quote of one kind
+  opens inside a quote of another (the `"` in `'x "y'`, the `\"` in `"x \"y"`, the `'` in
+  `"x 'y"`). A quote of any kind still open at a line break or at the end of the text cuts the
+  text at the earliest such quote, so a value or a quoted key written over two lines never shows:
+  `msg "abc` and `hunter2" done` on the next line are stored as `msg [REDACTED]`, and
+  `status='x "y'` and `hunter2" ok` as `status='x [REDACTED]`. An escaped quote with no partner
+  on its line cuts the text too, inside a plain quote as well: `"a \" b" done` is stored as
+  `"a [REDACTED]`.
 
 JSON in the text (`{"…`, `[{…`, `["…`, `[[…`) is parsed with a JSON parser and redacted by the
 key rule of structured input, as a body is; its strings are free text again, with this rule.
@@ -348,7 +354,8 @@ and the time that a request or a log message can use:
 
 JSON past a limit is not read: a body is omitted, and a string or other text inside a document that
 holds such JSON is hidden whole. The free-text rule reads a text once and keeps only its position,
-the cut, the first quote that does not close on its line and the last closing bracket of each kind.
+the cut, where a quote of each of the six kinds is open, the first quote that does not close on its
+line and the last closing bracket of each kind.
 The package's tests run every limit on a thread with 512 KiB of stack, and in a release build
 (`swift test -c release`) they check that a megabyte of text, nested input or a body takes less
 than a second of CPU time, and, on macOS, that a megabyte of free text takes less than 16 MB of
