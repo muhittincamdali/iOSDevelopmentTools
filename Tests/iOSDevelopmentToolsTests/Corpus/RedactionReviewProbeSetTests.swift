@@ -6,12 +6,14 @@ import Testing
 /// seventh, ninth, tenth, twelfth and thirteenth of iOSSecurityTools, the correctness repros of
 /// the twelfth and thirteenth, and the twentieth and twenty-second sets of this package's
 /// sixteenth review (`a-16n20`, `a-16n22`: a letter, mark or number with no ASCII form in place of
-/// one letter of a name, in every shape) — as `Resources/ReviewProbes.jsonl` holds them, run
+/// one letter of a name, in every shape) and the wildcard probes of its eighteenth (`a-18n25`: a
+/// decimal digit of another script and the other wildcards in place of a letter or put into a
+/// name, on every path, and two long texts) — as `Resources/ReviewProbes.jsonl` holds them, run
 /// against this package's rules. Each probe the documentation says is hidden is hidden, apart from the
 /// limitations that "What it does not find" names.
 @Suite("Redaction corpus: review probe sets")
 struct RedactionReviewProbeSetTests {
-    static let reviews = ["a-3", "a-5", "a-7", "a-9", "a-10", "a-12", "a-13", "c-12", "c-13", "a-16n20", "a-16n22"]
+    static let reviews = ["a-3", "a-5", "a-7", "a-9", "a-10", "a-12", "a-13", "c-12", "c-13", "a-16n20", "a-16n22", "a-18n25"]
 
     /// The probes that show their secret, by review and number, with the limitation each one is.
     static let documentedLimitations: [String: String] = {
@@ -36,10 +38,10 @@ struct RedactionReviewProbeSetTests {
         let counts = Dictionary(grouping: ReviewProbes.all, by: \.review).mapValues(\.count)
         #expect(counts == [
             "a-3": 453, "a-5": 452, "a-7": 560, "a-9": 353, "a-10": 475, "a-12": 613, "a-13": 579, "c-12": 66, "c-13": 245,
-            "a-16n20": 240, "a-16n22": 766,
+            "a-16n20": 240, "a-16n22": 766, "a-18n25": 275,
         ])
         #expect(Self.documentedLimitations.count == 32)
-        #expect(Self.large.count == 50)
+        #expect(Self.large.count == 51)
     }
 
     /// The probes of up to a few megabytes, each a test case of its own so that they run side by side.

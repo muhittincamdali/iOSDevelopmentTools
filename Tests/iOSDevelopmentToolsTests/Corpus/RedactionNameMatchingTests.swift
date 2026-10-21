@@ -3,8 +3,9 @@ import Testing
 @testable import iOSDevelopmentTools
 
 /// How a word of free text is compared with the secret words: by its ASCII skeleton. Every letter,
-/// mark or number that has no ASCII form once the text is read in compatibility form is left out,
-/// and what remains is compared with the names, a plural `s` included; a name also counts with one of its letters missing where characters were
+/// mark or number that has no ASCII form once the text is read in compatibility form, and every
+/// decimal digit of another script, is left out, and what remains is compared with the names, a
+/// plural `s` included; a name also counts with one of its letters missing where characters were
 /// left out. The eighteenth review of this package found the readings this replaces, which took
 /// such a character as any letter, as none, or as a mark after a letter, one reading at a time,
 /// missing a name with one character in place of a letter and another put in (`tͦkenͦ`, `pını`).
@@ -77,7 +78,7 @@ struct RedactionNameMatchingTests {
     @Test("one character in place of a letter and more put in elsewhere leave the name found, on every path", arguments: [
         "t\u{0366}ken\u{0366} hunter2", "t\u{0366}ken" + String(repeating: "\u{0366}", count: 300) + " hunter2", "tıkenı hunter2", "pını hunter2",
         "t\u{3007}ken\u{3007} hunter2", "t\u{0366}k\u{0366}en hunter2", "p\u{0366}n\u{0366} hunter2", "t\u{0366}ken\u{0366}s hunter2",
-        "ıtıken hunter2",
+        "tıken\u{1040} hunter2", "ıtıken hunter2",
     ])
     func oneInPlaceAndMorePutIn(line: String) {
         for (path, output) in RedactionCutRuleTests.everyPath(line) {
@@ -123,9 +124,11 @@ struct RedactionNameMatchingTests {
         { n, v in "\(n)\n\(v)" }, { n, v in "(\(n) | \(v))" },
     ]
 
-    /// Letters and numbers without an ASCII form, of scripts that do not mix with Latin, so that
-    /// the words are read rather than cut as words that mix scripts.
-    static let foreignLetters: [Character] = ["ꞏ", "ı", "ɑ", "ø", "ł", "ß", "ǃ", "ʔ", "ɛ", "ŧ", "ꞌ", "ð", "þ", "ħ", "\u{3007}"]
+    /// Letters, marks and digits without an ASCII form, of scripts that do not mix with Latin, so
+    /// that the words are read rather than cut as words that mix scripts.
+    static let foreignLetters: [Character] = [
+        "ꞏ", "ı", "ɑ", "ø", "ł", "ß", "ǃ", "ʔ", "ɛ", "ŧ", "ꞌ", "ð", "þ", "ħ", "\u{1040}", "\u{0966}", "\u{0661}", "\u{3007}",
+    ]
 
     @Test("no generated secret name with characters without an ASCII form put in, or one in place of a letter, shows its value")
     func generatedNames() {
@@ -206,7 +209,7 @@ struct RedactionNameMatchingTests {
 /// each name at each letter with all its letters and with each of them missing in turn, kept here
 /// to check the one-pass match against.
 private struct ReferenceSkeleton {
-    /// ASCII as it is, a letter without an ASCII form left out, anything else a separator.
+    /// ASCII as it is, a letter or digit without an ASCII form left out, anything else a separator.
     let bytes: [UInt8]
     let leftOutBefore: [Bool]
     let leftOutAtEnd: Bool
@@ -219,7 +222,7 @@ private struct ReferenceSkeleton {
         var leftOutBefore: [Bool] = []
         var isLeavingOut = false
         for scalar in word.unicodeScalars {
-            if !scalar.isASCII, scalar.properties.isAlphabetic {
+            if !scalar.isASCII, scalar.properties.isAlphabetic || scalar.properties.numericType == .decimal {
                 isLeavingOut = true
                 continue
             }

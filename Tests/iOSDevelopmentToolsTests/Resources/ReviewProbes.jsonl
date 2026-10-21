@@ -4800,3 +4800,278 @@
 {"category": "n22x-host-label-more", "claim": "C", "id": 764, "input": "myapp://reset.password/Qz764Wk5m", "kind": "url", "review": "a-16n22", "secret": "Qz764Wk5m"}
 {"category": "n22x-host-label-more", "claim": "C", "id": 765, "input": "myapp://login.token/Qz765Wk5m", "kind": "url", "review": "a-16n22", "secret": "Qz765Wk5m"}
 {"category": "n22x-host-label-more", "claim": "X", "id": 766, "input": "myapp://xn--pin/Qz766Wk5m", "kind": "url", "review": "a-16n22", "secret": "Qz766Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":1,"input":"login t၀ken Qz001Wk5m","kind":"text","review":"a-18n25","secret":"Qz001Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":2,"input":"login t०ken Qz002Wk5m","kind":"text","review":"a-18n25","secret":"Qz002Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":3,"input":"login t০ken Qz003Wk5m","kind":"text","review":"a-18n25","secret":"Qz003Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":4,"input":"login t๐ken Qz004Wk5m","kind":"text","review":"a-18n25","secret":"Qz004Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":5,"input":"login t໐ken Qz005Wk5m","kind":"text","review":"a-18n25","secret":"Qz005Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":6,"input":"login t߀ken Qz006Wk5m","kind":"text","review":"a-18n25","secret":"Qz006Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":7,"input":"login passw၀rd Qz007Wk5m","kind":"text","review":"a-18n25","secret":"Qz007Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":8,"input":"login passw०rd Qz008Wk5m","kind":"text","review":"a-18n25","secret":"Qz008Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":9,"input":"login passw০rd Qz009Wk5m","kind":"text","review":"a-18n25","secret":"Qz009Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":10,"input":"login passw๐rd Qz010Wk5m","kind":"text","review":"a-18n25","secret":"Qz010Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":11,"input":"login passw໐rd Qz011Wk5m","kind":"text","review":"a-18n25","secret":"Qz011Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":12,"input":"login passw߀rd Qz012Wk5m","kind":"text","review":"a-18n25","secret":"Qz012Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":13,"input":"login c၀okie Qz013Wk5m","kind":"text","review":"a-18n25","secret":"Qz013Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":14,"input":"login c०okie Qz014Wk5m","kind":"text","review":"a-18n25","secret":"Qz014Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":15,"input":"login c০okie Qz015Wk5m","kind":"text","review":"a-18n25","secret":"Qz015Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":16,"input":"login c๐okie Qz016Wk5m","kind":"text","review":"a-18n25","secret":"Qz016Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":17,"input":"login c໐okie Qz017Wk5m","kind":"text","review":"a-18n25","secret":"Qz017Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":18,"input":"login c߀okie Qz018Wk5m","kind":"text","review":"a-18n25","secret":"Qz018Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":19,"input":"login ၀tp Qz019Wk5m","kind":"text","review":"a-18n25","secret":"Qz019Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":20,"input":"login ०tp Qz020Wk5m","kind":"text","review":"a-18n25","secret":"Qz020Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":21,"input":"login ০tp Qz021Wk5m","kind":"text","review":"a-18n25","secret":"Qz021Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":22,"input":"login ๐tp Qz022Wk5m","kind":"text","review":"a-18n25","secret":"Qz022Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":23,"input":"login ໐tp Qz023Wk5m","kind":"text","review":"a-18n25","secret":"Qz023Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":24,"input":"login ߀tp Qz024Wk5m","kind":"text","review":"a-18n25","secret":"Qz024Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":25,"input":"login sessi၀n Qz025Wk5m","kind":"text","review":"a-18n25","secret":"Qz025Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":26,"input":"login sessi०n Qz026Wk5m","kind":"text","review":"a-18n25","secret":"Qz026Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":27,"input":"login sessi০n Qz027Wk5m","kind":"text","review":"a-18n25","secret":"Qz027Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":28,"input":"login sessi๐n Qz028Wk5m","kind":"text","review":"a-18n25","secret":"Qz028Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":29,"input":"login sessi໐n Qz029Wk5m","kind":"text","review":"a-18n25","secret":"Qz029Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":30,"input":"login sessi߀n Qz030Wk5m","kind":"text","review":"a-18n25","secret":"Qz030Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":31,"input":"login passc၀de Qz031Wk5m","kind":"text","review":"a-18n25","secret":"Qz031Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":32,"input":"login passc०de Qz032Wk5m","kind":"text","review":"a-18n25","secret":"Qz032Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":33,"input":"login passc০de Qz033Wk5m","kind":"text","review":"a-18n25","secret":"Qz033Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":34,"input":"login passc๐de Qz034Wk5m","kind":"text","review":"a-18n25","secret":"Qz034Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":35,"input":"login passc໐de Qz035Wk5m","kind":"text","review":"a-18n25","secret":"Qz035Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":36,"input":"login passc߀de Qz036Wk5m","kind":"text","review":"a-18n25","secret":"Qz036Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":37,"input":"login p၀n Qz037Wk5m","kind":"text","review":"a-18n25","secret":"Qz037Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":38,"input":"login p०n Qz038Wk5m","kind":"text","review":"a-18n25","secret":"Qz038Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":39,"input":"login p০n Qz039Wk5m","kind":"text","review":"a-18n25","secret":"Qz039Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":40,"input":"login p๐n Qz040Wk5m","kind":"text","review":"a-18n25","secret":"Qz040Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":41,"input":"login p໐n Qz041Wk5m","kind":"text","review":"a-18n25","secret":"Qz041Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":42,"input":"login p߀n Qz042Wk5m","kind":"text","review":"a-18n25","secret":"Qz042Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":43,"input":"login sec၀et Qz043Wk5m","kind":"text","review":"a-18n25","secret":"Qz043Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":44,"input":"login sec०et Qz044Wk5m","kind":"text","review":"a-18n25","secret":"Qz044Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":45,"input":"login sec০et Qz045Wk5m","kind":"text","review":"a-18n25","secret":"Qz045Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":46,"input":"login sec๐et Qz046Wk5m","kind":"text","review":"a-18n25","secret":"Qz046Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":47,"input":"login sec໐et Qz047Wk5m","kind":"text","review":"a-18n25","secret":"Qz047Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":48,"input":"login sec߀et Qz048Wk5m","kind":"text","review":"a-18n25","secret":"Qz048Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":49,"input":"login api_၀ey Qz049Wk5m","kind":"text","review":"a-18n25","secret":"Qz049Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":50,"input":"login api_०ey Qz050Wk5m","kind":"text","review":"a-18n25","secret":"Qz050Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":51,"input":"login api_০ey Qz051Wk5m","kind":"text","review":"a-18n25","secret":"Qz051Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":52,"input":"login api_๐ey Qz052Wk5m","kind":"text","review":"a-18n25","secret":"Qz052Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":53,"input":"login api_໐ey Qz053Wk5m","kind":"text","review":"a-18n25","secret":"Qz053Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":54,"input":"login api_߀ey Qz054Wk5m","kind":"text","review":"a-18n25","secret":"Qz054Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":55,"input":"login iba၀ Qz055Wk5m","kind":"text","review":"a-18n25","secret":"Qz055Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":56,"input":"login iba० Qz056Wk5m","kind":"text","review":"a-18n25","secret":"Qz056Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":57,"input":"login iba০ Qz057Wk5m","kind":"text","review":"a-18n25","secret":"Qz057Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":58,"input":"login iba๐ Qz058Wk5m","kind":"text","review":"a-18n25","secret":"Qz058Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":59,"input":"login iba໐ Qz059Wk5m","kind":"text","review":"a-18n25","secret":"Qz059Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":60,"input":"login iba߀ Qz060Wk5m","kind":"text","review":"a-18n25","secret":"Qz060Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":61,"input":"login c၀rd Qz061Wk5m","kind":"text","review":"a-18n25","secret":"Qz061Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":62,"input":"login c०rd Qz062Wk5m","kind":"text","review":"a-18n25","secret":"Qz062Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":63,"input":"login c০rd Qz063Wk5m","kind":"text","review":"a-18n25","secret":"Qz063Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":64,"input":"login c๐rd Qz064Wk5m","kind":"text","review":"a-18n25","secret":"Qz064Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":65,"input":"login c໐rd Qz065Wk5m","kind":"text","review":"a-18n25","secret":"Qz065Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":66,"input":"login c߀rd Qz066Wk5m","kind":"text","review":"a-18n25","secret":"Qz066Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":67,"input":"login cre၀ential Qz067Wk5m","kind":"text","review":"a-18n25","secret":"Qz067Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":68,"input":"login cre०ential Qz068Wk5m","kind":"text","review":"a-18n25","secret":"Qz068Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":69,"input":"login cre০ential Qz069Wk5m","kind":"text","review":"a-18n25","secret":"Qz069Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":70,"input":"login cre๐ential Qz070Wk5m","kind":"text","review":"a-18n25","secret":"Qz070Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":71,"input":"login cre໐ential Qz071Wk5m","kind":"text","review":"a-18n25","secret":"Qz071Wk5m"}
+{"category":"n25-wild-nd-in-place","claim":"C","id":72,"input":"login cre߀ential Qz072Wk5m","kind":"text","review":"a-18n25","secret":"Qz072Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":73,"input":"INFO passw၀rd Qz073Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz073Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":74,"input":"INFO passw०rd Qz074Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz074Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":75,"input":"INFO passw০rd Qz075Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz075Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":76,"input":"INFO passw๐rd Qz076Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz076Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":77,"input":"INFO passw໐rd Qz077Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz077Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":78,"input":"INFO passw߀rd Qz078Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz078Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":79,"input":"INFO passw០rd Qz079Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz079Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":80,"input":"INFO passw᠐rd Qz080Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz080Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":81,"input":"INFO passw૦rd Qz081Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz081Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":82,"input":"INFO passw௦rd Qz082Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz082Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":83,"input":"INFO passw౦rd Qz083Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz083Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":84,"input":"INFO passw೦rd Qz084Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz084Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":85,"input":"INFO passw൦rd Qz085Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz085Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":86,"input":"INFO passw༠rd Qz086Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz086Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":87,"input":"INFO passw𐒠rd Qz087Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz087Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":88,"input":"INFO passw᱐rd Qz088Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz088Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":89,"input":"INFO passw꣐rd Qz089Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz089Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":90,"input":"INFO passw𞥐rd Qz090Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz090Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":91,"input":"INFO passw٠rd Qz091Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz091Wk5m"}
+{"category":"n25-wild-nd-all-scripts","claim":"C","id":92,"input":"INFO passw۰rd Qz092Wk5m ok","kind":"text","review":"a-18n25","secret":"Qz092Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":93,"input":"login to၀ken Qz093Wk5m","kind":"text","review":"a-18n25","secret":"Qz093Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":94,"input":"login to०ken Qz094Wk5m","kind":"text","review":"a-18n25","secret":"Qz094Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":95,"input":"login pa၀ssword Qz095Wk5m","kind":"text","review":"a-18n25","secret":"Qz095Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":96,"input":"login pa०ssword Qz096Wk5m","kind":"text","review":"a-18n25","secret":"Qz096Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":97,"input":"login co၀okie Qz097Wk5m","kind":"text","review":"a-18n25","secret":"Qz097Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":98,"input":"login co०okie Qz098Wk5m","kind":"text","review":"a-18n25","secret":"Qz098Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":99,"input":"login ot၀p Qz099Wk5m","kind":"text","review":"a-18n25","secret":"Qz099Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":100,"input":"login ot०p Qz100Wk5m","kind":"text","review":"a-18n25","secret":"Qz100Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":101,"input":"login se၀ssion Qz101Wk5m","kind":"text","review":"a-18n25","secret":"Qz101Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":102,"input":"login se०ssion Qz102Wk5m","kind":"text","review":"a-18n25","secret":"Qz102Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":103,"input":"login pa၀sscode Qz103Wk5m","kind":"text","review":"a-18n25","secret":"Qz103Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":104,"input":"login pa०sscode Qz104Wk5m","kind":"text","review":"a-18n25","secret":"Qz104Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":105,"input":"login pi၀n Qz105Wk5m","kind":"text","review":"a-18n25","secret":"Qz105Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":106,"input":"login pi०n Qz106Wk5m","kind":"text","review":"a-18n25","secret":"Qz106Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":107,"input":"login se၀cret Qz107Wk5m","kind":"text","review":"a-18n25","secret":"Qz107Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":108,"input":"login se०cret Qz108Wk5m","kind":"text","review":"a-18n25","secret":"Qz108Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":109,"input":"login ap၀i_key Qz109Wk5m","kind":"text","review":"a-18n25","secret":"Qz109Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":110,"input":"login ap०i_key Qz110Wk5m","kind":"text","review":"a-18n25","secret":"Qz110Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":111,"input":"login ib၀an Qz111Wk5m","kind":"text","review":"a-18n25","secret":"Qz111Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":112,"input":"login ib०an Qz112Wk5m","kind":"text","review":"a-18n25","secret":"Qz112Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":113,"input":"login ca၀rd Qz113Wk5m","kind":"text","review":"a-18n25","secret":"Qz113Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":114,"input":"login ca०rd Qz114Wk5m","kind":"text","review":"a-18n25","secret":"Qz114Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":115,"input":"login cr၀edential Qz115Wk5m","kind":"text","review":"a-18n25","secret":"Qz115Wk5m"}
+{"category":"n25-wild-nd-put-in","claim":"C","id":116,"input":"login cr०edential Qz116Wk5m","kind":"text","review":"a-18n25","secret":"Qz116Wk5m"}
+{"category":"n25-wild-nd-paths","claim":"C","id":117,"input":"{\"msg\":\"login t၀ken Qz117Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz117Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":118,"input":"note=login+t%E1%81%80ken+Qz118Wk5m","kind":"body","review":"a-18n25","secret":"Qz118Wk5m","type":"application/x-www-form-urlencoded"}
+{"category":"n25-wild-nd-paths","claim":"C","id":119,"input":"--B0und\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nlogin t၀ken Qz119Wk5m\r\n--B0und--","kind":"body","review":"a-18n25","secret":"Qz119Wk5m","type":"multipart/form-data; boundary=B0und"}
+{"category":"n25-wild-nd-paths","claim":"C","id":120,"input":"login t၀ken Qz120Wk5m","kind":"body","review":"a-18n25","secret":"Qz120Wk5m","type":"text/plain"}
+{"category":"n25-wild-nd-paths","claim":"C","id":121,"input":"https://x.example/a?q=t%E1%81%80ken+Qz121Wk5m","keys":["q"],"kind":"url","review":"a-18n25","secret":"Qz121Wk5m"}
+{"category":"n25-wild-nd-paths","claim":"C","id":122,"input":"{\"title\":\"t၀ken\",\"value\":\"Qz122Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz122Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":123,"input":"{\"ParameterKey\":\"t၀ken\",\"ParameterValue\":\"Qz123Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz123Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":124,"input":"[\"a\",\"t၀ken\",\"Qz124Wk5m\"]","kind":"body","review":"a-18n25","secret":"Qz124Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":125,"input":"title=t%E1%81%80ken&value=Qz125Wk5m","kind":"body","review":"a-18n25","secret":"Qz125Wk5m","type":"application/x-www-form-urlencoded"}
+{"category":"n25-wild-nd-paths","claim":"C","id":126,"input":"--B0und\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\nt၀ken\r\n--B0und\r\nContent-Disposition: form-data; name=\"value\"\r\n\r\nQz126Wk5m\r\n--B0und--","kind":"body","review":"a-18n25","secret":"Qz126Wk5m","type":"multipart/form-data; boundary=B0und"}
+{"category":"n25-wild-nd-paths","claim":"C","id":127,"input":"status=200 \"t၀ken\" Qz127Wk5m","kind":"text","review":"a-18n25","secret":"Qz127Wk5m"}
+{"category":"n25-wild-nd-paths","claim":"C","id":128,"input":"status=200 [t၀ken] Qz128Wk5m","kind":"text","review":"a-18n25","secret":"Qz128Wk5m"}
+{"category":"n25-wild-nd-paths","claim":"C","id":129,"input":"{\"msg\":\"login passw०rd Qz129Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz129Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":130,"input":"note=login+passw%E0%A5%A6rd+Qz130Wk5m","kind":"body","review":"a-18n25","secret":"Qz130Wk5m","type":"application/x-www-form-urlencoded"}
+{"category":"n25-wild-nd-paths","claim":"C","id":131,"input":"--B0und\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nlogin passw०rd Qz131Wk5m\r\n--B0und--","kind":"body","review":"a-18n25","secret":"Qz131Wk5m","type":"multipart/form-data; boundary=B0und"}
+{"category":"n25-wild-nd-paths","claim":"C","id":132,"input":"login passw०rd Qz132Wk5m","kind":"body","review":"a-18n25","secret":"Qz132Wk5m","type":"text/plain"}
+{"category":"n25-wild-nd-paths","claim":"C","id":133,"input":"https://x.example/a?q=passw%E0%A5%A6rd+Qz133Wk5m","keys":["q"],"kind":"url","review":"a-18n25","secret":"Qz133Wk5m"}
+{"category":"n25-wild-nd-paths","claim":"C","id":134,"input":"{\"title\":\"passw०rd\",\"value\":\"Qz134Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz134Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":135,"input":"{\"ParameterKey\":\"passw०rd\",\"ParameterValue\":\"Qz135Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz135Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":136,"input":"[\"a\",\"passw०rd\",\"Qz136Wk5m\"]","kind":"body","review":"a-18n25","secret":"Qz136Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":137,"input":"title=passw%E0%A5%A6rd&value=Qz137Wk5m","kind":"body","review":"a-18n25","secret":"Qz137Wk5m","type":"application/x-www-form-urlencoded"}
+{"category":"n25-wild-nd-paths","claim":"C","id":138,"input":"--B0und\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\npassw०rd\r\n--B0und\r\nContent-Disposition: form-data; name=\"value\"\r\n\r\nQz138Wk5m\r\n--B0und--","kind":"body","review":"a-18n25","secret":"Qz138Wk5m","type":"multipart/form-data; boundary=B0und"}
+{"category":"n25-wild-nd-paths","claim":"C","id":139,"input":"status=200 \"passw०rd\" Qz139Wk5m","kind":"text","review":"a-18n25","secret":"Qz139Wk5m"}
+{"category":"n25-wild-nd-paths","claim":"C","id":140,"input":"status=200 [passw०rd] Qz140Wk5m","kind":"text","review":"a-18n25","secret":"Qz140Wk5m"}
+{"category":"n25-wild-nd-paths","claim":"C","id":141,"input":"{\"msg\":\"login c๐okie Qz141Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz141Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":142,"input":"note=login+c%E0%B9%90okie+Qz142Wk5m","kind":"body","review":"a-18n25","secret":"Qz142Wk5m","type":"application/x-www-form-urlencoded"}
+{"category":"n25-wild-nd-paths","claim":"C","id":143,"input":"--B0und\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nlogin c๐okie Qz143Wk5m\r\n--B0und--","kind":"body","review":"a-18n25","secret":"Qz143Wk5m","type":"multipart/form-data; boundary=B0und"}
+{"category":"n25-wild-nd-paths","claim":"C","id":144,"input":"login c๐okie Qz144Wk5m","kind":"body","review":"a-18n25","secret":"Qz144Wk5m","type":"text/plain"}
+{"category":"n25-wild-nd-paths","claim":"C","id":145,"input":"https://x.example/a?q=c%E0%B9%90okie+Qz145Wk5m","keys":["q"],"kind":"url","review":"a-18n25","secret":"Qz145Wk5m"}
+{"category":"n25-wild-nd-paths","claim":"C","id":146,"input":"{\"title\":\"c๐okie\",\"value\":\"Qz146Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz146Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":147,"input":"{\"ParameterKey\":\"c๐okie\",\"ParameterValue\":\"Qz147Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz147Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":148,"input":"[\"a\",\"c๐okie\",\"Qz148Wk5m\"]","kind":"body","review":"a-18n25","secret":"Qz148Wk5m","type":"application/json"}
+{"category":"n25-wild-nd-paths","claim":"C","id":149,"input":"title=c%E0%B9%90okie&value=Qz149Wk5m","kind":"body","review":"a-18n25","secret":"Qz149Wk5m","type":"application/x-www-form-urlencoded"}
+{"category":"n25-wild-nd-paths","claim":"C","id":150,"input":"--B0und\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\nc๐okie\r\n--B0und\r\nContent-Disposition: form-data; name=\"value\"\r\n\r\nQz150Wk5m\r\n--B0und--","kind":"body","review":"a-18n25","secret":"Qz150Wk5m","type":"multipart/form-data; boundary=B0und"}
+{"category":"n25-wild-nd-paths","claim":"C","id":151,"input":"status=200 \"c๐okie\" Qz151Wk5m","kind":"text","review":"a-18n25","secret":"Qz151Wk5m"}
+{"category":"n25-wild-nd-paths","claim":"C","id":152,"input":"status=200 [c๐okie] Qz152Wk5m","kind":"text","review":"a-18n25","secret":"Qz152Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":153,"input":"login tɑken Qz153Wk5m","kind":"text","review":"a-18n25","secret":"Qz153Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":154,"input":"login tǀken Qz154Wk5m","kind":"text","review":"a-18n25","secret":"Qz154Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":155,"input":"login t口ken Qz155Wk5m","kind":"text","review":"a-18n25","secret":"Qz155Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":156,"input":"login tㅇken Qz156Wk5m","kind":"text","review":"a-18n25","secret":"Qz156Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":157,"input":"login tͦken Qz157Wk5m","kind":"text","review":"a-18n25","secret":"Qz157Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":158,"input":"login tःken Qz158Wk5m","kind":"text","review":"a-18n25","secret":"Qz158Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":159,"input":"login t⃝ken Qz159Wk5m","kind":"text","review":"a-18n25","secret":"Qz159Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":160,"input":"login t〇ken Qz160Wk5m","kind":"text","review":"a-18n25","secret":"Qz160Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":161,"input":"login t𐄇ken Qz161Wk5m","kind":"text","review":"a-18n25","secret":"Qz161Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":162,"input":"login t௰ken Qz162Wk5m","kind":"text","review":"a-18n25","secret":"Qz162Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":163,"input":"login passwɑrd Qz163Wk5m","kind":"text","review":"a-18n25","secret":"Qz163Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":164,"input":"login passwǀrd Qz164Wk5m","kind":"text","review":"a-18n25","secret":"Qz164Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":165,"input":"login passw口rd Qz165Wk5m","kind":"text","review":"a-18n25","secret":"Qz165Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":166,"input":"login passwㅇrd Qz166Wk5m","kind":"text","review":"a-18n25","secret":"Qz166Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":167,"input":"login passwͦrd Qz167Wk5m","kind":"text","review":"a-18n25","secret":"Qz167Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":168,"input":"login passwःrd Qz168Wk5m","kind":"text","review":"a-18n25","secret":"Qz168Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":169,"input":"login passw⃝rd Qz169Wk5m","kind":"text","review":"a-18n25","secret":"Qz169Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":170,"input":"login passw〇rd Qz170Wk5m","kind":"text","review":"a-18n25","secret":"Qz170Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":171,"input":"login passw𐄇rd Qz171Wk5m","kind":"text","review":"a-18n25","secret":"Qz171Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":172,"input":"login passw௰rd Qz172Wk5m","kind":"text","review":"a-18n25","secret":"Qz172Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":173,"input":"login pɑn Qz173Wk5m","kind":"text","review":"a-18n25","secret":"Qz173Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":174,"input":"login pǀn Qz174Wk5m","kind":"text","review":"a-18n25","secret":"Qz174Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":175,"input":"login p口n Qz175Wk5m","kind":"text","review":"a-18n25","secret":"Qz175Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":176,"input":"login pㅇn Qz176Wk5m","kind":"text","review":"a-18n25","secret":"Qz176Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":177,"input":"login pͦn Qz177Wk5m","kind":"text","review":"a-18n25","secret":"Qz177Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":178,"input":"login pःn Qz178Wk5m","kind":"text","review":"a-18n25","secret":"Qz178Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":179,"input":"login p⃝n Qz179Wk5m","kind":"text","review":"a-18n25","secret":"Qz179Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":180,"input":"login p〇n Qz180Wk5m","kind":"text","review":"a-18n25","secret":"Qz180Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":181,"input":"login p𐄇n Qz181Wk5m","kind":"text","review":"a-18n25","secret":"Qz181Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":182,"input":"login p௰n Qz182Wk5m","kind":"text","review":"a-18n25","secret":"Qz182Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":183,"input":"login secɑet Qz183Wk5m","kind":"text","review":"a-18n25","secret":"Qz183Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":184,"input":"login secǀet Qz184Wk5m","kind":"text","review":"a-18n25","secret":"Qz184Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":185,"input":"login sec口et Qz185Wk5m","kind":"text","review":"a-18n25","secret":"Qz185Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":186,"input":"login secㅇet Qz186Wk5m","kind":"text","review":"a-18n25","secret":"Qz186Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":187,"input":"login secͦet Qz187Wk5m","kind":"text","review":"a-18n25","secret":"Qz187Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":188,"input":"login secःet Qz188Wk5m","kind":"text","review":"a-18n25","secret":"Qz188Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":189,"input":"login sec⃝et Qz189Wk5m","kind":"text","review":"a-18n25","secret":"Qz189Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":190,"input":"login sec〇et Qz190Wk5m","kind":"text","review":"a-18n25","secret":"Qz190Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":191,"input":"login sec𐄇et Qz191Wk5m","kind":"text","review":"a-18n25","secret":"Qz191Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":192,"input":"login sec௰et Qz192Wk5m","kind":"text","review":"a-18n25","secret":"Qz192Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":193,"input":"login coɑkie Qz193Wk5m","kind":"text","review":"a-18n25","secret":"Qz193Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":194,"input":"login coǀkie Qz194Wk5m","kind":"text","review":"a-18n25","secret":"Qz194Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":195,"input":"login co口kie Qz195Wk5m","kind":"text","review":"a-18n25","secret":"Qz195Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":196,"input":"login coㅇkie Qz196Wk5m","kind":"text","review":"a-18n25","secret":"Qz196Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":197,"input":"login coͦkie Qz197Wk5m","kind":"text","review":"a-18n25","secret":"Qz197Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":198,"input":"login coःkie Qz198Wk5m","kind":"text","review":"a-18n25","secret":"Qz198Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":199,"input":"login co⃝kie Qz199Wk5m","kind":"text","review":"a-18n25","secret":"Qz199Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":200,"input":"login co〇kie Qz200Wk5m","kind":"text","review":"a-18n25","secret":"Qz200Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":201,"input":"login co𐄇kie Qz201Wk5m","kind":"text","review":"a-18n25","secret":"Qz201Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":202,"input":"login co௰kie Qz202Wk5m","kind":"text","review":"a-18n25","secret":"Qz202Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":203,"input":"login ɑtp Qz203Wk5m","kind":"text","review":"a-18n25","secret":"Qz203Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":204,"input":"login ǀtp Qz204Wk5m","kind":"text","review":"a-18n25","secret":"Qz204Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":205,"input":"login 口tp Qz205Wk5m","kind":"text","review":"a-18n25","secret":"Qz205Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":206,"input":"login ㅇtp Qz206Wk5m","kind":"text","review":"a-18n25","secret":"Qz206Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":207,"input":"login ͦtp Qz207Wk5m","kind":"text","review":"a-18n25","secret":"Qz207Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":208,"input":"login ःtp Qz208Wk5m","kind":"text","review":"a-18n25","secret":"Qz208Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":209,"input":"login ⃝tp Qz209Wk5m","kind":"text","review":"a-18n25","secret":"Qz209Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":210,"input":"login 〇tp Qz210Wk5m","kind":"text","review":"a-18n25","secret":"Qz210Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":211,"input":"login 𐄇tp Qz211Wk5m","kind":"text","review":"a-18n25","secret":"Qz211Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":212,"input":"login ௰tp Qz212Wk5m","kind":"text","review":"a-18n25","secret":"Qz212Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":213,"input":"login sessiɑn Qz213Wk5m","kind":"text","review":"a-18n25","secret":"Qz213Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":214,"input":"login sessiǀn Qz214Wk5m","kind":"text","review":"a-18n25","secret":"Qz214Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":215,"input":"login sessi口n Qz215Wk5m","kind":"text","review":"a-18n25","secret":"Qz215Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":216,"input":"login sessiㅇn Qz216Wk5m","kind":"text","review":"a-18n25","secret":"Qz216Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":217,"input":"login sessiͦn Qz217Wk5m","kind":"text","review":"a-18n25","secret":"Qz217Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":218,"input":"login sessiःn Qz218Wk5m","kind":"text","review":"a-18n25","secret":"Qz218Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":219,"input":"login sessi⃝n Qz219Wk5m","kind":"text","review":"a-18n25","secret":"Qz219Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":220,"input":"login sessi〇n Qz220Wk5m","kind":"text","review":"a-18n25","secret":"Qz220Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":221,"input":"login sessi𐄇n Qz221Wk5m","kind":"text","review":"a-18n25","secret":"Qz221Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":222,"input":"login sessi௰n Qz222Wk5m","kind":"text","review":"a-18n25","secret":"Qz222Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":223,"input":"login api_kɑy Qz223Wk5m","kind":"text","review":"a-18n25","secret":"Qz223Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":224,"input":"login api_kǀy Qz224Wk5m","kind":"text","review":"a-18n25","secret":"Qz224Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":225,"input":"login api_k口y Qz225Wk5m","kind":"text","review":"a-18n25","secret":"Qz225Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":226,"input":"login api_kㅇy Qz226Wk5m","kind":"text","review":"a-18n25","secret":"Qz226Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":227,"input":"login api_kͦy Qz227Wk5m","kind":"text","review":"a-18n25","secret":"Qz227Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":228,"input":"login api_kःy Qz228Wk5m","kind":"text","review":"a-18n25","secret":"Qz228Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":229,"input":"login api_k⃝y Qz229Wk5m","kind":"text","review":"a-18n25","secret":"Qz229Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":230,"input":"login api_k〇y Qz230Wk5m","kind":"text","review":"a-18n25","secret":"Qz230Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":231,"input":"login api_k𐄇y Qz231Wk5m","kind":"text","review":"a-18n25","secret":"Qz231Wk5m"}
+{"category":"n25-wild-other-in-place","claim":"C","id":232,"input":"login api_k௰y Qz232Wk5m","kind":"text","review":"a-18n25","secret":"Qz232Wk5m"}
+{"category":"n25-wild-other-paths","claim":"C","id":233,"input":"{\"msg\":\"login tͦken Qz233Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz233Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":234,"input":"note=login+t%CD%A6ken+Qz234Wk5m","kind":"body","review":"a-18n25","secret":"Qz234Wk5m","type":"application/x-www-form-urlencoded"}
+{"category":"n25-wild-other-paths","claim":"C","id":235,"input":"--B0und\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nlogin tͦken Qz235Wk5m\r\n--B0und--","kind":"body","review":"a-18n25","secret":"Qz235Wk5m","type":"multipart/form-data; boundary=B0und"}
+{"category":"n25-wild-other-paths","claim":"C","id":236,"input":"https://x.example/a?q=t%CD%A6ken+Qz236Wk5m","keys":["q"],"kind":"url","review":"a-18n25","secret":"Qz236Wk5m"}
+{"category":"n25-wild-other-paths","claim":"C","id":237,"input":"{\"title\":\"tͦken\",\"value\":\"Qz237Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz237Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":238,"input":"[\"a\",\"tͦken\",\"Qz238Wk5m\"]","kind":"body","review":"a-18n25","secret":"Qz238Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":239,"input":"https://x.example/v1/t%CD%A6ken/Qz239Wk5m","kind":"url","review":"a-18n25","secret":"Qz239Wk5m"}
+{"category":"n25-wild-other-paths","claim":"C","id":240,"input":"{\"msg\":\"login passw〇rd Qz240Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz240Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":241,"input":"note=login+passw%E3%80%87rd+Qz241Wk5m","kind":"body","review":"a-18n25","secret":"Qz241Wk5m","type":"application/x-www-form-urlencoded"}
+{"category":"n25-wild-other-paths","claim":"C","id":242,"input":"--B0und\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nlogin passw〇rd Qz242Wk5m\r\n--B0und--","kind":"body","review":"a-18n25","secret":"Qz242Wk5m","type":"multipart/form-data; boundary=B0und"}
+{"category":"n25-wild-other-paths","claim":"C","id":243,"input":"https://x.example/a?q=passw%E3%80%87rd+Qz243Wk5m","keys":["q"],"kind":"url","review":"a-18n25","secret":"Qz243Wk5m"}
+{"category":"n25-wild-other-paths","claim":"C","id":244,"input":"{\"title\":\"passw〇rd\",\"value\":\"Qz244Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz244Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":245,"input":"[\"a\",\"passw〇rd\",\"Qz245Wk5m\"]","kind":"body","review":"a-18n25","secret":"Qz245Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":246,"input":"https://x.example/v1/passw%E3%80%87rd/Qz246Wk5m","kind":"url","review":"a-18n25","secret":"Qz246Wk5m"}
+{"category":"n25-wild-other-paths","claim":"C","id":247,"input":"{\"msg\":\"login p𐄇n Qz247Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz247Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":248,"input":"note=login+p%F0%90%84%87n+Qz248Wk5m","kind":"body","review":"a-18n25","secret":"Qz248Wk5m","type":"application/x-www-form-urlencoded"}
+{"category":"n25-wild-other-paths","claim":"C","id":249,"input":"--B0und\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nlogin p𐄇n Qz249Wk5m\r\n--B0und--","kind":"body","review":"a-18n25","secret":"Qz249Wk5m","type":"multipart/form-data; boundary=B0und"}
+{"category":"n25-wild-other-paths","claim":"C","id":250,"input":"https://x.example/a?q=p%F0%90%84%87n+Qz250Wk5m","keys":["q"],"kind":"url","review":"a-18n25","secret":"Qz250Wk5m"}
+{"category":"n25-wild-other-paths","claim":"C","id":251,"input":"{\"title\":\"p𐄇n\",\"value\":\"Qz251Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz251Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":252,"input":"[\"a\",\"p𐄇n\",\"Qz252Wk5m\"]","kind":"body","review":"a-18n25","secret":"Qz252Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":253,"input":"https://x.example/v1/p%F0%90%84%87n/Qz253Wk5m","kind":"url","review":"a-18n25","secret":"Qz253Wk5m"}
+{"category":"n25-wild-other-paths","claim":"C","id":254,"input":"{\"msg\":\"login sःcret Qz254Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz254Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":255,"input":"note=login+s%E0%A4%83cret+Qz255Wk5m","kind":"body","review":"a-18n25","secret":"Qz255Wk5m","type":"application/x-www-form-urlencoded"}
+{"category":"n25-wild-other-paths","claim":"C","id":256,"input":"--B0und\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nlogin sःcret Qz256Wk5m\r\n--B0und--","kind":"body","review":"a-18n25","secret":"Qz256Wk5m","type":"multipart/form-data; boundary=B0und"}
+{"category":"n25-wild-other-paths","claim":"C","id":257,"input":"https://x.example/a?q=s%E0%A4%83cret+Qz257Wk5m","keys":["q"],"kind":"url","review":"a-18n25","secret":"Qz257Wk5m"}
+{"category":"n25-wild-other-paths","claim":"C","id":258,"input":"{\"title\":\"sःcret\",\"value\":\"Qz258Wk5m\"}","kind":"body","review":"a-18n25","secret":"Qz258Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":259,"input":"[\"a\",\"sःcret\",\"Qz259Wk5m\"]","kind":"body","review":"a-18n25","secret":"Qz259Wk5m","type":"application/json"}
+{"category":"n25-wild-other-paths","claim":"C","id":260,"input":"https://x.example/v1/s%E0%A4%83cret/Qz260Wk5m","kind":"url","review":"a-18n25","secret":"Qz260Wk5m"}
+{"category":"n25-wild-ascii-form","claim":"D","id":261,"input":"login passw0rd Qz261Wk5m","kind":"text","review":"a-18n25","secret":"Qz261Wk5m"}
+{"category":"n25-wild-ascii-form","claim":"D","id":262,"input":"login passw０rd Qz262Wk5m","kind":"text","review":"a-18n25","secret":"Qz262Wk5m"}
+{"category":"n25-wild-ascii-form","claim":"D","id":263,"input":"login passw⁰rd Qz263Wk5m","kind":"text","review":"a-18n25","secret":"Qz263Wk5m"}
+{"category":"n25-wild-ascii-form","claim":"D","id":264,"input":"login passw₀rd Qz264Wk5m","kind":"text","review":"a-18n25","secret":"Qz264Wk5m"}
+{"category":"n25-wild-ascii-form","claim":"D","id":265,"input":"login passw𝟎rd Qz265Wk5m","kind":"text","review":"a-18n25","secret":"Qz265Wk5m"}
+{"category":"n25-wild-ascii-form","claim":"D","id":266,"input":"login passw🯰rd Qz266Wk5m","kind":"text","review":"a-18n25","secret":"Qz266Wk5m"}
+{"category":"n25-wild-ascii-form","claim":"D","id":267,"input":"login passw⓪rd Qz267Wk5m","kind":"text","review":"a-18n25","secret":"Qz267Wk5m"}
+{"category":"n25-wild-ascii-form","claim":"D","id":268,"input":"login pɑsswoʀd Qz268Wk5m","kind":"text","review":"a-18n25","secret":"Qz268Wk5m"}
+{"category":"n25-wild-ascii-form","claim":"D","id":269,"input":"login tɵkɛn Qz269Wk5m","kind":"text","review":"a-18n25","secret":"Qz269Wk5m"}
+{"category":"n25-wild-control","claim":"K","id":270,"input":"café au lait Qz270Wk5m","kind":"text","review":"a-18n25","secret":"Qz270Wk5m"}
+{"category":"n25-wild-control","claim":"K","id":271,"input":"naïve résumé Qz271Wk5m","kind":"text","review":"a-18n25","secret":"Qz271Wk5m"}
+{"category":"n25-wild-control","claim":"K","id":272,"input":"bjørn Qz272Wk5m","kind":"text","review":"a-18n25","secret":"Qz272Wk5m"}
+{"category":"n25-wild-control","claim":"K","id":273,"input":"pinto beans Qz273Wk5m","kind":"text","review":"a-18n25","secret":"Qz273Wk5m"}
+{"category":"n25-big","claim":"C","id":897,"kind":"text","repeat":{"count":100000,"prefix":"","suffix":"t၀ken Qz897Wk5m","unit":"ok "},"review":"a-18n25","secret":"Qz897Wk5m"}
+{"category":"n25-big","claim":"C","id":901,"input":"tͦkenͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦͦ Qz901Wk5m","kind":"text","review":"a-18n25","secret":"Qz901Wk5m"}

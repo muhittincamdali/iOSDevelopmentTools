@@ -18,8 +18,9 @@ struct RedactionGuideTests {
         #expect(policy.redact(text: "x=hunter2") == "x=[REDACTED]")
         #expect(policy.redact(text: "curl -u bob:hunter2 https://x.example") == "curl -u bob:[REDACTED]")
         #expect(policy.redact(text: "password hunter2") == "password [REDACTED]")
-        // A word is read with one letter without an ASCII form as any letter and as its ASCII
-        // skeleton, without such letters; both readings hide more than the secret on purpose.
+        // A word is read as its ASCII skeleton, without the letters that have no ASCII form, and a
+        // name counts with one letter missing where one was left out; this hides more than the
+        // secret on purpose.
         #expect(policy.redact(text: "tokens\u{0131} hunter2") == "tokens[REDACTED]")
         // A mark after an ASCII letter and a number without an ASCII form are read so too.
         #expect(policy.redact(text: "t\u{0366}ken hunter2") == "t\u{0366}ken [REDACTED]")
@@ -27,6 +28,11 @@ struct RedactionGuideTests {
         #expect(policy.redact(text: "pi\u{A78F}n 1234") == "pi\u{A78F}n [REDACTED]")
         #expect(policy.redact(text: "token\u{A78F}\u{A78F} hunter2") == "token[REDACTED]")
         #expect(policy.redact(text: "p\u{0131}n 1234") == "p\u{0131}n [REDACTED]")
+        // Each such character counts on its own, and a decimal digit of another script is one too.
+        #expect(policy.redact(text: "t\u{1040}ken hunter2") == "t\u{1040}ken [REDACTED]")
+        #expect(policy.redact(text: "to\u{1040}ken hunter2") == "to\u{1040}ken [REDACTED]")
+        #expect(policy.redact(text: "t\u{0366}ken\u{0366} hunter2") == "t\u{0366}ken\u{0366} [REDACTED]")
+        #expect(policy.redact(text: "p\u{0131}n\u{0131} hunter2") == "p\u{0131}n[REDACTED]")
         #expect(policy.redact(text: "login password=hunter2 status=200\nnext line") == "login password=[REDACTED]")
         #expect(policy.redact(text: "p\u{0430}ssword=hunter2") == "[REDACTED]")
         #expect(policy.redact(text: #"saved {"status":200,"name":"ada","card":"x"}"#) == #"saved {"status":200,"name":[REDACTED]"#)
@@ -87,6 +93,9 @@ struct RedactionGuideTests {
         #expect(policy.redact(text: "p\u{0251}sswo\u{0280}d=hunter2") == "p\u{0251}sswo\u{0280}d=[REDACTED]")
         // Such letters put in beside the name's own are left out of its skeleton.
         #expect(policy.redact(text: "p\u{0131}a\u{0131}ssword hunter2") == "p\u{0131}a\u{0131}ssword [REDACTED]")
+        // A digit that decomposes to an ASCII digit is that digit: `passw０rd` names nothing.
+        #expect(policy.redact(text: "passw\u{FF10}rd hunter2") == "passw\u{FF10}rd hunter2")
+        #expect(policy.redact(text: "passw\u{2070}rd hunter2") == "passw\u{2070}rd hunter2")
         // A secret word in another language is not one of the names.
         #expect(policy.redact(text: "пароль hunter2") == "пароль hunter2")
         // In a body, a plain name that is not a secret name keeps its value; in free text the key
