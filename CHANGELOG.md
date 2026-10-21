@@ -123,6 +123,13 @@ out of logs in the first place.
   with a line break in it: `msg "abc` with `hunter2" done` on the next line is stored as
   `msg [REDACTED]`, in a log line, a `text/plain` body and a JSON string alike. Before, a quote
   closed at the next one anywhere in the text, so the lines in between were kept.
+- Each of the six kinds of quote (`"`, `'` and a backtick, plain or escaped) is read on its own,
+  so a quote of one kind inside a quote of another that does not close on its line cuts the
+  text: `status='x "y'` with `hunter2" ok` on the next line is stored as `status='x [REDACTED]`,
+  and the same holds for a backtick quote, `"x \"y"`, `"x 'y"` and `'"note'` before `Qx31": 1`.
+  Before, one quote was kept open at a time and the quotes inside it opened nothing, so the
+  value on the next line showed. An escaped quote with no partner on its line now cuts the text
+  inside a plain quote as well (`"a \" b" done` is stored as `"a [REDACTED]`).
 - A quoted key that is not on `allowedTextKeys` cuts the text at its opening quote, whichever
   quote it is written in: `"x":"hunter2"`, `"x"="hunter2"`, `'x': 'hunter2'` and `"hunter2":"v"`
   are stored as `[REDACTED]`. Before, the cut came after the separator, so the key showed.
