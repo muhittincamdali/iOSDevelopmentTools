@@ -4,7 +4,8 @@ import Testing
 
 /// Dot segments in a recorded URL: a path that servers resolve differently from how it is written
 /// (RFC 3986 §5.2.4) is recorded as its scheme and host only, so the segment after a secret name
-/// cannot hide behind `.`, `..`, `%2E`, an empty `;` segment or a double escape.
+/// cannot hide behind `.`, `..`, `%2E`, a `;` (raw or `%3B`) or a double escape. No parameter after
+/// a `;` is parsed.
 @Suite("Redaction corpus: dot segments in URLs")
 struct RedactionDotSegmentTests {
     let redactor = Redactor()
@@ -19,7 +20,17 @@ struct RedactionDotSegmentTests {
         "/a/b/..", "/a/.",
     ]
 
-    @Test("a path with a dot segment, an empty `;` segment or a double escape is recorded as scheme and host only", arguments: paths)
+    /// Paths with a `;` anywhere, raw or as `%3B` in either case. The review of the 14th round
+    /// found matrix parameters still parsed (`/a;jsessionid=X/x` was stored as
+    /// `/a;jsessionid=[REDACTED]/x`, `/pin;x/4831` as `/pin;[REDACTED]/:id`) and `%3B` not
+    /// checked at all (`/a%3Bb/c` was stored as it is).
+    static let semicolonPaths = [
+        "/a;jsessionid=X/x", "/users;id=7", "/pin;x/4831", "/a%3Bb/c", "/a%3bb/c", "/token;v=1/X", "/cart;jsessionid=abc/view",
+        "/shop;jsessionid=ABC123/cart", "/x;x=1", "/;x=1", "/a;", "/a;/b", "/token%3B/hunter2Zq", "/pin%3bv=1/4831",
+        "/v1/users/12345678;v=2/orders", "/a/b;c=d;e=f/g",
+    ]
+
+    @Test("a path with a dot segment, a `;` or a double escape is recorded as scheme and host only", arguments: paths + semicolonPaths)
     func hostOnly(path: String) throws {
         let url = try #require(URL(string: "https://h.example:8443\(path)?page=2#f"))
         #expect(redactor.redact(url: url) == "https://h.example:8443")
@@ -41,8 +52,8 @@ struct RedactionDotSegmentTests {
 
     @Test("paths without dot segments are read as before", arguments: [
         ("/v1/pin/4831", "/v1/pin/:id"), ("/v1/items.json", "/v1/items.json"), ("/a//b", "/a//b"), ("/.../x", "/.../x"),
-        ("/a.b/c..d", "/a.b/c..d"), ("/cart;jsessionid=abc/view", "/cart;jsessionid=[REDACTED]/view"), ("/token//4831", "/token//:id"),
-        ("/v1/users/12345678/orders", "/v1/users/:id/orders"), ("/50%25off", "/50%25off"),
+        ("/a.b/c..d", "/a.b/c..d"), ("/token//4831", "/token//:id"), ("/v1/users/12345678/orders", "/v1/users/:id/orders"),
+        ("/50%25off", "/50%25off"), ("/a%2Cb", "/a%2Cb"),
     ])
     func otherPaths(path: String, expected: String) throws {
         let url = try #require(URL(string: "https://h.example\(path)"))

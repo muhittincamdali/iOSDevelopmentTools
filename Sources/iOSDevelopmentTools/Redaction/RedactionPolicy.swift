@@ -60,8 +60,8 @@ public struct RedactionPolicy: Sendable, Hashable {
     /// only: 64.
     public static let maximumPathSegments = 64
 
-    /// A URL whose query, or whose path, has more parameters than this is recorded with its
-    /// scheme, host and port only: 128.
+    /// A URL whose query has more parameters than this is recorded with its scheme, host and
+    /// port only: 128.
     public static let maximumQueryParameters = 128
 
     /// The names whose values are always hidden, folded: the list the redaction rules share with

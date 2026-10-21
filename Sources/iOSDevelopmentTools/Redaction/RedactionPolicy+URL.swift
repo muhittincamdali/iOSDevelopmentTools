@@ -26,14 +26,15 @@ extension RedactionPolicy {
     ///   more hex or Base64 characters, a JSON Web Token, anything the value detectors find, and
     ///   text the free-text rule would change. The segment after one that names a secret is a
     ///   value too and becomes `:id` whatever it looks like (`/pin/4831`, `/token/…/info`).
-    ///   Parameters after a `;` (`;jsessionid=…`) are read like query parameters.
     /// - **Dot segments:** a path that servers resolve differently from how it is written is not
     ///   read: only the scheme, host and port are written. That is a path with a `.` or `..`
-    ///   segment, `%2E` in any case, a segment whose part before `;` is empty (`/;/`, `/;x=1/`)
-    ///   or an escape escaped again (`%252E`). `URL.standardized` and servers resolve
-    ///   `/pin/./4831` and `/token/x/../4831` as `/pin/4831` and `/token/4831` (RFC 3986
-    ///   §5.2.4), so the segment after a secret name could not be told from what the text shows.
-    /// - A path of more than ``maximumPathSegments`` segments, or a path or query of more than
+    ///   segment, `%2E` in any case, a `;` anywhere, raw or as `%3B` in any case
+    ///   (`/cart;jsessionid=…`, `/a;pin/4831`), or an escape escaped again (`%252E`).
+    ///   `URL.standardized` and servers resolve `/pin/./4831` and `/token/x/../4831` as
+    ///   `/pin/4831` and `/token/4831` (RFC 3986 §5.2.4), and a `;` starts parameters for some
+    ///   servers but is part of the segment for others, so the segment after a secret name could
+    ///   not be told from what the text shows. Parameters after a `;` are never read.
+    /// - A path of more than ``maximumPathSegments`` segments, or a query of more than
     ///   ``maximumQueryParameters`` parameters, is not read: only the scheme, host and port are
     ///   written. So is every URL with ``URLDetail/hostOnly``.
     ///
@@ -149,20 +150,23 @@ extension RedactionPolicy {
     }
 
     /// Whether a percent-encoded path holds what servers resolve or decode apart from its text: a
-    /// segment `.` or `..`, also before `;` (`.;x`), `%2E` in any case, a segment whose part
-    /// before `;` is empty, or an escape escaped again (`%25` before two hex digits or another
-    /// `%`). Empty segments (`//`) are not: no server resolves them away.
+    /// segment `.` or `..`, `%2E` in any case, a `;` anywhere, raw or as `%3B` in any case, or an
+    /// escape escaped again (`%25` before two hex digits or another `%`). A `;` starts parameters
+    /// for a Java servlet but is part of the segment for most other servers (`/a;pin/4831` is the
+    /// segment `a` with the parameter `pin`, or the segment `a;pin`), and a server that decodes
+    /// before routing reads `%3B` as `;`, so no parameter after a `;` is parsed. Empty segments
+    /// (`//`) are not counted: no server resolves them away.
     static func hasDotSegments(_ path: String) -> Bool {
         let bytes = Array(path.utf8)
+        if bytes.contains(UInt8(ascii: ";")) { return true }
         for (i, byte) in bytes.enumerated() where byte == UInt8(ascii: "%") && i + 2 < bytes.count {
             let escape = (bytes[i + 1], bytes[i + 2] | 0x20)
-            if escape == (UInt8(ascii: "2"), UInt8(ascii: "e")) { return true }
+            if escape == (UInt8(ascii: "2"), UInt8(ascii: "e")) || escape == (UInt8(ascii: "3"), UInt8(ascii: "b")) { return true }
             guard escape == (UInt8(ascii: "2"), UInt8(ascii: "5")), i + 3 < bytes.count else { continue }
             if bytes[i + 3] == UInt8(ascii: "%") || (i + 4 < bytes.count && isHexDigit(bytes[i + 3]) && isHexDigit(bytes[i + 4])) { return true }
         }
         return bytes.split(separator: UInt8(ascii: "/"), omittingEmptySubsequences: true).contains { segment in
-            let base = segment.prefix { $0 != UInt8(ascii: ";") }
-            return base.isEmpty || base.allSatisfy { $0 == UInt8(ascii: ".") } && base.count <= 2
+            segment.count <= 2 && segment.allSatisfy { $0 == UInt8(ascii: ".") }
         }
     }
 
@@ -170,13 +174,11 @@ extension RedactionPolicy {
         ASCII.isDigit(byte) || (UInt8(ascii: "a")...UInt8(ascii: "f")).contains(byte | 0x20)
     }
 
-    /// Whether the path has more than ``maximumPathSegments`` segments, or the path or the query
-    /// more than ``maximumQueryParameters`` parameters. Each segment and parameter is read on its
-    /// own, so the count bounds the work a URL can ask for; real URLs stay far below both.
+    /// Whether the path has more than ``maximumPathSegments`` segments, or the query more than
+    /// ``maximumQueryParameters`` parameters. Each segment and parameter is read on its own, so
+    /// the count bounds the work a URL can ask for; real URLs stay far below both.
     static func exceedsLimits(_ components: URLComponents) -> Bool {
-        let path = components.percentEncodedPath.utf8
-        if path.count(where: { $0 == UInt8(ascii: "/") }) > maximumPathSegments { return true }
-        if path.count(where: { $0 == UInt8(ascii: ";") }) > maximumQueryParameters { return true }
+        if components.percentEncodedPath.utf8.count(where: { $0 == UInt8(ascii: "/") }) > maximumPathSegments { return true }
         guard let query = components.percentEncodedQuery else { return false }
         return query.utf8.count(where: { $0 == UInt8(ascii: "&") }) >= maximumQueryParameters
     }
@@ -193,16 +195,9 @@ extension RedactionPolicy {
                 segments.append("")
                 continue
             }
-            let parts = segment.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false)
-            let base = parts[0]
-            let reading = readings[base] ?? read(pathSegment: base, nesting: nesting)
-            readings[base] = reading
-            if followsLabel {
-                segments.append(Self.identifierPlaceholder)
-            } else {
-                let shownBase = reading.hides ? Self.identifierPlaceholder : String(base)
-                segments.append(parts.count == 2 ? shownBase + ";" + redacted(pathParameters: parts[1], nesting: nesting) : shownBase)
-            }
+            let reading = readings[segment] ?? read(pathSegment: segment, nesting: nesting)
+            readings[segment] = reading
+            segments.append(followsLabel || reading.hides ? Self.identifierPlaceholder : String(segment))
             followsLabel = reading.isLabel
         }
         return segments.joined(separator: "/")
@@ -216,9 +211,9 @@ extension RedactionPolicy {
         let isLabel: Bool
     }
 
-    /// Reads a path segment, without its parameters, once: it is decoded and scanned a single
-    /// time, and the free-text rule, every value detector and the word reading all run on that
-    /// scan. A segment that does not decode is both.
+    /// Reads a path segment once: it is decoded and scanned a single time, and the free-text rule,
+    /// every value detector and the word reading all run on that scan. A segment that does not
+    /// decode is both.
     private func read(pathSegment segment: Substring, nesting: Nesting) -> PathSegmentReading {
         guard let decoded = segment.removingPercentEncoding else { return PathSegmentReading(hides: true, isLabel: true) }
         let scalars = Array(decoded.unicodeScalars)
@@ -232,18 +227,10 @@ extension RedactionPolicy {
         return PathSegmentReading(hides: isIdentifier || holdsSecret, isLabel: isLabel)
     }
 
-    /// Parameters after a `;` in a path segment (`cart;jsessionid=…`), read like query parameters.
-    private func redacted(pathParameters: Substring, nesting: Nesting) -> String {
-        pathParameters.split(separator: ";", omittingEmptySubsequences: false).map { parameter in
-            let pair = parameter.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
-            return redacted(parameter: String(pair[0]), value: pair.count == 2 ? String(pair[1]) : nil, nesting: nesting)
-        }.joined(separator: ";")
-    }
-
-    /// `name=value` from a query or path parameter, both percent-encoded. The value is kept only
-    /// when the name is allowed and no other parameter names a secret (`hidesValue`). An empty
-    /// field, as between `&&`, stays empty.
-    private func redacted(parameter rawName: String, value rawValue: String?, hidesValue: Bool = false, nesting: Nesting) -> String {
+    /// `name=value` from a query parameter, both percent-encoded. The value is kept only when the
+    /// name is allowed and no other parameter names a secret (`hidesValue`). An empty field, as
+    /// between `&&`, stays empty.
+    private func redacted(parameter rawName: String, value rawValue: String?, hidesValue: Bool, nesting: Nesting) -> String {
         if rawName.isEmpty, rawValue == nil { return "" }
         let name = Self.formDecoded(rawName)
         let shownName = name.map { PlainName($0.unicodeScalars) != nil && redactedName($0, nesting: nesting) == $0 } == true ? rawName : Self.replacement

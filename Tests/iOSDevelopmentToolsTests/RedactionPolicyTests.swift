@@ -158,7 +158,8 @@ struct RedactionPolicyTests {
         ("/k/0123456789abcdef0123456789abcdef", "/k/:id"),
         ("/t/eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2ln", "/t/:id"),
         ("/u/ada%40example.com/profile", "/u/:id/profile"), ("/bad/%FF", "/bad/:id"),
-        ("/shop;jsessionid=ABC123/cart", "/shop;jsessionid=\(RedactionPolicy.replacement)/cart"),
+        // A `;` in the path is not read: only the scheme and host are written.
+        ("/shop;jsessionid=ABC123/cart", ""),
     ])
     func pathSegments(path: String, expected: String) throws {
         let url = try #require(URL(string: "https://e.com\(path)"))
