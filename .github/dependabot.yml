@@ -6,3 +6,6 @@ updates:
       interval: "monthly"
     commit-message:
       prefix: "ci"
+    groups:
+      all:
+        patterns: ["*"]
