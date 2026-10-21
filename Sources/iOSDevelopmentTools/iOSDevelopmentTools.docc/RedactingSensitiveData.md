@@ -119,7 +119,13 @@ is as often a person, a place, a product or a media type, so the rest of the rec
 stored as they are, and `{"name":"Ayşe","value":"…"}` hides only `value`. The second element of a
 two-element array whose first is such a name is hidden, and so is every element of an array after
 a string that names a secret (`["password","…"]`). Form fields, query parameters and multipart
-parts follow the same rule. `{"label":"Şifre","value":…}` is hidden on purpose.
+parts follow the same rule. `{"label":"Şifre","value":…}` is hidden on purpose. In a member
+that does not hold a name (`setting`, `attribute`, `ParameterKey`), a string names a secret when it
+is a name whose words name one; a string of at most 256 scalars with a line break or a character reference is read
+as a name once its line breaks are read as spaces and its escapes are decoded, so
+`{"setting":"password\n","value":…}`, `{"Parameter":"api\nkey","Value":…}` and
+`{"ParameterKey":"&#x0070;in","ParameterValue":…}` hide the value, and a sentence with a line
+break (`{"message":"Error: token\nexpired",…}`) keeps the fields beside it.
 
 ### Values
 
@@ -134,7 +140,10 @@ number. The detectors read across a vertical tab, a form feed, U+0085, U+2028 an
 space between the groups of a card number or an IBAN and after `Bearer`, and as nothing inside an
 email address, a JWT and a long token. Each of these separators cuts free text, so a finding
 written across one is hidden from its start: `paid 4111 1111 1111`, U+2028 and `1111` is stored
-as `paid [REDACTED]`. A line feed or a carriage return written as such ends a finding, as it ends a
+as `paid [REDACTED]`. An address with a separator right after it is hidden from its start too: when
+letters follow the separator (`alice@example.com`, a vertical tab and `ok`) they are read as the
+end of its top-level domain, and when a digit or `-` follows it, the address ends at the
+separator. A line feed or a carriage return written as such ends a finding, as it ends a
 line.
 
 Strings in JSON, form values, query values and multipart text parts are free text; see below. A
