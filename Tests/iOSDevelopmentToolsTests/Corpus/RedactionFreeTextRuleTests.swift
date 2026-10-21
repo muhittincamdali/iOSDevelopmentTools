@@ -84,13 +84,14 @@ struct RedactionFreeTextRuleTests {
         ("status='bob smith' count=1", "status='bob smith' count=1"),
         ("status=`bob` count=1", "status=`bob` count=1"),
         ("status=\"a\\\"b\\\"\" count=1", "status=\"a\\\"b\\\"\" count=1"),
-        // An escaped quote with no partner on its line does not close, inside a plain quote too.
-        ("status=\"a\\\"b\" count=1", "status=\"a[REDACTED]"),
+        // An escaped quote with no partner on its line overlaps the plain quote around it: the
+        // text is cut at the plain one.
+        ("status=\"a\\\"b\" count=1", "status=[REDACTED]"),
         ("status={\"count\":[1,2]} path=/a", "status={\"count\":[1,2]} path=/a"),
         ("user=\"bob smith\" status=1", "user=\"[REDACTED]"),
         ("user='bob smith' status=1", "user='[REDACTED]"),
         ("user=`bob` status=1", "user=`[REDACTED]"),
-        ("user=\"a\\\"b\" status=1", "user=\"[REDACTED]"),
+        ("user=\"a\\\"b\" status=1", "user=[REDACTED]"),
         ("{\\\"password\\\":\\\"x\\\"}", "{[REDACTED]"),
         ("data={\"a\":[1,2]} status=1", "data=[REDACTED]"),
         ("data=[\"a\",\"b\"],status=1", "data=[REDACTED]"),

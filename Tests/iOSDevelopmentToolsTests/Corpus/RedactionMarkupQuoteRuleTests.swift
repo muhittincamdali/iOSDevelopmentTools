@@ -106,9 +106,9 @@ struct RedactionMarkupQuoteRuleTests {
         ("say \"hunter2", "say [REDACTED]"), ("\"note\nQZ9WK7RXV\": 1", "[REDACTED]"), ("status=200 'a\nQZ9WK7RXV': 1", "status=200 [REDACTED]"),
         ("x `a\nQZ9WK7RXV`: 1", "x [REDACTED]"), ("x \\\"a\nQZ9WK7RXV\\\": 1", "x [REDACTED]"), ("\"note\rQZ9WK7RXV\": 1", "[REDACTED]"),
         ("x \"a \u{2254} b\" c", "x \"a [REDACTED]"), ("status=\"ok\u{2028}QZ9WK7RXV\"", "status=[REDACTED]"),
-        // An escaped quote is a kind of its own: one with no partner on its line does not close,
-        // also inside a plain quote.
-        ("\"a \\\" b\" done", "\"a [REDACTED]"), ("status=\"a\\\"b\" count=1", "status=\"a[REDACTED]"),
+        // An escaped quote is a kind of its own: one with no partner on its line inside a plain
+        // quote overlaps it, and the text is cut at the plain quote.
+        ("\"a \\\" b\" done", "[REDACTED]"), ("status=\"a\\\"b\" count=1", "status=[REDACTED]"),
     ])
     func unclosedQuotes(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -124,14 +124,16 @@ struct RedactionMarkupQuoteRuleTests {
 
     /// The eleventh review's inputs: one quote slot let a quote of one kind inside a quote of
     /// another (`'x "y'`, `"x \"y"`, `"x 'y"`) open nothing, so it did not cut the text although
-    /// it did not close on its line, and the value on the next line showed.
+    /// it did not close on its line, and the value on the next line showed. The inner quote is
+    /// still open where the outer one closes, so the quotes overlap and the text is cut at the
+    /// outer one.
     static let nestedQuoteInputs = [
         ("status=x \"y\nhunter2Zq\" ok", "status=x [REDACTED]", "hunter2Zq"),
-        ("status='x \"y'\nhunter2Zq\" ok", "status='x [REDACTED]", "hunter2Zq"),
-        ("status=`x \"y`\nhunter2Zq\" ok", "status=`x [REDACTED]", "hunter2Zq"),
-        ("status=\"x \\\"y\"\nhunter2Zq\\\" ok", "status=\"x [REDACTED]", "hunter2Zq"),
-        ("status=\"x 'y\"\nhunter2Zq' ok", "status=\"x [REDACTED]", "hunter2Zq"),
-        ("'\"note'\nQx31\": 1", "'[REDACTED]", "Qx31"),
+        ("status='x \"y'\nhunter2Zq\" ok", "status=[REDACTED]", "hunter2Zq"),
+        ("status=`x \"y`\nhunter2Zq\" ok", "status=[REDACTED]", "hunter2Zq"),
+        ("status=\"x \\\"y\"\nhunter2Zq\\\" ok", "status=[REDACTED]", "hunter2Zq"),
+        ("status=\"x 'y\"\nhunter2Zq' ok", "status=[REDACTED]", "hunter2Zq"),
+        ("'\"note'\nQx31\": 1", "[REDACTED]", "Qx31"),
     ]
 
     @Test("a quote inside a quote of another kind that does not close on its line cuts the text at it", arguments: nestedQuoteInputs)

@@ -69,8 +69,9 @@ struct FreeTextScanner {
     /// The last closing bracket of each kind in the text, so that whether one opened later
     /// closes is known without searching (see ``readMark()``).
     var lastCloses: [Int] = [-1, -1, -1]
-    /// The first quote that does not close on its line: the byte of the quote, or of the
-    /// backslashes before it when it is escaped (`\"`). The text is cut there at the latest.
+    /// The earliest quote still open where a quote does not close on its line or overlaps
+    /// another (see ``noteMarks()``): the byte of the quote, or of the backslashes before it when
+    /// it is escaped (`\"`). The text is cut there at the latest.
     var unclosedQuote: Int?
     /// The end of the line the position is on, found once per line (see ``currentLineEnd()``).
     private var lineEndCache = -1
