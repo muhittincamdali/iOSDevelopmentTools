@@ -180,10 +180,12 @@ only when allowed, and a query that servers could split differently is written a
 six or more digits, tokens of 16 or more letters and digits, long hex or Base64 strings, JWTs and
 segments in which the free-text rule or a detector finds something; the segment after one that
 names a secret becomes `:id` too (`/pin/4831`). A path that servers resolve differently from how
-it is written is not read: one with a `.` or `..` segment, `%2E` in any case, a segment whose
-part before `;` is empty (`/;/`) or an escape escaped again (`%252E`) is recorded as its scheme,
-host and port only. `URL.standardized` and servers read `/pin/./4831` and `/pin/x/../4831` as
-`/pin/4831` (RFC 3986 §5.2.4), so the value after the name could not be told from the text. With
+it is written is not read: one with a `.` or `..` segment, `%2E` in any case, a `;` anywhere, raw
+or as `%3B` in any case (`/cart;jsessionid=…`, `/a;pin/4831`), or an escape escaped again
+(`%252E`) is recorded as its scheme, host and port only. `URL.standardized` and servers read
+`/pin/./4831` and `/pin/x/../4831` as `/pin/4831` (RFC 3986 §5.2.4), and a `;` starts parameters
+for some servers but is part of the segment for others, so the value after the name could not be
+told from the text. Parameters after a `;` (matrix parameters) are never parsed. With
 `urlDetail: .hostOnly` only the scheme, host and port are written. A host that is neither a name
 of ASCII letters, digits and hyphens nor an IP address, or in which a value detector finds
 something, is not written either: `https://password=hunter2.example/x` is recorded as
@@ -367,8 +369,8 @@ and the time that a request or a log message can use:
   body, JSON in a line or a string, a URL and a multipart part each count.
 - The documents found inside one input read at most four times its length, all together.
 - A URL whose path has more than ``RedactionPolicy/maximumPathSegments`` (64) segments, or whose
-  query or path has more than ``RedactionPolicy/maximumQueryParameters`` (128) parameters, is
-  recorded with its scheme, host and port only. A multipart body has at most 1,000 parts.
+  query has more than ``RedactionPolicy/maximumQueryParameters`` (128) parameters, is recorded
+  with its scheme, host and port only. A multipart body has at most 1,000 parts.
 
 JSON past a limit is not read: a body is omitted, and a string or other text inside a document that
 holds such JSON is hidden whole. The free-text rule reads a text once and keeps only its position,
