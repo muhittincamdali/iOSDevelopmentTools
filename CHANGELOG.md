@@ -53,7 +53,9 @@ out of logs in the first place.
   written as `?[REDACTED]`. A host that is neither a name of ASCII labels nor an IP address, or in
   which a value detector finds something, is reduced to the scheme. Path segments that look like identifiers or secrets become `:id`, and
   so does the segment after one that names a secret. A path of more than 64 segments or a query of
-  more than 128 parameters is recorded with its scheme, host and port only.
+  more than 128 parameters is recorded with its scheme, host and port only, and so is a path that
+  servers resolve differently from how it is written: one with a `.` or `..` segment, `%2E` in any
+  case, a segment whose part before `;` is empty or an escape escaped again (`%252E`).
 - Free text (`LogStore` messages, error descriptions of failed requests, kept header values,
   `text/plain` bodies and the strings of structured input) has one cut point: from the first
   trigger, everything to the end of the text is hidden, the lines below included. The triggers
@@ -64,8 +66,12 @@ out of logs in the first place.
   is missing; the words of a key that name a secret when read together (`pass word=`); a
   character outside the safe alphabet (letters, marks and digits of any script, the ASCII space,
   tab, LF and CR, printable ASCII), judged by its own Unicode category, so `꞉`, `≔`, `＝`, `…`,
-  `‥`, `№`, emoji, VT, FF, U+0085 and U+2028 cut the text; an escape (`%3D`, `&#61;`, `\u0041`,
-  `\=`), which is never decoded; a word longer than 256 characters; a word that mixes scripts or
+  `‥`, `№`, emoji, VT, FF, U+0085 and U+2028 cut the text, and a letter or digit judged also by
+  the compatibility form the rule reads, so `🄁` (read as `0,`), `⒈`, `⑴` and `½` cut it too; an
+  escape, which is never decoded and of which no list of forms is kept: a backslash before
+  anything but an ASCII space, a tab, a line break or the end of the text, `%` and two hex
+  digits, and `&` before a letter or `#` (`%3D`, `&#61;`, `&amp`, `R&D`, `\u0041`, `\p{L}`, `\"`,
+  `dir\data`); a word longer than 256 characters; a word that mixes scripts or
   holds an invisible character; markup, from its first `<` that is not a comparison; a quote that
   does not close on its line; a bracket that does not close; and JSON that does not parse. Text
   with no trigger is kept as it is, apart from the value detectors, and JSON in it is read by the
@@ -134,6 +140,29 @@ out of logs in the first place.
   quotes inside it opened nothing, so the value on the next line showed; and a first fix that
   read each kind of quote on its own took the second `"` of `'x "y' "c` for the close of the
   first, so it showed again. `"a \" b" done` is now stored as `[REDACTED]`.
+- A backslash in free text is an escape before anything but an ASCII space, a tab, a line break
+  or the end of the text, and `&` before any letter or `#`; no list of their forms is kept. Before,
+  a backslash was an escape only before an octal digit or `x`, `u`, `U`, `N` or `o`, and `&` only
+  with a name and `;` or with `#` and a digit, so `dir\data\hunter2`, a written `\n` or `\t`,
+  `\"hi\"`, `a\\b`, `\p{L}`, `\e`, `\8`, `\cJ`, `\k`, `a\/b`, `R&D`, `&amp` without `;`,
+  `&#x;` and `&#q` kept the text after them in a log line, a `text/plain` body, a JSON string, a
+  form value, an allowed query value and a multipart part. An escaped quote is now cut at its
+  backslash (`"x \"y\" z"` is stored as `"x [REDACTED]`), and so are pairs joined by `&`
+  (`status=200&count=3` is stored as `status=200[REDACTED]`). JSON in the text is read by its
+  parser, so its escapes are not escapes of free text. A backslash escape in a JSON member name
+  cuts the name at the backslash, and a name read for secret words that holds one (a URL path
+  segment, a name written as a value) counts as one that names a secret.
+- A letter or digit whose compatibility form holds ASCII punctuation or a character outside the
+  safe alphabet cuts free text, as the scanner reads that form. Before, such a character was
+  judged by its own category only, so U+1F101 to U+1F10A (`🄁` to `🄊`, read as `0,` to `9,`)
+  let the `,` end a key before an allowed one: `🄁status=hunter2`, `x🄁status=`, `🄁count: `,
+  `🄊method=` and `🄁"status": ` kept their values in a log line, a JSON string, a form value
+  and a `text/plain` body. Every scalar from U+0021 to U+3FFFF is now tested before an allowed key.
+- A recorded URL whose path has a dot segment is recorded with its scheme, host and port only.
+  Before, a `.`, `%2E` or empty `;` segment right after a secret name took the `:id`, so
+  `/v1/pin/./4831` was stored as `/v1/pin/:id/4831` and `/token/x/../4831` as
+  `/token/:id/../4831`, while servers and `URL.standardized` resolve both to the value after the
+  name.
 - A quoted key that is not on `allowedTextKeys` cuts the text at its opening quote, whichever
   quote it is written in: `"x":"hunter2"`, `"x"="hunter2"`, `'x': 'hunter2'` and `"hunter2":"v"`
   are stored as `[REDACTED]`. Before, the cut came after the separator, so the key showed.
