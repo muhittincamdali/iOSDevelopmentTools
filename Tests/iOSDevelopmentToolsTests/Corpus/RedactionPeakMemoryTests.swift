@@ -9,7 +9,9 @@ import Testing
 /// start tag of a megabyte of attributes followed by 17 secret names, which the free text of an
 /// earlier design kept once for every name; the thirteenth measured 36 MB for a megabyte word of
 /// backslashes and 67 MB for a form of a megabyte, before words were limited to 256 scalars and
-/// bodies to 256 KiB.
+/// bodies to 256 KiB; the seventeenth measured 17.5 MiB for a megabyte of different characters
+/// outside ASCII and 70.5 MiB for a log message of a million of them, in readings kept for each
+/// character (see ``DistinctScalarShapes``).
 @Suite("Redaction corpus: peak memory", .serialized)
 struct RedactionPeakMemoryTests {
     static let limit = 16 * 1_048_576
@@ -29,7 +31,11 @@ struct RedactionPeakMemoryTests {
             RedactionTimeLimitTests.repeated("mail alice@example.com\n", to: RedactionTimeLimitTests.size)
         }, redact: redactor.redact),
     ] + ThirteenthReviewShapes.text + ThirteenthReviewShapes.bodies(size: bodySize, redactor: redactor) + MarkupQuoteShapes.text
-        + QuotedKeyShapes.text
+        + QuotedKeyShapes.text + DistinctScalarShapes.all + [
+            TimedInput(testDescription: "a log message of a million different characters", make: DistinctScalarShapes.logMessage, redact: {
+                LogStore.redacted($0, with: .default)
+            }),
+        ]
 
     /// Bodies just under ``RedactionPolicy/defaultMaximumBodySize``.
     static let bodySize = RedactionPolicy.defaultMaximumBodySize - 144
