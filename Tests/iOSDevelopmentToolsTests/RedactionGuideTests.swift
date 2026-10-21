@@ -114,6 +114,10 @@ struct RedactionGuideTests {
         #expect(RedactionPolicy(allowedQueryParameters: ["page"]).redact(url: url) == "https://api.example.com/users/:id/reset?code=[REDACTED]&page=2")
         // A path with a dot segment is recorded as its scheme and host only.
         #expect(policy.redact(url: try #require(URL(string: "https://api.example.com/pin/./4831"))) == "https://api.example.com")
+        // A host that names a secret is recorded as the scheme and host only.
+        #expect(policy.redact(url: try #require(URL(string: "myapp://pin/4831"))) == "myapp://pin")
+        #expect(policy.redact(url: try #require(URL(string: "https://auth.example.com/x/4831"))) == "https://auth.example.com")
+        #expect(policy.redact(url: try #require(URL(string: "myapp://callback/x"))) == "myapp://callback/x")
         let headers = RedactionPolicy(allowedHeaders: RedactionPolicy.defaultAllowedHeaders + ["X-Request-ID"]).redact(headers: [
             HTTPHeader(name: "Content-Type", value: "application/json; charset=utf-8"), HTTPHeader(name: "X-Request-ID", value: "42"),
             HTTPHeader(name: "Cache-Control", value: "max-age=60"), HTTPHeader(name: "X-Upstream", value: "eu-1"),

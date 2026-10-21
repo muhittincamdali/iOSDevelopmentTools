@@ -50,7 +50,7 @@ is not built to stop someone who writes a log line on purpose to get a secret pa
 
 | Part | Recorded | Never recorded |
 | --- | --- | --- |
-| URL | Scheme, host, port, path, query parameter names, values of allowlisted query parameters | User info (`user:password@`), the fragment (`#…`), other query values, path segments that look like identifiers or secrets (shown as `:id`), and a host that is not a name of ASCII labels or an address or in which a value detector finds something (also in ``NetworkEntry/host``) |
+| URL | Scheme, host, port, path, query parameter names, values of allowlisted query parameters | User info (`user:password@`), the fragment (`#…`), other query values, path segments that look like identifiers or secrets (shown as `:id`), a host that is not a name of ASCII labels or an address or in which a value detector finds something (also in ``NetworkEntry/host``), and the path and query after a host that names a secret (`myapp://pin/4831` is recorded as `myapp://pin`, also in ``NetworkEntry/path``) |
 | Headers | Names; values of the allowlisted headers, after the free-text rule | Values of every other header, and always the values of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key`, any header whose name contains `token`, `secret`, `key`, `auth`, `session` or `signature`, and values that start with an authentication scheme (`Bearer …`, `Basic …`, `Token …`) |
 | JSON, form and multipart bodies | Keys and values, as sent, with hidden values replaced | Values of secret keys and of keys that are not plain ASCII; values named by a field that holds a secret name; file parts and file names of multipart bodies |
 | Other bodies | `text/plain` after the free-text rule; a note for everything else | Bodies with an unknown or missing content type, bodies that do not parse, bodies that servers could split into fields differently, and bodies that were cut off or are larger than ``RedactionPolicy/maximumBodySize`` (256 KiB by default) |
@@ -189,7 +189,12 @@ told from the text. Parameters after a `;` (matrix parameters) are never parsed.
 `urlDetail: .hostOnly` only the scheme, host and port are written. A host that is neither a name
 of ASCII letters, digits and hyphens nor an IP address, or in which a value detector finds
 something, is not written either: `https://password=hunter2.example/x` is recorded as
-`https://[REDACTED]`.
+`https://[REDACTED]`. A host that names a secret, by the key rule or as a word, is recorded with
+the scheme and port only, as the path after it is its value: with a scheme of the app's own
+`URLComponents` reads the first part after `//` as the host, so `myapp://pin/4831` has the host
+`pin` and the path `/4831`, and is recorded as `myapp://pin`. A host such as `auth.example.com`
+names `auth` too and hides its whole path and query, which over-hides on purpose;
+`myapp://callback/x` names no secret and is recorded as it is.
 
 ```swift
 let url = URL(string: "https://bob:pw@api.example.com/users/12345678/reset?code=x&page=2#y")!
@@ -197,6 +202,8 @@ RedactionPolicy.default.redact(url: url)
 // https://api.example.com/users/:id/reset?code=[REDACTED]&page=[REDACTED]
 RedactionPolicy(allowedQueryParameters: ["page"]).redact(url: url)
 // https://api.example.com/users/:id/reset?code=[REDACTED]&page=2
+RedactionPolicy.default.redact(url: URL(string: "myapp://pin/4831")!)
+// myapp://pin
 ```
 
 ### Free text: one cut point
