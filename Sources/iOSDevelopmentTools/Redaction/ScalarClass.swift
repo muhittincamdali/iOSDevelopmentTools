@@ -26,6 +26,19 @@ enum ScalarClass {
         return UInt8(value)
     }
 
+    /// Whether a scalar is a decimal digit of another script, one with no ASCII form under
+    /// compatibility decomposition (`၀` U+1040, `०` U+0966, `٠` U+0660): every decimal digit outside
+    /// ASCII but the full-width, outlined, mathematical and segmented ones, which decompose to an
+    /// ASCII digit. The scanning copy reads it as its digit, for numbers and the value detectors,
+    /// and a word reads it as the wildcard (see ``LooseReading``). A test compares this with
+    /// Foundation's decomposition for every decimal digit.
+    static func isDigitWithoutASCIIForm(_ scalar: Unicode.Scalar) -> Bool {
+        guard !scalar.isASCII, decimalDigit(scalar) != nil else { return false }
+        return !digitsWithASCIIForm.contains { $0.contains(scalar.value) }
+    }
+
+    private static let digitsWithASCIIForm: [ClosedRange<UInt32>] = [0xFF10...0xFF19, 0x1CCF0...0x1CCF9, 0x1D7CE...0x1D7FF, 0x1FBF0...0x1FBF9]
+
     /// Scalars that can be put into a value without changing how it looks, and that the scanning
     /// copy leaves out: format characters, marks, variation selectors, every default-ignorable
     /// code point (fillers such as U+115F and U+3164, unassigned ones such as U+FFF0 and

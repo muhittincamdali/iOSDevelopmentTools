@@ -120,14 +120,17 @@ extension FreeTextScanner {
 /// The scanned text has already read each character as the ASCII it stands for under
 /// compatibility normalization and left out marks and format characters (`pässword`, `ｐａｓｓ`
 /// are `password`, `pass`). Every letter, mark or number outside ASCII that is still without an
-/// ASCII form is then left out: a letter or number such as `ꞏ`, `ı`, `ɑ`, `ø` or `〇`, and a mark
-/// that the scanned text left out (`ͦ`, U+0366). What remains is compared, lowercased, with the
-/// secret names, a plural `s` included (see ``PlainName/firstSecret(in:where:)``).
+/// ASCII form is then left out: a letter or number such as `ꞏ`, `ı`, `ɑ`, `ø` or `〇`, a decimal
+/// digit of another script, which the scanned text reads as its ASCII digit for numbers and the
+/// detectors (`၀`, `०`, see ``ScalarClass/isDigitWithoutASCIIForm(_:)``), and a mark that the
+/// scanned text left out (`ͦ`, U+0366). What remains is compared, lowercased, with the secret
+/// names, a plural `s` included (see ``PlainName/firstSecret(in:where:)``).
 ///
 /// Each such character counts as nothing or as any one letter. As nothing, `piꞏn`, `tokeın`,
-/// `tokenꞏs` and `keyıs` read as `pin`, `token`, `tokens` and `keys`, however many are put in. As a letter, a name counts with one of its letters missing where such a
+/// `tokenꞏs`, `to၀ken` and `keyıs` read as `pin`, `token`, `tokens`, `token` and `keys`, however
+/// many are put in. As a letter, a name counts with one of its letters missing where such a
 /// character was left out, so one put in place of one of its letters is found too (`pɑssword`,
-/// `user_pın`, `tͦken`, `passw〇rd`), also with more of them put in elsewhere
+/// `user_pın`, `tͦken`, `passw〇rd`, `t၀ken`), also with more of them put in elsewhere
 /// (`tͦkenͦ`, `pını`), and a word of another language that reads as a name this way is read as
 /// that name (Turkish `yapın` as `pin`), which hides more on purpose. Two or more letters put in
 /// place of letters of one name (`pɑsswoʀd`) are not found: no list of look-alikes is kept, a
@@ -166,6 +169,10 @@ struct LooseReading {
                 let byte = text.bytes[k]
                 let scalar = source[text.offsets[k]]
                 if byte == CompatibilityText.unreadable, ScalarClass.isLetterOrNumber(scalar) {
+                    isLeavingOut = true
+                } else if ASCII.isDigit(byte), ScalarClass.isDigitWithoutASCIIForm(scalar) {
+                    // The scanned text reads a digit of another script as its digit, for numbers
+                    // and the detectors. It has no ASCII form, so a word leaves it out.
                     isLeavingOut = true
                 } else {
                     append(byte, from: k)
