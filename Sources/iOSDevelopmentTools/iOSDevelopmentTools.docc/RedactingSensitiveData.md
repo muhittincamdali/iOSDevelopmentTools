@@ -32,10 +32,12 @@ is not built to stop someone who writes a log line on purpose to get a secret pa
   hidden: a key that is not plain ASCII, a name that cannot be read, a body that does not parse.
 - **Free text is a best effort.** A log line has no grammar, so the policy does not try to tell
   where a value ends. After the first trigger, such as a secret name, everything to the end of
-  the text is hidden, the lines below included. A secret name written without a separator and
-  disguised on purpose by writing two or more of its letters as look-alikes (`pɑsswoʀd hunter2`),
-  or with a combining mark in place of one letter (`tͦken hunter2`), is not guaranteed to be
-  found; see "What it does not find". No table of look-alikes is kept to chase such names,
+  the text is hidden, the lines below included. One rule reads disguised letters: a single
+  letter, mark or number with no ASCII form inside a word stands for any one letter or for none,
+  so `tͦken hunter2` (U+0366 after the `t`), `passw〇rd hunter2` and `piꞏn 1234` are found. A
+  secret name written without a separator and disguised on purpose by writing two or more of its
+  letters as look-alikes (`pɑsswoʀd hunter2`) is not guaranteed to be found; see "What it does
+  not find". No table of look-alikes is kept to chase such names,
   since none is ever complete, and none would make free text safe. Use structured logging
   instead: separate fields, and secrets kept out of messages.
 - **Hostile input has a cost bound.** All the documents found inside one input, one inside
@@ -51,7 +53,7 @@ is not built to stop someone who writes a log line on purpose to get a secret pa
 
 | Part | Recorded | Never recorded |
 | --- | --- | --- |
-| URL | Scheme, host, port, path, query parameter names, values of allowlisted query parameters | User info (`user:password@`), the fragment (`#…`), other query values, path segments that look like identifiers or secrets (shown as `:id`), a host that is not a name of ASCII labels or an address or in which a value detector finds something (also in ``NetworkEntry/host``), and the path and query after a host that names a secret (`myapp://pin/4831` is recorded as `myapp://pin`, also in ``NetworkEntry/path``) |
+| URL | Scheme, host, port, path, query parameter names, values of allowlisted query parameters | User info (`user:password@`), the fragment (`#…`), other query values, path segments that look like identifiers or secrets (shown as `:id`), the segment after one that names a secret or is not plain ASCII (`/caf%C3%A9/menu` is recorded as `/caf%C3%A9/:id`), a host that is not a name of ASCII labels or an address or in which a value detector finds something (also in ``NetworkEntry/host``), and the path and query after a host that names a secret (`myapp://pin/4831` is recorded as `myapp://pin`, also in ``NetworkEntry/path``) |
 | Headers | Names; values of the allowlisted headers, after the free-text rule | Values of every other header, and always the values of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key`, any header whose name contains `token`, `secret`, `key`, `auth`, `session` or `signature`, and values that start with an authentication scheme (`Bearer …`, `Basic …`, `Token …`) |
 | JSON, form and multipart bodies | Keys and values, as sent, with hidden values replaced | Values of secret keys and of keys that are not plain ASCII; values named by a field that holds a secret name; file parts and file names of multipart bodies |
 | Other bodies | `text/plain` after the free-text rule; a note for everything else | Bodies with an unknown or missing content type, bodies that do not parse, bodies that servers could split into fields differently, and bodies that were cut off or are larger than ``RedactionPolicy/maximumBodySize`` (256 KiB by default) |
@@ -180,7 +182,11 @@ only when allowed, and a query that servers could split differently is written a
 `?[REDACTED]`. Path segments that look like identifiers or secrets become `:id`: UUIDs, numbers of
 six or more digits, tokens of 16 or more letters and digits, long hex or Base64 strings, JWTs and
 segments in which the free-text rule or a detector finds something; the segment after one that
-names a secret becomes `:id` too (`/pin/4831`). A path that servers resolve differently from how
+names a secret becomes `:id` too (`/pin/4831`). A segment is read by the key rule, as the name of
+a field is: one that, decoded, is not plain ASCII (letters, digits, `_`, `-`, `.` and spaces, with
+a letter or digit among them) is a label too, so the segment after it becomes `:id`
+(`/caf%C3%A9/menu`, `/t%CD%A6ken/4831`, `/%C5%9Eifre/4831` and `/a+b/c` keep only their first
+segment). This over-hides on purpose. A path that servers resolve differently from how
 it is written is not read: one with a `.` or `..` segment, `%2E` in any case, a `;` anywhere, raw
 or as `%3B` in any case (`/cart;jsessionid=…`, `/a;pin/4831`), or an escape escaped again
 (`%252E`) is recorded as its scheme, host and port only. `URL.standardized` and servers read
@@ -247,8 +253,10 @@ The triggers:
 - **A secret name**, with or without a separator, quoted or not: `password=…`, `password …`,
   `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`, `Bearer: …`. The text is hidden from the value
   after the name. Punctuation inside a word is read as a separator (`pass~word`), two words are
-  read together (`pass word`), and one letter that has no ASCII form is read as any letter or,
-  between two letters, as none (`passꞏword`). The plural `s` is a letter of the word here too:
+  read together (`pass word`), and one letter, mark or number that has no ASCII form is read as
+  any letter or, between two letters, as none (`passꞏword`, `passw〇rd`, and `tͦken` with the mark
+  U+0366 after the `t`). A mark on a letter that has no ASCII form belongs to that letter. The
+  plural `s` is a letter of the word here too:
   `tokenꞏ` reads as `tokens` and `tokenꞏs` as `tokens`. Each word is also read as its ASCII
   skeleton: every letter that has no ASCII form is left out, however many there are and wherever
   they stand, and the rest is compared with the secret names, the plural `s` included
@@ -376,6 +384,11 @@ and the time that a request or a log message can use:
 - At most ``RedactionPolicy/maximumNestedDocuments`` (4) documents are read one inside another. A
   body, JSON in a line or a string, a URL and a multipart part each count.
 - The documents found inside one input read at most four times its length, all together.
+- What a character outside ASCII is read as is kept in one table for the whole text, body, URL
+  or list of headers, with every field, part, segment and header in it. The table has a fixed
+  number of slots, at most 4,096 (96 KiB), and never grows: a character that meets another in a
+  slot takes it over. A megabyte of different characters takes no more memory than a megabyte
+  of the same few.
 - A URL whose path has more than ``RedactionPolicy/maximumPathSegments`` (64) segments, or whose
   query has more than ``RedactionPolicy/maximumQueryParameters`` (128) parameters, is recorded
   with its scheme, host and port only. A multipart body has at most 1,000 parts.
@@ -387,7 +400,7 @@ close on its line or overlaps another, and the last closing bracket of each kind
 The package's tests run every limit on a thread with 512 KiB of stack, and in a release build
 (`swift test -c release`) they check that a megabyte of text, nested input or a body takes less
 than a second of CPU time, and, on macOS, that a megabyte of free text takes less than 16 MB of
-memory beyond the input.
+memory beyond the input, also when every character of it is a different one outside ASCII.
 
 ### Change the policy
 
@@ -426,10 +439,6 @@ Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
   put in beside the name's own are left out of its skeleton, so `pıaıssword hunter2` is hidden.
   With a separator (`pɑsswoʀd=hunter2`) the value is hidden. A secret word in another language, such as
   `пароль hunter2`, is not one either.
-- A secret name in free text written without a separator with a combining mark in place of one
-  of its letters: `tͦken hunter2` (a `t`, then U+0366 where the `o` belongs) is stored as it
-  is. Only a letter put in place of a letter is read as any letter. With a separator
-  (`tͦken=hunter2`) the key is not plain ASCII and the value is hidden.
 - A value written before its name, with no key before it: `hunter2 is my password` is stored as
   it is.
 - A card number grouped with `+` or `.` (`4111+1111+1111+1111`).

@@ -24,6 +24,7 @@ struct RedactionGuideTests {
         // A mark after an ASCII letter and a number without an ASCII form are read so too.
         #expect(policy.redact(text: "t\u{0366}ken hunter2") == "t\u{0366}ken [REDACTED]")
         #expect(policy.redact(text: "passw\u{3007}rd hunter2") == "passw\u{3007}rd [REDACTED]")
+        #expect(policy.redact(text: "pi\u{A78F}n 1234") == "pi\u{A78F}n [REDACTED]")
         #expect(policy.redact(text: "token\u{A78F}\u{A78F} hunter2") == "token[REDACTED]")
         #expect(policy.redact(text: "p\u{0131}n 1234") == "p\u{0131}n [REDACTED]")
         #expect(policy.redact(text: "login password=hunter2 status=200\nnext line") == "login password=[REDACTED]")
@@ -117,6 +118,11 @@ struct RedactionGuideTests {
         #expect(RedactionPolicy(allowedQueryParameters: ["page"]).redact(url: url) == "https://api.example.com/users/:id/reset?code=[REDACTED]&page=2")
         // A path with a dot segment is recorded as its scheme and host only.
         #expect(policy.redact(url: try #require(URL(string: "https://api.example.com/pin/./4831"))) == "https://api.example.com")
+        // A path segment that is not plain ASCII, as one that names a secret, makes the next one `:id`.
+        #expect(policy.redact(url: try #require(URL(string: "https://api.example.com/caf%C3%A9/menu"))) == "https://api.example.com/caf%C3%A9/:id")
+        #expect(policy.redact(url: try #require(URL(string: "https://api.example.com/t%CD%A6ken/4831"))) == "https://api.example.com/t%CD%A6ken/:id")
+        #expect(policy.redact(url: try #require(URL(string: "https://api.example.com/%C5%9Eifre/4831"))) == "https://api.example.com/%C5%9Eifre/:id")
+        #expect(policy.redact(url: try #require(URL(string: "https://api.example.com/a+b/c"))) == "https://api.example.com/a+b/:id")
         // A host that names a secret is recorded as the scheme and host only.
         #expect(policy.redact(url: try #require(URL(string: "myapp://pin/4831"))) == "myapp://pin")
         #expect(policy.redact(url: try #require(URL(string: "https://auth.example.com/x/4831"))) == "https://auth.example.com")
