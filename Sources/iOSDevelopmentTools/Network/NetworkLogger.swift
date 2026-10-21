@@ -30,8 +30,10 @@ public final class NetworkLogger: Sendable {
             set { storedMaximumEntries = min(max(newValue, 1), Self.entryLimit) }
         }
 
-        /// How many bytes of each request and response body are stored. Larger bodies are cut
-        /// off and marked ``CapturedBody/isTruncated``. Kept between 0 and ``bodySizeLimit``.
+        /// How many bytes of each request and response body are kept. Larger bodies are cut off
+        /// and marked ``CapturedBody/isTruncated``; a cut-off body cannot be parsed, so redaction
+        /// stores a note in its place (``RedactionOutcome/omitted``), as it does for a body over
+        /// ``RedactionPolicy/maximumBodySize``. Kept between 0 and ``bodySizeLimit``.
         public var maximumBodySize: Int {
             get { storedMaximumBodySize }
             set { storedMaximumBodySize = min(max(newValue, 0), Self.bodySizeLimit) }
@@ -216,25 +218,35 @@ public final class NetworkLogger: Sendable {
         update(id) { entry in
             if bodyByteCount > 0 {
                 entry.responseBody = CapturedBody.capture(
-                    prefix: bodyPrefix, byteCount: bodyByteCount, contentType: entry.responseContentType, policy: policy)
+                    prefix: bodyPrefix, byteCount: bodyByteCount, contentType: entry.receivedContentType, policy: policy)
             }
-            entry.error = error.map(NetworkError.init)
+            entry.receivedContentType = nil
+            entry.error = error.map { NetworkError($0, policy: policy) }
             entry.timings = timings ?? entry.timings
             entry.networkProtocol = networkProtocol ?? entry.networkProtocol
             entry.endDate = endDate
         }
     }
 
-    /// Records the final size of a request body that was streamed while it was sent.
+    /// Records the final size of a request body that was streamed while it was sent. A body
+    /// that turns out longer than what was checked cannot have been parsed whole, so it is
+    /// omitted.
     func updateRequestBodySize(_ id: NetworkEntry.ID, byteCount: Int) {
+        let policy = configuration.redaction
         update(id) { entry in
             guard let body = entry.requestBody, byteCount > body.byteCount else { return }
-            entry.requestBody = CapturedBody(data: body.data, byteCount: byteCount, isTruncated: true, redaction: body.redaction)
+            guard policy.isEnabled else {
+                entry.requestBody = CapturedBody(data: body.data, byteCount: byteCount, isTruncated: true, redaction: body.redaction)
+                return
+            }
+            let note = RedactionPolicy.omissionNote(byteCount: byteCount, mediaType: MediaType(entry.requestContentType))
+            entry.requestBody = CapturedBody(data: Data(note.utf8), byteCount: byteCount, isTruncated: true, redaction: .omitted)
         }
     }
 
     private static func apply(response: URLResponse, to entry: inout NetworkEntry, policy: RedactionPolicy) {
         entry.responseContentType = response.mimeType
+        entry.receivedContentType = response.mimeType
         guard let http = response as? HTTPURLResponse else { return }
         entry.statusCode = http.statusCode
         var fields: [String: String] = [:]
@@ -242,7 +254,8 @@ public final class NetworkLogger: Sendable {
             fields[String(describing: name)] = String(describing: value)
         }
         entry.responseHeaders = policy.redact(headers: HTTPHeader.sorted(fields))
-        entry.responseContentType = http.value(forHTTPHeaderField: "Content-Type") ?? response.mimeType
+        entry.receivedContentType = http.value(forHTTPHeaderField: "Content-Type")
+        entry.responseContentType = HTTPHeader.value(named: "Content-Type", in: entry.responseHeaders) ?? response.mimeType
     }
 
     private func update(_ id: NetworkEntry.ID, _ change: (inout NetworkEntry) -> Void) {

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -9,7 +9,7 @@
 
 <p align="center">
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml"><img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="État de la CI"></a>
-<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="Dernière version: v2.0.0"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="Dernière version: v2.1.0"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg" alt="Plateformes prises en charge: iOS 17+ · macOS 14+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg" alt="Version du langage: Swift 6.2+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg" alt="Licence: MIT"></picture></a>
@@ -45,10 +45,13 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
 - **Une ligne pour enregistrer** — `NetworkCapture.start()` enregistre `URLSession.shared` ainsi que
   toutes les sessions créées ensuite à partir de la configuration default ou ephemeral, y compris celles
   des bibliothèques construites sur `URLSession`. Votre app reçoit chaque réponse sans modification.
-- **Masquage avant stockage** — les valeurs des en-têtes, de la query, des formulaires, du multipart et
-  du JSON dont le nom est sensible sont remplacées, quelle que soit l'écriture du nom (`X-API-Key`,
-  `api_key`, `API%5FKEY`). Un corps JSON impossible à vérifier, par exemple parce qu'il a été tronqué,
-  est retenu au lieu d'être stocké sans contrôle.
+- **Masquage avant stockage** — les valeurs placées sous des noms secrets (`password`, `token`,
+  `api_key`, quelle que soit leur écriture ou leur encodage) et sous des clés qui ne sont pas en
+  ASCII simple sont remplacées, et seuls les en-têtes et paramètres de query de la liste autorisée
+  gardent leur valeur. Les corps JSON, de formulaire et multipart sont analysés ; un corps
+  impossible à analyser est remplacé par une note au lieu d'être stocké. Dans un message de
+  journal, tout est masqué du premier nom secret, ou de la première clé absente de la liste
+  autorisée, jusqu'à la fin.
 - **Stockage borné** — par défaut, au plus 500 requêtes et 256 KiB par corps ; les messages de journal
   sont conservés dans un tampon circulaire, et les envois de plus de 4 MiB sont transmis en flux au lieu
   d'être copiés. Les en-têtes et les URL sont stockés en entier.
@@ -58,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 148 tests Swift Testing sur macOS et 149 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 631 tests Swift Testing sur macOS et 628 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -73,7 +76,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Collez-la dans le champ de recherche en haut à droite de la fenêtre. Laissez **Dependency Rule** sur
-**Up to Next Major Version** à partir de `2.0.0`, puis cliquez sur **Add Package**. Dans la fenêtre
+**Up to Next Major Version** à partir de `2.1.0`, puis cliquez sur **Add Package**. Dans la fenêtre
 suivante, choisissez le target de votre app à côté de **iOSDevelopmentTools** et cliquez de nouveau sur
 **Add Package**.
 
@@ -132,7 +135,7 @@ Ou ajoutez-le aux `dependencies` de votre `Package.swift` :
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.0.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -176,19 +179,87 @@ func makeAPISession() -> URLSession {
 
 ### Choisir ce qui est conservé
 
-Les limites hors plage sont ramenées dans la plage. Les fragments de nom sont comparés à des noms
-normalisés : `"iban"` détecte donc aussi `IBAN`, `iban_number` et `ibanNumber` :
+Les limites hors plage sont ramenées dans la plage. Les noms secrets sont normalisés comme les clés
+auxquelles ils sont comparés : `"license_number"` détecte donc aussi `licenseNumber` et
+`LICENSE-NUMBER`, et seuls les paramètres de query indiqués gardent leur valeur :
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### Ce qui est enregistré
+
+- **Enregistré :** la méthode, le statut, les durées, les noms des en-têtes, les valeurs des
+  en-têtes de la liste autorisée (par défaut `Accept`, `Accept-Encoding`, `Accept-Language`,
+  `Cache-Control`, `Content-Encoding`, `Content-Length`, `Content-Type`, `ETag` et `User-Agent`),
+  le schéma, l'hôte, le chemin et les noms des paramètres de query de l'URL, ainsi que les corps
+  JSON, de formulaire, multipart et `text/plain` après masquage.
+- **Jamais enregistré :** les informations utilisateur et le fragment de l'URL, les valeurs de
+  query hors de la liste autorisée, les valeurs de tous les autres en-têtes (`Authorization`,
+  `Cookie` et `Set-Cookie` même s'ils sont dans la liste), les valeurs placées sous des noms
+  secrets comme `password`, `token` ou `api_key`, les segments de chemin qui ressemblent à des
+  identifiants (affichés `:id`) et le segment qui suit un segment qui nomme un secret ou qui
+  n'est pas en ASCII simple (`/caf%C3%A9/menu` est gardé comme `/caf%C3%A9/:id`), le chemin et la query d'une URL dont le chemin a un segment point
+  (`/pin/./4831`, `..`, `%2E`) ou un `;` (`/cart;jsessionid=…`, `%3B`) : seuls le schéma et l'hôte
+  sont gardés, les paramètres matriciels ne sont donc jamais lus ; le chemin et la query après
+  un hôte qui nomme un secret (`myapp://pin/4831` est gardé comme `myapp://pin` ; un hôte comme
+  `auth.example.com` masque aussi son chemin) ; et les parties fichier des corps multipart.
+- **Les clés qui ne sont pas en ASCII simple** une fois les échappements décodés, NFKC appliqué et
+  la casse normalisée (`pаssword` avec un `а` cyrillique, `pass\u200Dword`, `şifre`) ont leur
+  valeur masquée par défaut.
+- **Les corps impossibles à analyser** (un type de contenu inconnu ou absent, du JSON ou du
+  multipart mal formé, un corps coupé à la limite de taille) sont remplacés par une note comme
+  `[body omitted: 512 bytes, application/xml]`.
+- **Les messages de journal** sont conservés jusqu'à leur premier déclencheur : un nom secret, une
+  clé absente de la liste autorisée (`status`, `method`, `path`, `duration_ms` et `count` par
+  défaut ; ajoutez les vôtres avec `allowedTextKeys`), un caractère hors ASCII qui n'est ni une
+  lettre, ni un signe diacritique, ni un chiffre, ni une espace (`꞉`, `…`, un emoji, ou une lettre que la
+  normalisation de compatibilité lit comme une ponctuation, comme `🄁`, lu `0,`), une séquence
+  d'échappement de toute forme (une barre oblique inverse devant tout sauf un blanc, `%3D`, un `&`
+  devant une lettre ou `#` : `R&D`, `&amp`), une clé entre guillemets qui n'est pas autorisée (coupée à son
+  guillemet ouvrant : `"x":"hunter2"` est stocké sous la forme `[REDACTED]`), du balisage (un
+  `<` qui n'est pas une comparaison : `<b>`, `</x>`, `<!--` ; aucune balise ne garde son texte),
+  un guillemet qui ne se ferme pas sur sa ligne, des guillemets qui se chevauchent
+  (`'x "y' z"`) ou une parenthèse qui ne se ferme pas masque tout
+  ce qui suit, y compris les lignes suivantes (`login password=hunter2 status=200` est stocké sous la
+  forme `login password=[REDACTED]`, et `x=hunter2` sous la forme `x=[REDACTED]`). Un message sans
+  déclencheur est conservé tel quel, hormis les jetons, numéros de carte et adresses e-mail
+  détectés.
+  Les détecteurs lisent à travers VT, FF, U+0085, U+2028 et U+2029, qui coupent le message : un
+  numéro de carte, un IBAN, une adresse e-mail ou un jeton coupé par l'un d'eux est masqué depuis
+  son début (`paid 4111 1111 1111`, U+2028, `1111` est enregistré sous la forme
+  `paid [REDACTED]`) ; LF et CR terminent une détection.
+- **Les URL dans les messages de log** n'ont pas de logique d'îlot. Une URL ne reste visible que si
+  elle est propre : `scheme://host` avec un chemin facultatif fait de lettres ASCII, de chiffres,
+  de `.`, `_`, `-` et `/`, sans hôte ni segment de chemin qui soit un nom secret, suivie d'une
+  espace, d'une fin de ligne, de la fin du texte ou d'un seul `.`, `,`, `!` ou `)` suivi de l'un
+  d'eux. Toute autre URL (une query, un fragment, un port, des informations d'utilisateur, un
+  échappement comme `%3D`, un guillemet ou deux signes après elle) masque le message à partir du début de l'URL (`GET https://api.example.com/v1/items?page=2 done` est
+  enregistré comme `GET [REDACTED]`) ; `allowedQueryParameters` s'applique aux URL des requêtes
+  enregistrées, pas aux URL dans un texte.
+
+Le masquage est un filet de sécurité, pas une garantie. Il est conçu pour les secrets enregistrés
+par accident : les entrées structurées sont analysées, et ce que l'analyseur ne comprend pas
+entièrement est masqué ; le texte libre est traité au mieux, et un nom secret écrit sans `=` ni `:`
+dont deux lettres ou plus sont remplacées par des lettres qui se ressemblent (`pɑsswoʀd hunter2`)
+n'est pas forcément trouvé ; une seule lettre, marque ou chiffre sans forme ASCII compte comme
+n'importe quelle lettre, donc `tͦken hunter2`, `passw〇rd hunter2` et `t၀ken hunter2` (un zéro birman) sont trouvés. Gardez les secrets hors des requêtes que vous enregistrez et des
+messages de journal dès le départ, et préférez une journalisation structurée.
+
+Deux autres limites font partie de ce modèle. **Borne de coût :** tous les documents imbriqués
+dans une même entrée (du JSON dans une chaîne, une URL dans un texte) lisent ensemble au plus quatre
+fois la longueur de l'entrée ; au-delà de ce budget, la chaîne qui contient le document suivant est
+masquée entièrement. **Les mises en page sur plusieurs lignes** ne demandent rien de particulier :
+un `<key>` de property list sur sa propre ligne, du JSON réparti sur plusieurs lignes et un corps
+multipart écrit comme du texte sont masqués du premier déclencheur jusqu'à la fin du texte, si bien
+que la valeur est masquée où qu'elle soit écrite.
 
 ### Journaliser des messages
 
@@ -262,7 +333,7 @@ Référence de l’API et articles :
 - [Capturer le trafic réseau](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — quelles sessions sont enregistrées, comment les requêtes atteignent le serveur, limites de mémoire et ce qui n'est pas enregistré.
 - [Masquer les données sensibles](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — comment les noms sont comparés, ce qui est remplacé, pourquoi certains corps sont retenus, et les limites.
+  — ce qui est enregistré et ce qui ne l'est jamais, comment les clés sont comparées, pourquoi certains corps sont omis, et les limites.
 - [Garder les outils hors des builds de release](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — conditions de compilation et un target interne distinct.
 

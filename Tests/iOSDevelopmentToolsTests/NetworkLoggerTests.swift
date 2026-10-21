@@ -69,6 +69,26 @@ struct NetworkLoggerTests {
         #expect(HTTPHeader.value(named: "Set-Cookie", in: entry.responseHeaders) == RedactionPolicy.replacement)
     }
 
+    // The tenth review: the entry kept the host as the request had it, so a host that the
+    // recorded URL hides showed in the list of requests.
+    @Test("The host of an entry is hidden when its URL hides it", arguments: [
+        ("myapp://password=hunter2/x", "[REDACTED]"), ("https://4111111111111111.example/x", "[REDACTED]"),
+        ("https://a_b.example/x", "[REDACTED]"), ("https://0123456789abcdef0123456789abcdef.example/x", "[REDACTED]"),
+        ("https://h%41.example/x", "[REDACTED]"), ("https://xn--bcher-kva.de/x", "[REDACTED]"),
+        ("https://eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl/x", "[REDACTED]"),
+        ("https://api.example.com/v1/x", "api.example.com"), ("https://bob:hunter2@api.example.com/x", "api.example.com"),
+        ("https://10.0.0.1/x", "10.0.0.1"), ("https://[::1]/x", "[::1]"),
+    ])
+    func hidesHost(url: String, host: String) throws {
+        let logger = NetworkLogger()
+        let request = URLRequest(url: try #require(URL(string: url)))
+        let id = try #require(logger.record(request: request, response: nil, body: nil, startDate: Date()))
+        let entry = try #require(logger.entry(id: id))
+        #expect(entry.host == host)
+        #expect(!(entry.host ?? "").contains("hunter2") && !(entry.host ?? "").contains("4111"))
+        #expect(entry.url.hasSuffix("[REDACTED]") == (host == "[REDACTED]"))
+    }
+
     @Test("A request that failed is recorded with its error")
     func recordsFailure() throws {
         let logger = NetworkLogger()
@@ -110,9 +130,15 @@ struct NetworkLoggerTests {
         let id = try #require(logger.record(request: sent, response: response("/a", status: 200), body: Data("123456".utf8), startDate: Date()))
         let entry = try #require(logger.entry(id: id))
         #expect(entry.requestBody == nil)
-        #expect(entry.responseBody?.data == Data("1234".utf8))
+        // A body cut off at the limit cannot be parsed, so it is omitted.
+        #expect(entry.responseBody?.redaction == .omitted)
+        #expect(entry.responseBody?.text?.hasPrefix("[body omitted: 6 bytes, ") == true)
         #expect(entry.responseBody?.byteCount == 6)
         #expect(entry.responseBody?.isTruncated == true)
+        // Without redaction, the first bytes are kept.
+        let raw = NetworkLogger(configuration: .init(maximumBodySize: 4, redaction: .disabled))
+        let rawID = try #require(raw.record(request: sent, response: response("/a", status: 200), body: Data("123456".utf8), startDate: Date()))
+        #expect(raw.entry(id: rawID)?.responseBody?.data == Data("1234".utf8))
     }
 
     @Test("An end date before the start gives a duration of zero, not a negative one")

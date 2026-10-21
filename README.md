@@ -8,7 +8,7 @@
 
 <p align="center">
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml"><img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
-<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="Latest version: v2.0.0"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="Latest version: v2.1.0"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg" alt="Supported platforms: iOS 17+ · macOS 14+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg" alt="Language version: Swift 6.2+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg" alt="License: MIT"></picture></a>
@@ -41,10 +41,12 @@ written for Swift 6 strict concurrency.
 - **One line to record** — `NetworkCapture.start()` records `URLSession.shared` and every
   session created from the default or ephemeral configuration afterwards, including libraries
   built on `URLSession`. Your app receives every response unchanged.
-- **Redaction before storage** — header, query, form, multipart and JSON values with sensitive
-  names are replaced, however the name is spelled (`X-API-Key`, `api_key`, `API%5FKEY`). A JSON
-  body that cannot be checked, for example because it was cut off, is withheld instead of stored
-  unchecked.
+- **Redaction before storage** — values under secret names (`password`, `token`, `api_key`,
+  however they are spelled or escaped) and under keys that are not plain ASCII are replaced, and
+  only allowlisted headers and query parameters keep their values. JSON, form and multipart
+  bodies are parsed; a body that cannot be parsed is replaced by a note instead of being stored.
+  In a log message, everything from the first secret name, or key that is not on the allowlist,
+  to its end is hidden.
 - **Bounded storage** — at most 500 requests and 256 KiB of each body by default, log messages
   in a ring buffer, and uploads over 4 MiB streamed instead of copied. Headers and URLs are
   stored whole.
@@ -53,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 148 Swift Testing tests on macOS and 149 on an iOS simulator. Requests travel
+- **Tested** — 631 Swift Testing tests on macOS and 628 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -68,7 +70,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Paste it into the search field at the top right of the window. Leave **Dependency Rule** at
-**Up to Next Major Version** from `2.0.0`, then click **Add Package**. In the next window, choose
+**Up to Next Major Version** from `2.1.0`, then click **Add Package**. In the next window, choose
 your app target next to **iOSDevelopmentTools** and click **Add Package** again.
 
 **2. Import the module**
@@ -125,7 +127,7 @@ Or add it to the `dependencies` in your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.0.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -169,19 +171,80 @@ func makeAPISession() -> URLSession {
 
 ### Choose what is kept
 
-Limits outside their ranges are clamped. Name fragments are matched against normalized names, so
-`"iban"` also catches `IBAN`, `iban_number` and `ibanNumber`:
+Limits outside their ranges are clamped. Secret names are folded like the keys they are compared
+with, so `"license_number"` also catches `licenseNumber` and `LICENSE-NUMBER`, and only the
+listed query parameters keep their values:
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### What is recorded
+
+- **Recorded:** method, status, timings, header names, the values of allowlisted headers (by
+  default `Accept`, `Accept-Encoding`, `Accept-Language`, `Cache-Control`, `Content-Encoding`,
+  `Content-Length`, `Content-Type`, `ETag` and `User-Agent`), the URL's scheme, host, path and
+  query parameter names, and JSON, form, multipart and `text/plain` bodies after redaction.
+- **Never recorded:** URL user info and fragments, query values that are not allowlisted, the
+  values of all other headers (`Authorization`, `Cookie` and `Set-Cookie` even when allowlisted),
+  values under secret names such as `password`, `token` or `api_key`, path segments that look
+  like identifiers (shown as `:id`) and the segment after one that names a secret or is not plain
+  ASCII (`/caf%C3%A9/menu` is kept as `/caf%C3%A9/:id`), the path and query of a URL
+  whose path has a dot segment or a `;` (`/pin/./4831`, `..`, `%2E`, `/cart;jsessionid=…`,
+  `%3B`: only the scheme and host are kept, so matrix parameters are never parsed), the path
+  and query after a host that names a secret (`myapp://pin/4831` is kept as `myapp://pin`; a
+  host such as `auth.example.com` hides its path too), and file parts of multipart bodies.
+- **Keys that are not plain ASCII** once escapes are decoded, NFKC is applied and case is folded
+  (`pаssword` with a Cyrillic `а`, `pass\u200Dword`, `şifre`) have their values hidden by default.
+- **Bodies that cannot be parsed** (an unknown or missing content type, malformed JSON or
+  multipart, a body cut off at the size limit) are replaced by a note such as
+  `[body omitted: 512 bytes, application/xml]`.
+- **Log messages** are kept up to their first trigger: a secret name, a key that is not on the
+  allowlist (`status`, `method`, `path`, `duration_ms` and `count` by default; add yours with
+  `allowedTextKeys`), a character outside ASCII that is not a letter, mark, digit or space (`꞉`,
+  `…`, an emoji, or a letter that compatibility normalization reads as punctuation, such as `🄁`
+  read as `0,`), an escape of any form (a backslash before anything but white space, `%3D`, `&`
+  before a letter or `#`: `R&D`, `&amp`), a key in quotes that is not allowed (cut at its
+  opening quote: `"x":"hunter2"` is stored as `[REDACTED]`), markup (a `<` that is not a
+  comparison: `<b>`, `</x>`, `<!--`; no tag keeps its text), a quote that does not close on its
+  line, quotes that overlap (`'x "y' z"`) or a bracket that does not close hides everything
+  after it, the lines below too
+  (`login password=hunter2 status=200` is stored as `login password=[REDACTED]`, `x=hunter2` as
+  `x=[REDACTED]`). A message with no trigger is kept as it is, apart from detected tokens, card
+  numbers and email addresses.
+  The detectors read across VT, FF, U+0085, U+2028 and U+2029, which cut a message, so a card
+  number, IBAN, email address or token split by one is hidden from its start
+  (`paid 4111 1111 1111`, U+2028, `1111` is stored as `paid [REDACTED]`); LF and CR end a finding.
+- **URLs in log messages** have no island logic. A URL stays visible only when it is clean:
+  `scheme://host` with an optional path of ASCII letters, digits, `.`, `_`, `-` and `/`, no host or
+  path segment that names a secret, and after it a space, a line end, the end of the text, or one
+  `.`, `,`, `!` or `)` followed by one of those. Any other URL (a query, a fragment, a port, user
+  info, an escape such as `%3D`, a quote or two marks after it) hides the message from where the
+  URL starts (`GET https://api.example.com/v1/items?page=2 done` is stored as `GET [REDACTED]`);
+  `allowedQueryParameters` applies to recorded request URLs, not to URLs in text.
+
+Redaction is a safety net, not a guarantee. It is built for secrets recorded by accident:
+structured input is parsed, and what the parser does not fully understand is hidden; free text is a
+best effort, and a secret name written without `=` or `:` with two or more of its letters replaced
+by look-alikes (`pɑsswoʀd hunter2`) is not guaranteed to be found; one letter, mark or number
+with no ASCII form counts as any letter, so `tͦken hunter2`,
+`passw〇rd hunter2` and `t၀ken hunter2` (a Myanmar zero) are found.
+Keep secrets out of the requests you record and out of log messages in the first place, and prefer
+structured logging.
+
+Two more limits belong to that model. **Cost bound:** all the documents nested in one input
+(JSON in a string, a URL in text) read at most four times the input's length together; past that
+budget, the string that holds the next document is hidden whole. **Multi-line layouts** need
+nothing special: a property list `<key>` on its own line, JSON spread over several lines and a
+multipart body written as text are hidden from the first trigger to the end of the text, so the
+value is hidden wherever it is written.
 
 ### Log messages
 
@@ -255,7 +318,8 @@ Reference documentation and articles:
   — which sessions are recorded, how requests reach the server, memory limits, what is not
   recorded.
 - [Redacting sensitive data](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — how names are matched, what is replaced, why some bodies are withheld, and the limits.
+  — what is recorded and what is never recorded, how keys are matched, why some bodies are
+  omitted, and the limits.
 - [Keeping the tools out of release builds](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — compilation conditions and a separate internal target.
 

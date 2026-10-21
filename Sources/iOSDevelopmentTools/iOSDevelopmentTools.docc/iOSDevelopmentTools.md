@@ -13,8 +13,11 @@ requests, open one to see its headers, bodies and timings, and share it as a cUR
 HTTP Archive (HAR) file that browser developer tools, Charles and Proxyman open.
 
 Passwords, tokens, cookies and API keys are replaced by ``RedactionPolicy`` before a request is
-stored, so they never reach the console, an exported file or a screenshot. The app itself still
-receives every response unchanged.
+stored or a message is logged, so they do not reach the console, an exported file or a
+screenshot. Only allowlisted headers and query parameters keep their values, a body that cannot
+be parsed is left out, and a log message is hidden from its first secret name, or key that is
+not on the allowlist, to its end. Redaction is a safety net, not a guarantee: keep secrets out of
+logs in the first place. The app itself still receives every response unchanged.
 
 ```swift
 import iOSDevelopmentTools

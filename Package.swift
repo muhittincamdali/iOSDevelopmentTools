@@ -14,7 +14,8 @@ let package = Package(
         .target(name: "iOSDevelopmentTools"),
         .testTarget(
             name: "iOSDevelopmentToolsTests",
-            dependencies: ["iOSDevelopmentTools"]
+            dependencies: ["iOSDevelopmentTools"],
+            resources: [.copy("Resources/ReviewProbes.jsonl")]
         )
     ]
 )

@@ -18,3 +18,4 @@ jobs:
       platforms: '["iOS","macOS"]'
       scheme: iOSDevelopmentTools
       test-on-simulator: true
+      swift-test-flags: --no-parallel

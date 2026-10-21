@@ -72,24 +72,24 @@ final class NetworkCaptureTests {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer secret-token", forHTTPHeaderField: "Authorization")
-        let body = Data(#"{"email":"ada@example.com","password":"hunter2"}"#.utf8)
+        let body = Data(#"{"name":"Ada","password":"hunter2"}"#.utf8)
         request.httpBody = body
 
         let (echoed, _) = try await session.data(for: request)
         #expect(echoed == body)
 
-        let entry = try await finishedEntry("/echo?api_key=\(RedactionPolicy.replacement)&page=1")
+        let entry = try await finishedEntry("/echo?api_key=\(RedactionPolicy.replacement)&page=\(RedactionPolicy.replacement)")
         #expect(entry.method == "POST")
         #expect(HTTPHeader.value(named: "Authorization", in: entry.requestHeaders) == RedactionPolicy.replacement)
         let sent = try #require(entry.requestBody)
         #expect(sent.byteCount == body.count)
         #expect(sent.redaction == .redacted)
         #expect(sent.text?.contains("hunter2") == false)
-        #expect(sent.text?.contains("ada@example.com") == true)
+        #expect(sent.text?.contains(#""name":"Ada""#) == true)
     }
 
-    @Test("A form body sent without a Content-Type is redacted in the entry")
-    func formBodyWithoutContentType() async throws {
+    @Test("A body sent without a Content-Type reaches the server and is omitted in the entry")
+    func bodyWithoutContentType() async throws {
         var request = URLRequest(url: url("/echo?form"))
         request.httpMethod = "POST"
         let body = Data("user=ada&password=hunter2".utf8)
@@ -98,19 +98,21 @@ final class NetworkCaptureTests {
         let (echoed, _) = try await session.data(for: request)
         #expect(echoed == body)
 
-        let entry = try await finishedEntry("/echo?form")
+        // A query parameter without `=` that is not allowed is hidden too.
+        let entry = try await finishedEntry("/echo?\(RedactionPolicy.replacement)")
         let sent = try #require(entry.requestBody)
-        #expect(sent.redaction == .redacted)
-        #expect(sent.text == "user=ada&password=\(RedactionPolicy.replacement)")
+        #expect(sent.redaction == .omitted)
+        #expect(sent.text == "[body omitted: 25 bytes, no known content type]")
     }
 
-    @Test("Bodies over the capture limit are sent whole but stored cut off")
+    @Test("Bodies over the capture limit are sent whole but omitted in the entry")
     func largeBodies() async throws {
         let (data, _) = try await session.data(from: url("/bytes/5000"))
         #expect(data.count == 5000)
         let entry = try await finishedEntry("/bytes/5000")
         let body = try #require(entry.responseBody)
-        #expect(body.data.count == 1024)
+        #expect(body.text == "[body omitted: 5000 bytes, text/plain]")
+        #expect(body.redaction == .omitted)
         #expect(body.byteCount == 5000)
         #expect(body.isTruncated)
     }
@@ -131,7 +133,8 @@ final class NetworkCaptureTests {
 
         let entry = try await finishedEntry("/echo")
         let sent = try #require(entry.requestBody)
-        #expect(sent.data.count == 1024)
+        #expect(sent.text == "[body omitted: \(size) bytes, application/octet-stream]")
+        #expect(sent.redaction == .omitted)
         #expect(sent.byteCount == size)
         #expect(sent.isTruncated)
     }

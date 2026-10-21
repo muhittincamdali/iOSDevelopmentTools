@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -9,7 +9,7 @@
 
 <p align="center">
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml"><img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="CI 상태"></a>
-<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="최신 버전: v2.0.0"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="최신 버전: v2.1.0"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg" alt="지원 플랫폼: iOS 17+ · macOS 14+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg" alt="언어 버전: Swift 6.2+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg" alt="라이선스: MIT"></picture></a>
@@ -43,9 +43,11 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **한 줄로 기록 시작** — `NetworkCapture.start()`는 `URLSession.shared`와 이후에 default 또는
   ephemeral 구성으로 만들어지는 모든 세션을 기록합니다. `URLSession` 위에 만들어진 라이브러리도
   포함됩니다. 앱은 모든 응답을 변경 없이 그대로 받습니다.
-- **저장 전에 가리기** — 민감한 이름을 가진 헤더, 쿼리, 폼, multipart, JSON 값은 이름의 철자가
-  어떻든(`X-API-Key`, `api_key`, `API%5FKEY`) 다른 값으로 바뀝니다. 예를 들어 중간에 잘려서 검사할 수
-  없는 JSON 본문은 검사 없이 저장하는 대신 보류합니다.
+- **저장 전에 가리기** — 비밀 이름(`password`, `token`, `api_key`, 철자나 인코딩과 상관없이)과
+  순수 ASCII가 아닌 키 아래의 값은 바뀌고, 허용 목록에 있는 헤더와 쿼리 매개변수만 값을 유지합니다.
+  JSON, 폼, multipart 본문은 파싱하며, 파싱할 수 없는 본문은 저장하는 대신 안내 문구로 바꿉니다.
+  로그 메시지에서는 첫 번째 비밀 이름 또는 허용 목록에 없는 키부터 메시지 끝까지 모두
+  가려집니다.
 - **저장량 제한** — 기본값으로 요청은 최대 500개, 본문은 각각 최대 256 KiB입니다. 로그
   메시지는 링 버퍼에 보관하고, 4 MiB를 넘는 업로드는 복사하지 않고 스트리밍합니다.
   헤더와 URL은 자르지 않고 그대로 저장합니다.
@@ -54,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 148개, iOS 시뮬레이터에서 149개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 631개, iOS 시뮬레이터에서 628개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -68,7 +70,7 @@ Xcode에서 **File › Add Package Dependencies…**를 선택하고 저장소 U
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-창 오른쪽 위의 검색 필드에 붙여 넣으세요. **Dependency Rule**은 `2.0.0`부터 시작하는
+창 오른쪽 위의 검색 필드에 붙여 넣으세요. **Dependency Rule**은 `2.1.0`부터 시작하는
 **Up to Next Major Version**으로 둔 채 **Add Package**를 클릭합니다. 다음 창에서
 **iOSDevelopmentTools** 옆에 있는 앱 타깃을 선택하고 **Add Package**를 다시 클릭하세요.
 
@@ -125,7 +127,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.0.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -168,19 +170,73 @@ func makeAPISession() -> URLSession {
 
 ### 보관할 내용 선택하기
 
-범위를 벗어난 한도 값은 범위 안으로 조정됩니다. 이름 조각은 정규화된 이름과 비교하므로 `"iban"`은
-`IBAN`, `iban_number`, `ibanNumber`도 잡아냅니다.
+범위를 벗어난 한도 값은 범위 안으로 조정됩니다. 비밀 이름은 비교 대상인 키와 같은 방식으로
+정규화되므로 `"license_number"`는 `licenseNumber`와 `LICENSE-NUMBER`도 잡아내며, 나열한 쿼리
+매개변수만 값을 유지합니다.
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### 기록되는 내용
+
+- **기록되는 것:** 메서드, 상태 코드, 소요 시간, 헤더 이름, 허용 목록에 있는 헤더의 값(기본값은
+  `Accept`, `Accept-Encoding`, `Accept-Language`, `Cache-Control`, `Content-Encoding`,
+  `Content-Length`, `Content-Type`, `ETag`, `User-Agent`), URL의 스킴, 호스트, 경로, 쿼리 매개변수
+  이름, 그리고 가린 뒤의 JSON, 폼, multipart, `text/plain` 본문.
+- **절대 기록되지 않는 것:** URL의 사용자 정보와 프래그먼트, 허용 목록에 없는 쿼리 값, 그 밖의 모든
+  헤더 값(`Authorization`, `Cookie`, `Set-Cookie`는 허용 목록에 있어도 제외), `password`, `token`,
+  `api_key` 같은 비밀 이름 아래의 값, 식별자처럼 보이는 경로 세그먼트(`:id`로 표시), 비밀 이름이거나
+  일반 ASCII가 아닌 세그먼트 다음의 세그먼트(`/caf%C3%A9/menu`는 `/caf%C3%A9/:id`로 기록), 점 세그먼트
+  (`/pin/./4831`, `..`, `%2E`)나 `;`(`/cart;jsessionid=…`, `%3B`)가 있는 URL의 경로와 쿼리(스킴과 호스트만
+  기록하며 매트릭스 파라미터는 해석하지 않음), 비밀 이름을 나타내는 호스트 뒤의 경로와 쿼리
+  (`myapp://pin/4831`은 `myapp://pin`으로 기록하며, `auth.example.com` 같은 호스트도 경로를
+  가림), multipart 본문의 파일 파트.
+- **순수 ASCII가 아닌 키**(이스케이프를 풀고 NFKC를 적용하고 대소문자를 맞춘 뒤 기준, 예를 들어
+  키릴 문자 `а`가 들어간 `pаssword`, `pass\u200Dword`, `şifre`)의 값은 기본적으로 가려집니다.
+- **파싱할 수 없는 본문**(알 수 없거나 없는 Content-Type, 잘못된 JSON이나 multipart, 크기 한도에서
+  잘린 본문)은 `[body omitted: 512 bytes, application/xml]` 같은 안내 문구로 바뀝니다.
+- **로그 메시지**는 첫 번째 트리거까지만 보관됩니다. 비밀 이름, 허용 목록에 없는 키(기본값은
+  `status`, `method`, `path`, `duration_ms`, `count`이며 `allowedTextKeys`로 직접 추가할 수
+  있습니다), 문자·결합 부호·숫자·공백이 아닌 ASCII 밖의 문자(`꞉`, `…`, 이모지, 호환성 정규화가 문장 부호로
+  읽는 문자. 예: `0,`으로 읽히는 `🄁`), 모든 형태의 이스케이프(공백이 아닌 문자 앞의 백슬래시, `%3D`,
+  문자나 `#` 앞의 `&`: `R&D`, `&amp`), 허용되지 않은 따옴표 속 키(여는 따옴표에서 잘립니다. `"x":"hunter2"`는
+  `[REDACTED]`로 저장됩니다), 마크업(비교가 아닌 `<`: `<b>`, `</x>`, `<!--`. 어떤 태그도 텍스트를
+  남기지 않습니다), 같은 줄에서 닫히지 않은 따옴표, 서로 겹치는 따옴표(`'x "y' z"`), 닫히지 않은 괄호가 나오면 그 뒤의 모든 내용이
+  아래 줄까지 가려집니다
+  (`login password=hunter2 status=200`은 `login password=[REDACTED]`로, `x=hunter2`는
+  `x=[REDACTED]`로 저장됩니다). 트리거가 없는 메시지는 감지된 토큰, 카드 번호, 이메일 주소를 빼고
+  그대로 보관됩니다.
+  감지기는 메시지를 자르는 VT, FF, U+0085, U+2028, U+2029를 건너 읽으므로, 이들로 나뉜
+  카드 번호, IBAN, 이메일 주소, 토큰은 시작부터 가려집니다(`paid 4111 1111 1111`, U+2028,
+  `1111`은 `paid [REDACTED]`로 저장됩니다). LF와 CR은 감지 대상을 끝냅니다.
+- **로그 메시지 속 URL**에는 섬 논리가 없습니다. URL은 깨끗할 때만 그대로 보입니다. 즉
+  `scheme://host`와 ASCII 문자, 숫자, `.`, `_`, `-`, `/`로만 된 선택적 경로로 이루어지고,
+  비밀 이름인 호스트나 경로 세그먼트가 없으며, 바로 뒤에 공백, 줄 끝, 텍스트의 끝, 또는 `.`, `,`,
+  `!`, `)` 중 하나와 그 뒤의 공백·줄 끝·텍스트의 끝이 와야 합니다. 그 밖의 URL(쿼리, 프래그먼트,
+  포트, 사용자 정보, `%3D` 같은 이스케이프가 있거나 뒤에 따옴표나 문장 부호 두 개가 오는 URL)은 URL이 시작하는 곳부터 메시지를 가립니다
+  (`GET https://api.example.com/v1/items?page=2 done`은 `GET [REDACTED]`로 저장됩니다).
+  `allowedQueryParameters`는 기록된 요청 URL에 적용되며 텍스트 속 URL에는 적용되지 않습니다.
+
+가리기는 안전망일 뿐 보장이 아닙니다. 실수로 기록된 비밀 값을 위해 만들어졌습니다. 구조화된 입력은
+파싱하고, 파서가 완전히 이해하지 못하는 부분은 가립니다. 자유 형식 텍스트는 최선의 노력일 뿐이며,
+`=`나 `:` 없이 쓰고 두 글자 이상을 비슷하게 생긴 글자로 바꾼 비밀 이름(`pɑsswoʀd hunter2`)은
+찾는다고 보장할 수 없습니다. ASCII 형태가 없는 글자, 결합 문자, 숫자 하나는 아무 글자로 읽으므로
+`tͦken hunter2`, `passw〇rd hunter2`, `t၀ken hunter2`(미얀마 숫자 0)는 찾습니다. 애초에 기록하는 요청과 로그 메시지에 비밀 값을 넣지 말고, 구조화된
+로깅을 쓰세요.
+
+이 모델에는 두 가지 한계가 더 있습니다. **비용 상한:** 한 입력 안에 중첩된 모든 문서(문자열 속
+JSON, 텍스트 속 URL)는 합쳐서 입력 길이의 최대 4배까지만 읽습니다. 이 예산을 넘으면 다음 문서를
+담은 문자열 전체를 가립니다. **여러 줄 레이아웃**에는 특별한 처리가 필요 없습니다. 한 줄에
+따로 쓴 property list `<key>`, 여러 줄에 걸친 JSON, 텍스트로 쓴 multipart 본문은 첫 번째
+트리거부터 텍스트 끝까지 가려지므로 값이 어디에 쓰였든 가려집니다.
 
 ### 메시지 로그 남기기
 
@@ -253,7 +309,7 @@ API 레퍼런스와 문서:
 - [네트워크 트래픽 캡처하기](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — 기록되는 세션, 요청이 서버에 도달하는 방식, 메모리 한도, 기록되지 않는 것.
 - [민감한 데이터 가리기](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — 이름을 비교하는 방식, 바뀌는 값, 일부 본문을 보류하는 이유, 그리고 한계.
+  — 기록되는 것과 절대 기록되지 않는 것, 키를 비교하는 방식, 일부 본문을 생략하는 이유, 그리고 한계.
 - [릴리스 빌드에서 도구 제외하기](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — 컴파일 조건과 별도의 내부용 타깃.
 

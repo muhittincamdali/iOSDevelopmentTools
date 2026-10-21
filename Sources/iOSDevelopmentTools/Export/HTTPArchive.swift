@@ -4,11 +4,11 @@ import Foundation
 /// Charles, Proxyman and other HTTP debuggers open.
 ///
 /// The archive is built from the stored values, so it is redacted the same way the entries are.
-/// Bodies that are text are included as text and other bodies as Base64. Cut-off and withheld
-/// bodies are marked with a `comment`.
+/// Bodies that are text are included as text and other bodies as Base64. Cut-off and omitted
+/// bodies are marked with a `comment`; an omitted body's text is the note that replaced it.
 public struct HTTPArchive: Sendable {
     /// The version written to `log.creator.version`.
-    public static let creatorVersion = "2.0.0"
+    public static let creatorVersion = "2.1.0"
 
     /// The entries in the archive, oldest first.
     public let entries: [NetworkEntry]
@@ -246,8 +246,8 @@ public struct HTTPArchive: Sendable {
     }
 
     private static func content(of body: CapturedBody) -> BodyContent {
-        if body.redaction == .withheld {
-            return BodyContent(comment: "Withheld by redaction: the body could not be checked for sensitive values.")
+        if body.redaction == .omitted {
+            return BodyContent(text: body.text, comment: "Omitted by redaction: the body could not be parsed, or its content type is not one that is parsed.")
         }
         let truncation = body.isTruncated ? "Only the first \(body.data.count) of \(body.byteCount) bytes were stored." : nil
         let redaction = body.redaction == .redacted ? "Sensitive values were replaced with \(RedactionPolicy.replacement)." : nil

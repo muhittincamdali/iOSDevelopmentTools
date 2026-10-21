@@ -5,7 +5,7 @@ extension NetworkEntry {
     ///
     /// Every argument is quoted, so header values and bodies cannot break out of the command.
     /// The command uses `--globoff` because a redacted URL contains `[` and `]`, which curl would
-    /// otherwise read as a range. A body that was withheld, cut off or is not text is left out,
+    /// otherwise read as a range. A body that was omitted, cut off or is not text is left out,
     /// with a comment line above the command that says why, because sending part of a body or a
     /// placeholder would not repeat the request.
     public func curlCommand() -> String {
@@ -35,8 +35,8 @@ extension NetworkEntry {
     }
 
     private static func curlBody(_ body: CapturedBody) -> Result<String, BodyNote> {
-        if body.redaction == .withheld {
-            return .failure(BodyNote(message: "Request body left out: withheld by redaction (\(body.byteCount) bytes)."))
+        if body.redaction == .omitted {
+            return .failure(BodyNote(message: "Request body left out: omitted by redaction (\(body.byteCount) bytes)."))
         }
         if body.isTruncated {
             return .failure(BodyNote(message: "Request body left out: only \(body.data.count) of \(body.byteCount) bytes were stored."))

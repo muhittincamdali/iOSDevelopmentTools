@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -9,7 +9,7 @@
 
 <p align="center">
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml"><img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="CI durumu"></a>
-<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="Son sürüm: v2.0.0"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="Son sürüm: v2.1.0"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg" alt="Desteklenen platformlar: iOS 17+ · macOS 14+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg" alt="Dil sürümü: Swift 6.2+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg" alt="Lisans: MIT"></picture></a>
@@ -45,10 +45,12 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
 - **Tek satırla kayıt** — `NetworkCapture.start()`, `URLSession.shared`'i ve bundan sonra varsayılan
   ya da ephemeral yapılandırmayla oluşturulan her oturumu kaydeder; `URLSession` üzerine kurulu
   kütüphaneler de buna dahildir. Uygulamanız her yanıtı değişmeden alır.
-- **Saklamadan önce maskeleme** — hassas adlara sahip header, sorgu, form, multipart ve JSON
-  değerleri, ad nasıl yazılmış olursa olsun (`X-API-Key`, `api_key`, `API%5FKEY`) değiştirilir.
-  Kontrol edilemeyen bir JSON gövdesi, örneğin yarıda kesildiği için, denetlenmeden saklanmak
-  yerine alıkonur.
+- **Saklamadan önce maskeleme** — gizli adlar (`password`, `token`, `api_key`; nasıl yazılmış ya
+  da kodlanmış olursa olsun) ve düz ASCII olmayan anahtarlar altındaki değerler değiştirilir;
+  değerini yalnızca izin listesindeki header'lar ve sorgu parametreleri korur. JSON, form ve
+  multipart gövdeleri ayrıştırılır; ayrıştırılamayan bir gövde saklanmak yerine bir notla
+  değiştirilir. Bir günlük mesajında ilk gizli addan ya da izin listesinde olmayan ilk anahtardan
+  mesajın sonuna kadar her şey gizlenir.
 - **Sınırlı saklama** — varsayılan olarak en fazla 500 istek ve her gövdenin 256 KiB'ı;
   günlük mesajları bir halka arabellekte tutulur, 4 MiB'ı aşan yüklemeler kopyalanmak yerine
   akış olarak işlenir. Başlıklar ve URL'ler kısaltılmadan saklanır.
@@ -58,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 148, iOS simülatöründe 149 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 631, iOS simülatöründe 628 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -72,7 +74,7 @@ Xcode'da **File › Add Package Dependencies…** menüsünü seçin ve depo adr
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-Pencerenin sağ üstündeki arama alanına yapıştırın. **Dependency Rule** ayarını `2.0.0` sürümünden
+Pencerenin sağ üstündeki arama alanına yapıştırın. **Dependency Rule** ayarını `2.1.0` sürümünden
 itibaren **Up to Next Major Version** olarak bırakın, ardından **Add Package**'a tıklayın.
 Sonraki pencerede **iOSDevelopmentTools** yanındaki hedef olarak uygulamanızın target'ını seçin ve
 yeniden **Add Package**'a tıklayın.
@@ -131,7 +133,7 @@ Ya da `Package.swift` dosyanızdaki `dependencies` listesine ekleyin:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.0.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -175,19 +177,85 @@ func makeAPISession() -> URLSession {
 
 ### Nelerin saklanacağını seçin
 
-Aralık dışındaki sınırlar aralığa çekilir. Ad parçaları normalize edilmiş adlarla eşleştirilir;
-bu yüzden `"iban"` ifadesi `IBAN`, `iban_number` ve `ibanNumber` adlarını da yakalar:
+Aralık dışındaki sınırlar aralığa çekilir. Gizli adlar, karşılaştırıldıkları anahtarlar gibi
+katlanır; bu yüzden `"license_number"` ifadesi `licenseNumber` ve `LICENSE-NUMBER` adlarını da
+yakalar. Değerini yalnızca listelenen sorgu parametreleri korur:
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### Neler kaydedilir
+
+- **Kaydedilenler:** metot, durum kodu, zamanlamalar, header adları, izin listesindeki
+  header'ların değerleri (varsayılan olarak `Accept`, `Accept-Encoding`, `Accept-Language`,
+  `Cache-Control`, `Content-Encoding`, `Content-Length`, `Content-Type`, `ETag` ve `User-Agent`),
+  URL'nin şeması, sunucusu, yolu ve sorgu parametresi adları; maskelendikten sonra JSON, form,
+  multipart ve `text/plain` gövdeleri.
+- **Asla kaydedilmeyenler:** URL'deki kullanıcı bilgisi ve fragment, izin listesinde olmayan sorgu
+  değerleri, diğer bütün header'ların değerleri (`Authorization`, `Cookie` ve `Set-Cookie` izin
+  listesinde olsa bile), `password`, `token` veya `api_key` gibi gizli adlar altındaki değerler,
+  tanımlayıcıya benzeyen yol parçaları (`:id` olarak gösterilir), gizli bir ad olan ya da düz
+  ASCII olmayan bir parçadan sonraki parça (`/caf%C3%A9/menu`, `/caf%C3%A9/:id` olarak kaydedilir), nokta parçası
+  (`/pin/./4831`, `..`, `%2E`) ya da `;` (`/cart;jsessionid=…`, `%3B`) içeren bir URL'nin yolu ve
+  sorgusu (yalnız şema ve host kalır; matris parametreleri hiç ayrıştırılmaz), gizli bir ad olan
+  host'tan sonraki yol ve sorgu (`myapp://pin/4831` `myapp://pin` olarak kaydedilir;
+  `auth.example.com` gibi bir host da yolunu gizler) ve multipart gövdelerindeki dosya parçaları.
+- **Düz ASCII olmayan anahtarların** değerleri varsayılan olarak gizlenir: kaçış dizileri
+  çözüldükten, NFKC uygulandıktan ve harfler katlandıktan sonra ASCII dışı karakter içeren
+  anahtarlar (Kiril `а` içeren `pаssword`, `pass\u200Dword`, `şifre`).
+- **Ayrıştırılamayan gövdeler** (bilinmeyen ya da eksik içerik türü, bozuk JSON veya multipart,
+  boyut sınırında kesilmiş bir gövde) `[body omitted: 512 bytes, application/xml]` gibi bir notla
+  değiştirilir.
+- **Günlük mesajları** ilk tetikleyiciye kadar tutulur: gizli bir ad, izin listesinde olmayan bir
+  anahtar (varsayılan olarak `status`, `method`, `path`, `duration_ms` ve `count`; kendi
+  anahtarlarınızı `allowedTextKeys` ile ekleyin), harf, işaret, rakam ya da boşluk olmayan ASCII
+  dışı bir karakter (`꞉`, `…`, bir emoji ya da uyumluluk normalleştirmesinin noktalama
+  olarak okuduğu bir harf: `0,` olarak okunan `🄁`), her biçimde bir kaçış dizisi (boşluk dışında
+  herhangi bir şeyden önce gelen ters eğik çizgi, `%3D`, bir harften ya da `#` işaretinden önce gelen
+  `&`: `R&D`, `&amp`), izin verilmeyen tırnaklı bir
+  anahtar (açılış tırnağından kesilir: `"x":"hunter2"`, `[REDACTED]` olarak saklanır), işaretleme
+  (karşılaştırma olmayan bir `<`: `<b>`, `</x>`, `<!--`; hiçbir etiket metnini korumaz), kendi
+  satırında kapanmayan bir tırnak, birbiriyle çakışan tırnaklar (`'x "y' z"`) ya da kapanmayan bir parantez, ondan sonraki her şeyi alttaki
+  satırlarla birlikte gizler
+  (`login password=hunter2 status=200`, `login password=[REDACTED]`; `x=hunter2` ise
+  `x=[REDACTED]` olarak saklanır). Tetikleyici içermeyen bir mesaj, bulunan token'lar, kart
+  numaraları ve e-posta adresleri dışında olduğu gibi tutulur.
+  Dedektörler mesajı kesen VT, FF, U+0085, U+2028 ve U+2029'un ötesini de okur; bunlardan biriyle
+  bölünmüş bir kart numarası, IBAN, e-posta adresi ya da token başından gizlenir
+  (`paid 4111 1111 1111`, U+2028, `1111`, `paid [REDACTED]` olarak saklanır); LF ve CR bir
+  bulguyu bitirir.
+- **Günlük mesajlarındaki URL'ler** için ada mantığı yoktur. Bir URL yalnızca temizse görünür
+  kalır: `scheme://host` ve isteğe bağlı olarak ASCII harf, rakam, `.`, `_`, `-` ve `/`
+  karakterlerinden oluşan bir yol; gizli bir ad olan bir host ya da yol parçası yok; ardından bir
+  boşluk, satır sonu, metnin sonu ya da `.`, `,`, `!` ve `)` işaretlerinden yalnızca biri ve onun
+  ardından bunlardan biri geliyor. Başka her URL (sorgu, fragment, port, kullanıcı bilgisi, `%3D`
+  gibi bir kaçış dizisi, ardından gelen bir tırnak ya da iki işaret) mesajı URL'nin başladığı yerden
+  itibaren gizler (`GET https://api.example.com/v1/items?page=2 done`, `GET [REDACTED]` olarak
+  saklanır); `allowedQueryParameters` metindeki URL'lere değil, kaydedilen istek URL'lerine
+  uygulanır.
+
+Maskeleme bir güvenlik ağıdır, garanti değildir. Yanlışlıkla kaydedilen gizli bilgiler için
+tasarlanmıştır: yapılandırılmış girdi ayrıştırılır ve ayrıştırıcının tam anlamadığı her şey
+gizlenir; serbest metin ise en iyi çabadır ve `=` ya da `:` olmadan yazılmış, iki ya da daha fazla
+harfi benzer görünen harflerle değiştirilmiş (`pɑsswoʀd hunter2`) bir gizli adın bulunacağı
+garanti edilmez; ASCII biçimi olmayan tek bir harf, birleşen işaret ya da sayı herhangi bir harf
+yerine geçer, bu yüzden `tͦken hunter2`, `passw〇rd hunter2` ve `t၀ken hunter2` (Myanmar sıfırı) bulunur. Gizli bilgileri en baştan kaydettiğiniz isteklerin ve günlük mesajlarının dışında tutun ve
+yapılandırılmış günlük kaydını tercih edin.
+
+Bu modele iki sınır daha dahildir. **Maliyet sınırı:** bir girdinin içine gömülü bütün
+belgeler (bir string içindeki JSON, metindeki bir URL) toplamda girdinin uzunluğunun en çok dört
+katı kadar okunur; bu bütçe aşılınca sıradaki belgeyi taşıyan string bütünüyle gizlenir. **Çok
+satırlı düzenler** özel bir işlem gerektirmez: kendi satırındaki bir property list `<key>`'i,
+birden çok satıra yayılmış JSON ve metin olarak yazılmış bir multipart gövde ilk tetikleyiciden
+metnin sonuna kadar gizlenir; böylece değer nereye yazılmış olursa olsun gizlenir.
 
 ### Mesajları günlüğe yazın
 
@@ -260,7 +328,7 @@ API başvuru belgeleri ve makaleler:
 - [Ağ trafiğini yakalama](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — hangi oturumlar kaydedilir, istekler sunucuya nasıl ulaşır, bellek sınırları, nelerin kaydedilmediği.
 - [Hassas verileri maskeleme](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — adlar nasıl eşleştirilir, neler değiştirilir, bazı gövdeler neden alıkonur ve sınırlar.
+  — neler kaydedilir ve neler asla kaydedilmez, anahtarlar nasıl eşleştirilir, bazı gövdeler neden atlanır ve sınırlar.
 - [Araçları release derlemelerinin dışında tutma](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — derleme koşulları ve ayrı bir dahili target.
 

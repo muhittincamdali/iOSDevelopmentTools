@@ -158,8 +158,8 @@ struct BodyView: View {
     let captured: CapturedBody
 
     var body: some View {
-        if captured.redaction == .withheld {
-            note("Withheld: the body looked structured but could not be checked for sensitive values, so it was not stored.", systemImage: "eye.slash")
+        if captured.redaction == .omitted {
+            note("\(captured.text ?? "Body omitted.") It could not be parsed, or its content type is not one that is parsed, so it was not stored.", systemImage: "eye.slash")
         } else if let text = captured.prettyPrintedJSON ?? captured.text {
             let shown = text.count > Self.displayLimit ? String(text.prefix(Self.displayLimit)) : text
             Text(shown)
@@ -172,7 +172,7 @@ struct BodyView: View {
         } else {
             note("Binary data, \(ConsoleFormat.bytes(captured.byteCount)).", systemImage: "doc.zipper")
         }
-        if captured.isTruncated && captured.redaction != .withheld {
+        if captured.isTruncated && captured.redaction != .omitted {
             note("Stored \(ConsoleFormat.bytes(captured.data.count)) of \(ConsoleFormat.bytes(captured.byteCount)).", systemImage: "scissors")
         }
         if captured.redaction == .redacted {

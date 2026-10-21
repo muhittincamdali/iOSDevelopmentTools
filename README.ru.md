@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -9,7 +9,7 @@
 
 <p align="center">
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml"><img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="Статус CI"></a>
-<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="Последняя версия: v2.0.0"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="Последняя версия: v2.1.0"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg" alt="Поддерживаемые платформы: iOS 17+ · macOS 14+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg" alt="Версия языка: Swift 6.2+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg" alt="Лицензия: MIT"></picture></a>
@@ -45,10 +45,12 @@ concurrency в Swift 6.
 - **Одна строка для записи** — `NetworkCapture.start()` записывает `URLSession.shared` и все сессии,
   которые создаются потом из конфигурации default или ephemeral, включая библиотеки, построенные на
   `URLSession`. Ваше приложение получает каждый ответ без изменений.
-- **Маскирование до сохранения** — значения заголовков, query, форм, multipart и JSON с
-  чувствительными именами заменяются, как бы имя ни было написано (`X-API-Key`, `api_key`,
-  `API%5FKEY`). Тело JSON, которое нельзя проверить, например потому, что оно обрезано, не
-  сохраняется непроверенным, а удерживается.
+- **Маскирование до сохранения** — значения под секретными именами (`password`, `token`, `api_key`,
+  как бы они ни были написаны или закодированы) и под ключами, которые не являются простым ASCII,
+  заменяются, а свои значения сохраняют только заголовки и параметры query из разрешённого списка.
+  Тела JSON, форм и multipart разбираются; тело, которое нельзя разобрать, заменяется пометкой
+  вместо сохранения. В сообщении журнала маскируется всё от первого секретного имени или ключа
+  не из списка разрешённых до конца.
 - **Ограниченный объём хранения** — по умолчанию не более 500 запросов и 256 KiB на каждое тело;
   сообщения журнала хранятся в кольцевом буфере, а загрузки больше 4 MiB передаются потоком, а не
   копируются. Заголовки и URL сохраняются целиком.
@@ -57,7 +59,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 148 тестов Swift Testing на macOS и 149 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 631 тест Swift Testing на macOS и 628 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -72,7 +74,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Вставьте его в поле поиска в правом верхнем углу окна. Оставьте **Dependency Rule** равным
-**Up to Next Major Version** начиная с `2.0.0` и нажмите **Add Package**. В следующем окне выберите
+**Up to Next Major Version** начиная с `2.1.0` и нажмите **Add Package**. В следующем окне выберите
 target вашего приложения рядом с **iOSDevelopmentTools** и снова нажмите **Add Package**.
 
 **2. Импортируйте модуль**
@@ -129,7 +131,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.0.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -173,20 +175,88 @@ func makeAPISession() -> URLSession {
 
 ### Выбрать, что сохранять
 
-Значения лимитов вне допустимых диапазонов приводятся к границам диапазона. Фрагменты имён
-сопоставляются с нормализованными именами, поэтому `"iban"` ловит и `IBAN`, и `iban_number`, и
-`ibanNumber`:
+Значения лимитов вне допустимых диапазонов приводятся к границам диапазона. Секретные имена
+нормализуются так же, как ключи, с которыми их сравнивают, поэтому `"license_number"` ловит и
+`licenseNumber`, и `LICENSE-NUMBER`, а значения сохраняют только перечисленные параметры query:
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### Что записывается
+
+- **Записывается:** метод, статус, время, имена заголовков, значения заголовков из разрешённого
+  списка (по умолчанию `Accept`, `Accept-Encoding`, `Accept-Language`, `Cache-Control`,
+  `Content-Encoding`, `Content-Length`, `Content-Type`, `ETag` и `User-Agent`), схема, хост, путь
+  и имена параметров query в URL, а также тела JSON, форм, multipart и `text/plain` после
+  маскирования.
+- **Никогда не записывается:** данные пользователя и фрагмент URL, значения query вне
+  разрешённого списка, значения всех остальных заголовков (`Authorization`, `Cookie` и
+  `Set-Cookie` даже из разрешённого списка), значения под секретными именами вроде `password`,
+  `token` или `api_key`, сегменты пути, похожие на идентификаторы (показываются как `:id`), и сегмент после
+  сегмента, который называет секрет или не является простым ASCII (`/caf%C3%A9/menu` сохраняется
+  как `/caf%C3%A9/:id`), путь и запрос URL с
+  точечным сегментом (`/pin/./4831`, `..`, `%2E`) или `;` (`/cart;jsessionid=…`, `%3B`): сохраняются
+  только схема и хост, так что матричные параметры никогда не разбираются; путь и запрос после
+  хоста, который называет секрет (`myapp://pin/4831` сохраняется как `myapp://pin`; хост вроде
+  `auth.example.com` тоже скрывает свой путь); и файловые части тел multipart.
+- **Ключи, которые не являются простым ASCII** после декодирования escape-последовательностей,
+  NFKC и приведения регистра (`pаssword` с кириллической `а`, `pass\u200Dword`, `şifre`), по
+  умолчанию скрывают своё значение.
+- **Тела, которые нельзя разобрать** (неизвестный или отсутствующий тип содержимого, повреждённый
+  JSON или multipart, тело, обрезанное на пределе размера), заменяются пометкой вроде
+  `[body omitted: 512 bytes, application/xml]`.
+- **Сообщения журнала** сохраняются до первого триггера: секретное имя, ключ не из списка
+  разрешённых (по умолчанию `status`, `method`, `path`, `duration_ms` и `count`; свои ключи
+  добавляются через `allowedTextKeys`), символ вне ASCII, который не является буквой, диакритикой,
+  цифрой или пробелом (`꞉`, `…`, эмодзи, а также буква, которую нормализация совместимости
+  читает как знак препинания, например `🄁` как `0,`), escape-последовательность любого вида
+  (обратная косая черта перед чем угодно, кроме пробельного символа, `%3D`, `&` перед буквой или
+  `#`: `R&D`, `&amp`), ключ в кавычках
+  не из списка разрешённых (текст обрезается по открывающей кавычке: `"x":"hunter2"` сохраняется
+  как `[REDACTED]`), разметка (`<`, который не является сравнением: `<b>`, `</x>`, `<!--`; ни один
+  тег не сохраняет свой текст), кавычка, не закрытая в своей строке, перекрывающиеся кавычки
+  (`'x "y' z"`) или незакрытая скобка
+  скрывают всё, что идёт после, включая строки ниже
+  (`login password=hunter2 status=200` сохраняется как `login password=[REDACTED]`, а `x=hunter2`
+  как `x=[REDACTED]`). Сообщение без триггера сохраняется как есть, кроме найденных токенов, номеров
+  карт и адресов почты.
+  Детекторы читают через VT, FF, U+0085, U+2028 и U+2029, которые обрезают сообщение, поэтому
+  номер карты, IBAN, адрес почты или токен, разделённый одним из них, скрывается с начала
+  (`paid 4111 1111 1111`, U+2028, `1111` сохраняется как `paid [REDACTED]`); LF и CR завершают
+  найденное значение.
+- **URL в сообщениях лога** не обрабатываются как отдельный островок. URL остаётся видимым, только
+  если он чистый: `scheme://host` с необязательным путём из ASCII-букв, цифр, `.`, `_`, `-` и `/`,
+  без хоста или сегмента пути, который является секретным именем, а после него стоит пробел, конец
+  строки, конец текста или ровно один из знаков `.`, `,`, `!` и `)`, за которым идёт одно из
+  этого. Любой другой URL (с запросом, фрагментом, портом, данными пользователя, экранированием
+  вроде `%3D`, кавычкой или двумя знаками после него) скрывает сообщение с того места, где начинается
+  URL (`GET https://api.example.com/v1/items?page=2 done` сохраняется как `GET [REDACTED]`);
+  `allowedQueryParameters` применяется к URL записанных запросов, а не к URL в тексте.
+
+Маскирование — это страховка, а не гарантия. Оно рассчитано на секреты, записанные по ошибке:
+структурированные данные разбираются парсером, и всё, что парсер не понимает полностью, скрывается;
+свободный текст обрабатывается по возможности, и секретное имя, записанное без `=` или `:`, в
+котором две или более буквы заменены похожими (`pɑsswoʀd hunter2`), не обязательно будет
+найдено; одна буква, комбинируемый знак или цифра без формы в ASCII считается любой буквой,
+поэтому `tͦken hunter2`, `passw〇rd hunter2` и `t၀ken hunter2` (мьянманский ноль)
+находятся.
+Не допускайте секретов в записываемых запросах и сообщениях журнала с самого начала и используйте
+структурированное журналирование.
+
+К этой модели относятся ещё два ограничения. **Предел затрат:** все документы, вложенные в один
+вход (JSON в строке, URL в тексте), вместе читают не больше четырёх длин входа; сверх этого
+бюджета строка, содержащая следующий документ, скрывается целиком. **Многострочная разметка** не
+требует ничего особого: `<key>` property list на отдельной строке, JSON на нескольких строках и
+multipart-тело, записанное как текст, скрываются от первого триггера до конца текста, так что
+значение скрыто, где бы оно ни было записано.
 
 ### Записывать сообщения в журнал
 
@@ -259,7 +329,7 @@ struct MacDebugScenes: Scene {
 - [Перехват сетевого трафика](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — какие сессии записываются, как запросы доходят до сервера, лимиты памяти и что не записывается.
 - [Маскирование чувствительных данных](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — как сопоставляются имена, что заменяется, почему некоторые тела удерживаются, и ограничения.
+  — что записывается и что не записывается никогда, как сопоставляются ключи, почему некоторые тела опускаются, и ограничения.
 - [Как не включать инструменты в release-сборки](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — условия компиляции и отдельный внутренний target.
 

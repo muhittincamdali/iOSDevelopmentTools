@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -9,7 +9,7 @@
 
 <p align="center">
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml"><img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="CI 状态"></a>
-<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="最新版本: v2.0.0"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="最新版本: v2.1.0"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg" alt="支持的平台: iOS 17+ · macOS 14+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg" alt="语言版本: Swift 6.2+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg" alt="许可证: MIT"></picture></a>
@@ -41,9 +41,10 @@
 
 - **一行代码开始记录** — `NetworkCapture.start()` 会记录 `URLSession.shared`，以及之后用默认或
   ephemeral 配置创建的每个会话，包括基于 `URLSession` 构建的库。你的应用收到的每个响应都保持原样。
-- **存储前先脱敏** — 名称敏感的请求头、查询参数、表单、multipart 和 JSON 值都会被替换，无论名称
-  怎么拼写（`X-API-Key`、`api_key`、`API%5FKEY`）。无法检查的 JSON 消息体，例如被截断的，
-  会被扣留，而不是未经检查就存储。
+- **存储前先脱敏** — 秘密名称（`password`、`token`、`api_key`，无论怎么拼写或转义）下的值，以及
+  不是纯 ASCII 的键下的值都会被替换，只有允许列表中的请求头和查询参数会保留值。JSON、表单和
+  multipart 消息体会被解析；无法解析的消息体不会被存储，而是替换为一条说明。日志消息中从第一个
+  秘密名称或不在允许列表中的键到结尾的内容都会被隐藏。
 - **存储有上限** — 默认最多保留 500 个请求，每个消息体最多 256 KiB；日志消息保存在环形缓冲区中，
   超过 4 MiB 的上传以流的方式处理，而不是复制。头部和 URL 会完整保存，不会截断。
 - **导出** — 任何请求都可以导出为可安全用于 shell 的 `curl` 命令，任何请求列表都可以导出为
@@ -51,7 +52,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 148 个 Swift Testing 测试，iOS 模拟器上有 149 个。请求从应用的会话
+- **经过测试** — macOS 上有 631 个 Swift Testing 测试，iOS 模拟器上有 628 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -64,7 +65,7 @@
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-把它粘贴到窗口右上角的搜索框中。将 **Dependency Rule** 保持为从 `2.0.0` 开始的
+把它粘贴到窗口右上角的搜索框中。将 **Dependency Rule** 保持为从 `2.1.0` 开始的
 **Up to Next Major Version**，然后点击 **Add Package**。在下一个窗口中，在 **iOSDevelopmentTools**
 旁边选择你的应用 target，再次点击 **Add Package**。
 
@@ -121,7 +122,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.0.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -165,19 +166,69 @@ func makeAPISession() -> URLSession {
 
 ### 选择保留的内容
 
-超出范围的限制值会被限定到范围内。名称片段与规范化后的名称进行匹配，因此 `"iban"` 也能匹配
-`IBAN`、`iban_number` 和 `ibanNumber`：
+超出范围的限制值会被限定到范围内。秘密名称与所比较的键以相同方式规范化，因此
+`"license_number"` 也能匹配 `licenseNumber` 和 `LICENSE-NUMBER`，并且只有列出的查询参数会保留值：
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### 记录哪些内容
+
+- **会记录：** 方法、状态码、耗时、请求头名称、允许列表中请求头的值（默认是 `Accept`、
+  `Accept-Encoding`、`Accept-Language`、`Cache-Control`、`Content-Encoding`、`Content-Length`、
+  `Content-Type`、`ETag` 和 `User-Agent`）、URL 的协议、主机、路径和查询参数名称，以及脱敏后的
+  JSON、表单、multipart 和 `text/plain` 消息体。
+- **绝不记录：** URL 中的用户信息和片段、不在允许列表中的查询值、其他所有请求头的值（`Authorization`、
+  `Cookie` 和 `Set-Cookie` 即使在允许列表中也不记录）、`password`、`token`、`api_key` 等秘密名称下的
+  值、看起来像标识符的路径段（显示为 `:id`）、
+  紧跟在表示秘密名称或不是纯 ASCII 的路径段之后的路径段（`/caf%C3%A9/menu` 记录为
+  `/caf%C3%A9/:id`）、路径含点段（`/pin/./4831`、`..`、`%2E`）或 `;`
+  （`/cart;jsessionid=…`、`%3B`）的 URL 的路径和查询（只记录 scheme 和主机，从不解析矩阵参数）、
+  主机名为秘密名称时其后的路径和查询（`myapp://pin/4831` 记录为 `myapp://pin`；`auth.example.com`
+  这样的主机也会隐藏路径），以及 multipart 消息体中的文件部分。
+- **不是纯 ASCII 的键**（在解码转义、应用 NFKC 并统一大小写之后，例如含西里尔字母 `а` 的
+  `pаssword`、`pass\u200Dword`、`şifre`）的值默认会被隐藏。
+- **无法解析的消息体**（未知或缺失的内容类型、格式错误的 JSON 或 multipart、在大小上限处被截断的
+  消息体）会被替换为 `[body omitted: 512 bytes, application/xml]` 这样的说明。
+- **日志消息**只保留到第一个触发点之前：秘密名称、不在允许列表中的键（默认是 `status`、`method`、
+  `path`、`duration_ms` 和 `count`，可用 `allowedTextKeys` 添加自己的键）、ASCII 之外且不是字母、
+  附加符号、数字或空白的字符（`꞉`、`…`、表情符号，以及兼容性规范化读作标点的字符，例如读作
+  `0,` 的 `🄁`）、任何形式的转义（反斜杠后跟空白以外的任何字符、`%3D`、`&` 后跟字母或 `#`：`R&D`、
+  `&amp`）、不被允许的带引号的键
+  （从开引号处截断：`"x":"hunter2"` 会存储为 `[REDACTED]`）、标记（不是比较的 `<`：`<b>`、`</x>`、
+  `<!--`；任何标签都不保留其文本）、在本行内未闭合的引号、相互交叠的引号（`'x "y' z"`）或未闭合的括号，会让其后的所有内容（包括
+  下面的行）都被隐藏（`login password=hunter2 status=200` 会存储为
+  `login password=[REDACTED]`，`x=hunter2` 会存储为 `x=[REDACTED]`）。没有触发点的消息会原样保留，
+  只有检测到的令牌、卡号和电子邮件地址会被隐藏。
+  检测器会跨过会截断消息的 VT、FF、U+0085、U+2028 和 U+2029 读取，因此被其中之一分开的卡号、IBAN、
+  电子邮件地址或令牌会从开头起被隐藏（`paid 4111 1111 1111`、U+2028、`1111` 会存储为
+  `paid [REDACTED]`）；LF 和 CR 会结束一个检测结果。
+- **日志消息中的 URL** 没有孤岛逻辑。URL 只有在干净时才会保留原样：形式为 `scheme://host`，
+  可选路径只含 ASCII 字母、数字、`.`、`_`、`-` 和 `/`，主机和路径段都不是秘密名称，并且其后
+  紧跟空格、行尾、文本结尾，或 `.`、`,`、`!`、`)` 中的一个再接上述之一。其他任何 URL（带查询、片段、
+  端口、用户信息或 `%3D` 这类转义，或其后跟引号或两个标点）
+  都会让消息从 URL 开始处起被隐藏（`GET https://api.example.com/v1/items?page=2 done` 会存储为
+  `GET [REDACTED]`）；`allowedQueryParameters` 只用于记录下来的请求 URL，不用于文本中的 URL。
+
+脱敏只是一道安全网，而不是保证。它针对的是意外记录下来的秘密：结构化输入会用解析器读取，
+解析器不能完全理解的内容都会被隐藏；自由文本只能尽力而为，不带 `=` 或 `:`、且有两个或更多
+字母被替换为相似字母的秘密名称（`pɑsswoʀd hunter2`）不保证能被发现；没有 ASCII 形式的单个
+字母、组合用字符或数字会被当作任意一个字母，所以 `tͦken hunter2`、`passw〇rd hunter2`
+和 `t၀ken hunter2`（缅甸数字 0）能被发现。从一开始就不要让秘密进入
+你记录的请求和日志消息，并优先使用结构化日志。
+
+这个模型还包括两个限制。**开销上限：** 一个输入中嵌套的所有文档（字符串中的 JSON、文本中的
+URL）合计最多读取输入长度的四倍；超出这个预算后，包含下一个文档的字符串会被整体隐藏。**多行布局**
+不需要特殊处理：单独一行的 property list `<key>`、分布在多行的 JSON 和以文本形式写出的 multipart
+消息体都会从第一个触发点隐藏到文本末尾，所以无论值写在哪里都会被隐藏。
 
 ### 记录日志消息
 
@@ -250,7 +301,7 @@ API 参考文档与文章：
 - [捕获网络流量](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — 哪些会话会被记录、请求如何到达服务器、内存限制，以及哪些内容不会被记录。
 - [对敏感数据脱敏](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — 名称如何匹配、哪些内容会被替换、为什么有些消息体会被扣留，以及相关限制。
+  — 哪些内容会记录、哪些绝不记录，键如何匹配，为什么有些消息体会被省略，以及相关限制。
 - [让这些工具不进入 release 构建](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — 编译条件和一个单独的内部 target。
 

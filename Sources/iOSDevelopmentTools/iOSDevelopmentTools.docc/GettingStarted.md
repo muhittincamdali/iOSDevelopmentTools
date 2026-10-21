@@ -11,7 +11,7 @@ macOS, where the console opens from a window instead of a shake (see the last se
 
 In Xcode, choose **File › Add Package Dependencies…**, enter
 `https://github.com/muhittincamdali/iOSDevelopmentTools.git`, leave the rule at **Up to Next
-Major Version** from `2.0.0`, and add the **iOSDevelopmentTools** library to your app target.
+Major Version** from `2.1.0`, and add the **iOSDevelopmentTools** library to your app target.
 
 ### Start recording and add the console
 
@@ -47,7 +47,10 @@ Network tab lists the request; tap it to see its headers, body and timings.
 
 ### Log messages
 
-Log with ``LogStore`` instead of `print`. Messages appear in the Logs tab and in Console.app:
+Log with ``LogStore`` instead of `print`. Messages appear in the Logs tab and in Console.app,
+after redaction: from the first secret name in a message, a key that is not on the allowlist
+(`status`, `method`, `path`, `duration_ms` and `count` by default) or anything else that cannot be
+read with certainty, the rest of the message is hidden (see <doc:RedactingSensitiveData>):
 
 ```swift
 LogStore.shared.info("Signed in", category: "auth")

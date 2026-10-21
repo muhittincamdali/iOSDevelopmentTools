@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@083da504c273f1c07393aec158dccbf803ddb3da status=reviewed -->
+<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -9,7 +9,7 @@
 
 <p align="center">
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml"><img src="https://github.com/muhittincamdali/iOSDevelopmentTools/actions/workflows/ci.yml/badge.svg" alt="CI ステータス"></a>
-<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="最新バージョン: v2.0.0"></picture></a>
+<a href="https://github.com/muhittincamdali/iOSDevelopmentTools/releases"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-version-light.svg" alt="最新バージョン: v2.1.0"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-platforms-light.svg" alt="対応プラットフォーム: iOS 17+ · macOS 14+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/Package.swift"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-language-light.svg" alt="言語バージョン: Swift 6.2+"></picture></a>
 <a href="https://github.com/muhittincamdali/iOSDevelopmentTools/blob/master/LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/badge-license-light.svg" alt="ライセンス: MIT"></picture></a>
@@ -44,9 +44,12 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **1 行で記録開始** — `NetworkCapture.start()` は `URLSession.shared` と、その後に default または
   ephemeral の構成から作られるすべてのセッションを記録します。`URLSession` を基盤にしたライブラリも
   対象です。アプリはすべてのレスポンスを変更されないまま受け取ります。
-- **保存前にマスキング** — 機密性の高い名前を持つヘッダー、クエリ、フォーム、multipart、JSON の値は、
-  名前の綴りにかかわらず (`X-API-Key`、`api_key`、`API%5FKEY`) 置き換えられます。たとえば途中で切れた
-  ためなど、検査できない JSON ボディは、未検査のまま保存されるのではなく保留されます。
+- **保存前にマスキング** — 秘密の名前 (`password`、`token`、`api_key`。綴りやエスケープの仕方は問いません)
+  と、プレーンな ASCII ではないキーの値を置き換え、値を残すのは許可リストにあるヘッダーとクエリ
+  パラメーターだけです。JSON、フォーム、multipart のボディは解析され、解析できないボディは保存せずに
+  注記に置き換えます。ログメッセージでは、最初の秘密の名前または許可リストにないキーから
+  メッセージの終わりまでが
+  すべてマスキングされます。
 - **保存量に上限** — デフォルトでは最大 500 件のリクエスト、各ボディは 256 KiB までです。
   ログメッセージはリングバッファに保持され、4 MiB を超えるアップロードはコピーせずにストリーミング
   されます。ヘッダーと URL は切り詰めずに保存されます。
@@ -55,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 148 件、iOS シミュレーターで 149 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 631 件、iOS シミュレーターで 628 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -69,7 +72,7 @@ Xcode で **File › Add Package Dependencies…** を選び、リポジトリ�
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-ウィンドウ右上の検索フィールドに貼り付けます。**Dependency Rule** は `2.0.0` からの
+ウィンドウ右上の検索フィールドに貼り付けます。**Dependency Rule** は `2.1.0` からの
 **Up to Next Major Version** のままにして、**Add Package** をクリックします。次のウィンドウで
 **iOSDevelopmentTools** の横にあるアプリのターゲットを選び、もう一度 **Add Package** をクリックします。
 
@@ -126,7 +129,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.0.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -170,19 +173,78 @@ func makeAPISession() -> URLSession {
 
 ### 保持する内容を選ぶ
 
-範囲外の上限値は範囲内に丸められます。名前の断片は正規化した名前と照合されるため、`"iban"` は
-`IBAN`、`iban_number`、`ibanNumber` にも一致します。
+範囲外の上限値は範囲内に丸められます。秘密の名前は比較対象のキーと同じように正規化されるため、
+`"license_number"` は `licenseNumber` や `LICENSE-NUMBER` にも一致します。値を残すのは列挙した
+クエリパラメーターだけです。
 
 ```swift
 func configureNetworkLogger() {
     NetworkLogger.shared.configuration = NetworkLogger.Configuration(
         maximumEntries: 1_000,
         maximumBodySize: 512 * 1024,
-        redaction: RedactionPolicy(nameFragments: RedactionPolicy.defaultNameFragments + ["iban", "ssn"]),
+        redaction: RedactionPolicy(additionalSecretNames: ["license_number"], allowedQueryParameters: ["page"]),
         ignoredHosts: ["analytics.example.com"]
     )
 }
 ```
+
+### 記録される内容
+
+- **記録されるもの:** メソッド、ステータス、所要時間、ヘッダー名、許可リストにあるヘッダーの値
+  (デフォルトは `Accept`、`Accept-Encoding`、`Accept-Language`、`Cache-Control`、
+  `Content-Encoding`、`Content-Length`、`Content-Type`、`ETag`、`User-Agent`)、URL のスキーム、
+  ホスト、パス、クエリパラメーター名、そしてマスキング後の JSON、フォーム、multipart、`text/plain`
+  のボディ。
+- **決して記録されないもの:** URL のユーザー情報とフラグメント、許可リストにないクエリの値、その他
+  すべてのヘッダーの値 (`Authorization`、`Cookie`、`Set-Cookie` は許可リストにあっても記録されません)、
+  `password`、`token`、`api_key` などの秘密の名前の値、識別子に見えるパスセグメント (`:id` と表示)、
+  秘密の名前を表すセグメントまたはプレーンな ASCII ではないセグメントの次のセグメント
+  （`/caf%C3%A9/menu` は `/caf%C3%A9/:id` として記録）、
+  ドットセグメント（`/pin/./4831`、`..`、`%2E`）または `;`（`/cart;jsessionid=…`、`%3B`）を含む URL のパスと
+  クエリ（スキームとホストのみ記録。マトリックスパラメーターは解析しません）、秘密の名前を表す
+  ホストの後のパスとクエリ（`myapp://pin/4831` は `myapp://pin` として記録。`auth.example.com`
+  のようなホストもパスを隠します）、multipart ボディのファイルパート。
+- **プレーンな ASCII ではないキー** (エスケープのデコード、NFKC、大文字小文字の統一の後。キリル文字の
+  `а` を含む `pаssword`、`pass\u200Dword`、`şifre` など) の値は、デフォルトで隠されます。
+- **解析できないボディ** (不明または欠落した Content-Type、不正な JSON や multipart、サイズ上限で
+  切れたボディ) は `[body omitted: 512 bytes, application/xml]` のような注記に置き換えられます。
+- **ログメッセージ**は最初のトリガーまで保持されます。秘密の名前、許可リストにないキー（デフォルトは
+  `status`、`method`、`path`、`duration_ms`、`count`。独自のキーは `allowedTextKeys` で追加
+  します）、文字・結合記号・数字・空白以外の ASCII 外の文字（`꞉`、`…`、絵文字、および互換正規化が句読点として読む文字。
+  例：`0,` と読まれる `🄁`）、あらゆる形のエスケープ（空白以外の文字の前のバックスラッシュ、`%3D`、
+  英字か `#` の前の `&`：`R&D`、`&amp`）、許可されていない引用符付きのキー（開き引用符の位置で切られます。`"x":"hunter2"` は
+  `[REDACTED]` として保存されます）、マークアップ（比較ではない `<`。`<b>`、`</x>`、`<!--` など。
+  どのタグもテキストを残しません）、同じ行で閉じられていない引用符、重なり合う引用符（`'x "y' z"`）、閉じられていない括弧があると、
+  それ以降は下の行も含めてすべてマスキングされます（`login password=hunter2 status=200` は `login password=[REDACTED]`、`x=hunter2` は
+  `x=[REDACTED]` として保存されます）。トリガーのないメッセージは、検出されたトークン、カード番号、
+  メールアドレスを除いてそのまま保持されます。
+  検出は、メッセージを切る VT、FF、U+0085、U+2028、U+2029 をまたいで読むため、これらで分割された
+  カード番号、IBAN、メールアドレス、トークンは先頭からマスキングされます（`paid 4111 1111 1111`、
+  U+2028、`1111` は `paid [REDACTED]` として保存されます）。LF と CR は検出対象を終わらせます。
+- **ログメッセージ内の URL** を特別に扱う仕組みはありません。URL がそのまま表示されるのは
+  クリーンな場合だけです。つまり `scheme://host` と、ASCII の英字・数字・`.`・`_`・`-`・`/`
+  だけからなる省略可能なパスでできていて、秘密の名前であるホストやパスセグメントがなく、直後が
+  空白、行末、テキストの終わり、または `.`・`,`・`!`・`)` のいずれか 1 つとその後の空白・行末・
+  テキストの終わりである場合です。それ以外の URL（クエリ、フラグメント、ポート、ユーザー情報、
+  `%3D` のようなエスケープを含むもの、直後に引用符や 2 つの記号が続くもの）は、URL の始まりからメッセージを
+  マスキングします（`GET https://api.example.com/v1/items?page=2 done` は `GET [REDACTED]`
+  として保存されます）。`allowedQueryParameters` は記録されたリクエストの URL に適用され、
+  テキスト内の URL には適用されません。
+
+マスキングはセーフティネットであり、保証ではありません。うっかり記録された秘密情報を想定して
+作られています。構造化された入力はパーサーで解析し、パーサーが完全には理解できないものは
+マスキングします。自由形式のテキストはベストエフォートで、`=` や `:` なしで書かれ、2 文字以上を
+似た文字に置き換えた秘密の名前（`pɑsswoʀd hunter2`）が見つかる保証はありません。ASCII の形を
+持たない 1 つの文字・結合文字・数字は任意の 1 文字として読むので、`tͦken hunter2`、
+`passw〇rd hunter2`、`t၀ken hunter2`（ミャンマー数字の 0）は見つかります。そもそも記録する
+リクエストやログメッセージに秘密情報を含めず、構造化ログを使ってください。
+
+このモデルにはさらに 2 つの制限があります。**コストの上限:** 1 つの入力に入れ子になったすべての
+ドキュメント（文字列内の JSON、テキスト内の URL）は、合わせて入力の長さの最大 4 倍までしか
+読み取りません。この予算を超えると、次のドキュメントを含む文字列は丸ごとマスキングされます。
+**複数行のレイアウト**に特別な処理は要りません。独立した行にある property list の `<key>`、複数行に
+わたる JSON、テキストとして書かれた multipart ボディは、最初のトリガーからテキストの終わりまで
+マスキングされるため、値はどこに書かれていてもマスキングされます。
 
 ### メッセージをログに記録する
 
@@ -255,7 +317,7 @@ API リファレンスと解説記事：
 - [ネットワーク通信のキャプチャ](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/capturingnetworktraffic)
   — 記録されるセッション、リクエストがサーバーに届く仕組み、メモリの上限、記録されないもの。
 - [機密データのマスキング](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/redactingsensitivedata)
-  — 名前の照合方法、置き換えられるもの、一部のボディが保留される理由、そして制限。
+  — 記録されるものと決して記録されないもの、キーの照合方法、一部のボディが省かれる理由、そして制限。
 - [ツールをリリースビルドに含めない](https://muhittincamdali.github.io/iOSDevelopmentTools/documentation/iosdevelopmenttools/keepingtoolsoutofreleasebuilds)
   — コンパイル条件と、独立した内部用ターゲット。
 
