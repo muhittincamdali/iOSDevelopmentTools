@@ -27,6 +27,12 @@ extension RedactionPolicy {
     ///   text the free-text rule would change. The segment after one that names a secret is a
     ///   value too and becomes `:id` whatever it looks like (`/pin/4831`, `/token/…/info`).
     ///   Parameters after a `;` (`;jsessionid=…`) are read like query parameters.
+    /// - **Dot segments:** a path that servers resolve differently from how it is written is not
+    ///   read: only the scheme, host and port are written. That is a path with a `.` or `..`
+    ///   segment, `%2E` in any case, a segment whose part before `;` is empty (`/;/`, `/;x=1/`)
+    ///   or an escape escaped again (`%252E`). `URL.standardized` and servers resolve
+    ///   `/pin/./4831` and `/token/x/../4831` as `/pin/4831` and `/token/4831` (RFC 3986
+    ///   §5.2.4), so the segment after a secret name could not be told from what the text shows.
     /// - A path of more than ``maximumPathSegments`` segments, or a path or query of more than
     ///   ``maximumQueryParameters`` parameters, is not read: only the scheme, host and port are
     ///   written. So is every URL with ``URLDetail/hostOnly``.
@@ -57,7 +63,7 @@ extension RedactionPolicy {
     /// The URL's path as ``redact(url:)`` records it; empty when only the host is recorded.
     func redactedPath(of url: URL) -> String {
         guard isEnabled else { return url.path(percentEncoded: true) }
-        guard urlDetail == .full, let components = URLComponents(url: url, resolvingAgainstBaseURL: false), !Self.exceedsLimits(components)
+        guard urlDetail == .full, let components = URLComponents(url: url, resolvingAgainstBaseURL: false), Self.readsPath(of: components)
         else { return "" }
         return redacted(path: components.percentEncodedPath, nesting: .document(length: url.absoluteString.unicodeScalars.count))
     }
@@ -76,7 +82,7 @@ extension RedactionPolicy {
             result += "//" + host
             if let port = components.port { result += ":\(port)" }
         }
-        guard urlDetail == .full, !Self.exceedsLimits(components) else { return result.isEmpty ? Self.unparsedURL : result }
+        guard urlDetail == .full, Self.readsPath(of: components) else { return result.isEmpty ? Self.unparsedURL : result }
         result += redacted(path: components.percentEncodedPath, nesting: nesting)
         if let query = components.percentEncodedQuery, !Self.isStrictForm(query) { return result + "?" + Self.replacement }
         if let items = components.percentEncodedQueryItems {
@@ -134,6 +140,34 @@ extension RedactionPolicy {
         return inside.contains(UInt8(ascii: ":")) && inside.allSatisfy { byte in
             ASCII.isDigit(byte) || (UInt8(ascii: "a")...UInt8(ascii: "f")).contains(byte | 0x20) || byte == UInt8(ascii: ":") || byte == UInt8(ascii: ".")
         }
+    }
+
+    /// Whether the path and query of a URL are read: the URL is within the limits (see
+    /// ``exceedsLimits(_:)``) and its path has no dot segment (see ``hasDotSegments(_:)``).
+    static func readsPath(of components: URLComponents) -> Bool {
+        !exceedsLimits(components) && !hasDotSegments(components.percentEncodedPath)
+    }
+
+    /// Whether a percent-encoded path holds what servers resolve or decode apart from its text: a
+    /// segment `.` or `..`, also before `;` (`.;x`), `%2E` in any case, a segment whose part
+    /// before `;` is empty, or an escape escaped again (`%25` before two hex digits or another
+    /// `%`). Empty segments (`//`) are not: no server resolves them away.
+    static func hasDotSegments(_ path: String) -> Bool {
+        let bytes = Array(path.utf8)
+        for (i, byte) in bytes.enumerated() where byte == UInt8(ascii: "%") && i + 2 < bytes.count {
+            let escape = (bytes[i + 1], bytes[i + 2] | 0x20)
+            if escape == (UInt8(ascii: "2"), UInt8(ascii: "e")) { return true }
+            guard escape == (UInt8(ascii: "2"), UInt8(ascii: "5")), i + 3 < bytes.count else { continue }
+            if bytes[i + 3] == UInt8(ascii: "%") || (i + 4 < bytes.count && isHexDigit(bytes[i + 3]) && isHexDigit(bytes[i + 4])) { return true }
+        }
+        return bytes.split(separator: UInt8(ascii: "/"), omittingEmptySubsequences: true).contains { segment in
+            let base = segment.prefix { $0 != UInt8(ascii: ";") }
+            return base.isEmpty || base.allSatisfy { $0 == UInt8(ascii: ".") } && base.count <= 2
+        }
+    }
+
+    private static func isHexDigit(_ byte: UInt8) -> Bool {
+        ASCII.isDigit(byte) || (UInt8(ascii: "a")...UInt8(ascii: "f")).contains(byte | 0x20)
     }
 
     /// Whether the path has more than ``maximumPathSegments`` segments, or the path or the query
