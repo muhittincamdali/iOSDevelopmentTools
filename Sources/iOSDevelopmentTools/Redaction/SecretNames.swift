@@ -93,8 +93,9 @@ struct SecretNameTable: Sendable, Hashable {
 
     /// The entries that can be spelled from letter `start` of a name's lowercase `letters`: those
     /// that start with that letter, or, where a ``PlainName/wildcard`` stands for the first
-    /// letter, those whose second letter follows it. A word holds one wildcard at most, so after
-    /// two of them in a row no entry can start.
+    /// letter, those whose second letter follows it. A word is read with one wildcard at most, so
+    /// after two of them in a row no entry can start; more of them are found in the word's ASCII
+    /// skeleton, which leaves them out (see ``LooseReading``).
     func candidates(at start: Int, in letters: [UInt8]) -> [Entry] {
         let first = letters[start]
         guard first == PlainName.wildcard else { return Self.bucket(first).map { byFirstLetter[$0] } ?? [] }

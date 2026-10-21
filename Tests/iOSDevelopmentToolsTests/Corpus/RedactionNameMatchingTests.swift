@@ -2,9 +2,9 @@ import Foundation
 import Testing
 @testable import iOSDevelopmentTools
 
-/// How a word of free text is matched with the secret words: one pass per secret word, with at
-/// most one letter that has no ASCII form (a wildcard) standing for a letter or, between two
-/// letters, for none.
+/// How a word of free text is matched with the secret words, in two readings of one pass per
+/// secret word: with at most one letter that has no ASCII form (a wildcard) standing for a letter
+/// or, between two letters, for none, and as its ASCII skeleton, with every such letter left out.
 @Suite("Redaction corpus: name matching")
 struct RedactionNameMatchingTests {
     let redactor = Redactor()
@@ -19,10 +19,20 @@ struct RedactionNameMatchingTests {
         #expect(!redactor.redact(line).contains("hunter2"), "\(line)")
     }
 
+    // The eighth review of the spec branch: letters without an ASCII form put into a name are
+    // left out of its skeleton, however many there are.
+    @Test("letters without an ASCII form put into a name are left out of its skeleton", arguments: [
+        "passꞏwoꞏrd hunter2", "pıaıssword hunter2", "passıwoırd hunter2", "seıcreıt hunter2", "tokenꞏꞏ hunter2",
+        "tokenıı hunter2", "ꞏtoꞏkeꞏnꞏ hunter2",
+    ])
+    func skeleton(line: String) {
+        #expect(!redactor.redact(line).contains("hunter2"), "\(line)")
+    }
+
     // The logging guide names this limit under "What it does not find": free text without a
     // separator is a best effort, and no list of look-alikes is kept to chase it.
-    @Test("a name written without a separator and two or more letters without an ASCII form is not found", arguments: [
-        "pɑsswoʀd hunter2", "tɵkɛn hunter2", "passꞏwoꞏrd hunter2",
+    @Test("a name written without a separator with two or more letters replaced by ones without an ASCII form is not found", arguments: [
+        "pɑsswoʀd hunter2", "tɵkɛn hunter2",
     ])
     func twoWildcards(line: String) {
         #expect(redactor.redact(line).contains("hunter2"), "\(line) is found: update the guide")

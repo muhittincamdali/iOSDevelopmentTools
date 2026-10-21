@@ -10,8 +10,8 @@ struct RedactionEleventhReviewProbeTests {
     static let documentedLimitations: [Int: String] = {
         var limitations: [Int: String] = [:]
         let byReason: [(String, [Int])] = [
-            ("a name without a separator in two or more letters that have no ASCII form, on any path that reads free text",
-             Array(1...14) + Array(23...25) + Array(27...43) + [336]),
+            ("a name without a separator with two or more letters replaced by letters that have no ASCII form, on any path that reads free text",
+             Array(1...14) + Array(23...25) + Array(27...35) + Array(37...43) + [336]),
             ("a name and its value in two JSON objects or arrays", [79, 93]),
             ("a name in another script as an element of an array of more than two", [92]),
             ("a label it does not know: a word in another language or a name not on the list", [121, 123, 169]),
@@ -34,14 +34,15 @@ struct RedactionEleventhReviewProbeTests {
     /// since a key that is not allowed cuts free text, the value of a key that names no secret
     /// after a separator outside ASCII (`user：…`, `user⩵…`) and after `bob:` in `curl -u`, and,
     /// since a character outside the safe alphabet cuts it, the value after a dash or an arrow
-    /// that looks like `=` (`user゠…`, `user⭢…`).
+    /// that looks like `=` (`user゠…`, `user⭢…`), and, since the ASCII skeleton of a word leaves out
+    /// its letters without an ASCII form, a name with two of them put in (`passꞏwoꞏrd`).
     static let fixed = [184, 185, 186, 189, 328, 329, 354, 360] + Array(367...374) + Array(376...383) + [319, 337]
-        + Array(254...260) + [266, 291] + [261, 262, 272]
+        + Array(254...260) + [266, 291] + [261, 262, 272] + [36]
 
     @Test("the set has 475 probes")
     func count() {
         #expect(EleventhReviewProbeSet.all.count == 475)
-        #expect(Self.documentedLimitations.count == 47)
+        #expect(Self.documentedLimitations.count == 46)
     }
 
     @Test("no probe outside the documented limitations shows its secret")
@@ -54,7 +55,7 @@ struct RedactionEleventhReviewProbeTests {
 
     @Test("the probes that showed their secret when they were written hide it")
     func fixedProbes() {
-        #expect(Self.fixed.count == 38)
+        #expect(Self.fixed.count == 39)
         for id in Self.fixed {
             let probe = EleventhReviewProbeSet.all[id - 1]
             #expect(probe.leakedPiece(in: probe.redacted()) == nil, "#\(id) \(probe.input.debugDescription)")

@@ -81,8 +81,7 @@ extension FreeTextScanner {
         guard nextStart > word.upperBound, nextStart < lineEnd, !endsWord(nextStart) else { return nil }
         let next = nextStart..<wordEnd(from: nextStart, to: lineEnd)
         guard let reading = LooseReading(text, [word, next], source: source, names: policy.secretNameTable) else { return nil }
-        let split = reading.letterCount(before: nextStart)
-        return reading.secretEnd { $0.lowerBound < split && $0.upperBound > split }
+        return reading.secretEnd { $0.lowerBound < nextStart && $0.upperBound > nextStart }
     }
 
     private static let splittingBoundaries = ByteSet("|,;&?")

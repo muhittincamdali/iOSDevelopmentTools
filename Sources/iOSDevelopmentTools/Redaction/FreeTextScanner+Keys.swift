@@ -122,8 +122,7 @@ extension FreeTextScanner {
             ranges.append(wordStart..<k)
         }
         guard let last = ranges.last, let reading = LooseReading(text, ranges, source: source, names: policy.secretNameTable) else { return false }
-        let lastStart = reading.letterCount(before: last.lowerBound)
-        return reading.secretEnd { $0.upperBound > lastStart } != nil
+        return reading.secretEnd { $0.upperBound > last.lowerBound } != nil
     }
 
     private static let keyWordBoundaries = ByteSet(",?")

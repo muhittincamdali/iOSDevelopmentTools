@@ -64,8 +64,9 @@ struct PlainName {
 
     /// A word of free text read loosely, to find the secret words in it: punctuation between its
     /// letters is read as a separator (`pass~word`, `t*okens`), and the bytes marked in
-    /// `wildcards` as letters that match any letter. Never used for keys, which are compared only
-    /// when plain.
+    /// `wildcards` as letters that match any letter. ``LooseReading`` also reads the word as its
+    /// ASCII skeleton, with no wildcards and those letters left out. Never used for keys, which
+    /// are compared only when plain.
     init?(looseBytes bytes: [UInt8], wildcards: [Bool]) {
         var name = bytes
         for i in name.indices where !ASCII.isNameCharacter(name[i]) {
