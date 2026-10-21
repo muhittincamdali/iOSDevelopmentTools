@@ -5,7 +5,8 @@ import Testing
 /// Generated input for the key rule in every shape it takes besides `key=value`: the first string
 /// of a two-element array in a line, the tag of an element, the name of a multipart part header
 /// and the host of a URL. A key that is not allowed, or a host that is not an address, never lets
-/// the value show; one that is allowed keeps it, so the redactor stays useful.
+/// the value show; one that is allowed keeps it, so the redactor stays useful. An element in free
+/// text is markup, which is never parsed: its `<` cuts the text whatever its tag.
 @Suite("Redaction corpus: key shape properties")
 struct RedactionKeyShapePropertyTests {
     let redactor = Redactor()
@@ -79,15 +80,17 @@ struct RedactionKeyShapePropertyTests {
         }
     }
 
-    @Test("the text of an element shows when the app allows its tag")
+    // Markup in free text is not parsed, so no tag is a key that keeps its text: allowing a key
+    // never shows the text of an element of that name.
+    @Test("the text of an element never shows, even when the app allows its tag")
     func allowedElementText() {
         var random = SeededRandom(seed: 0x7A60_0100)
         let allowing = Redactor(allowedTextKeys: ["item", "note"])
         for _ in 0..<200 {
             let tag = ["status", "count", "item", "note"].randomElement(using: &random)!
             let value = RedactionCorpusPropertyTests.value(using: &random)
-            let text = "<\(tag)>\(value)</\(tag)> done"
-            #expect(allowing.redact(text) == text)
+            #expect(allowing.redact("<\(tag)>\(value)</\(tag)> done") == "[REDACTED]")
+            #expect(allowing.redact("\(tag)=1 <\(tag)>\(value)</\(tag)> done") == "\(tag)=1 [REDACTED]")
         }
     }
 

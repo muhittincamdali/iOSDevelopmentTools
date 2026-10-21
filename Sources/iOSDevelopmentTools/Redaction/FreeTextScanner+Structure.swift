@@ -68,7 +68,7 @@ extension FreeTextScanner {
         if readsWords, let first = document.firstValue(notAllowedBy: { policy.allowsTextKey($0, in: allowedKeys) }) {
             // What the key rule found before the cut stays: the values a detector changed.
             record(spans: found.filter { $0.start < first }, region: region)
-            cut(atOffset: first, trigger: jsonStart)
+            cut(atOffset: first)
             return
         }
         record(spans: found, region: region)

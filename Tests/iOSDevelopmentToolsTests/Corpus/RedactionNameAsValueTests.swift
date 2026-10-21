@@ -66,7 +66,7 @@ struct RedactionNameAsValueTests {
         (#"<property name="spring.datasource.password" value="S3CR3Tq"/>"#, #"[REDACTED]"#),
         (#"<p title="password">S3CR3Tq</p>"#, #"[REDACTED]"#),
         (#"<string name="api_key"><![CDATA[S3CR3Tq]]></string>"#, #"[REDACTED]"#),
-        ("<td>password</td><td>S3CR3Tq</td>", "<td>[REDACTED]"),
+        ("<td>password</td><td>S3CR3Tq</td>", "[REDACTED]"),
     ])
     func sameElement(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -86,27 +86,30 @@ struct RedactionNameAsValueTests {
         #expect(redactor.redact(input) == expected)
     }
 
+    // Markup in free text is not parsed: the first tag cuts the text, so the element after a key
+    // is hidden with it.
     @Test("the element after a key in a property list is hidden with everything after it", arguments: [
-        ("<key>password</key><string>S3CR3Tq</string>", "<key>[REDACTED]"),
-        ("<dict>\n\t<key>password</key>\n\t<string>S3CR3Tq\nS3CR3Tq2</string>\n</dict>", "<dict>\n\t<key>[REDACTED]"),
-        ("<key>password</key> <!-- note -->\n<string>S3CR3Tq</string>", "<key>[REDACTED]"),
-        ("<key>password</key>\nS3CR3Tq\nnext line", "<key>[REDACTED]"),
-        ("<label>Password</label>\n<input value=\"S3CR3Tq\">\n<p>after</p>", "<label>[REDACTED]"),
+        ("<key>password</key><string>S3CR3Tq</string>", "[REDACTED]"),
+        ("<dict>\n\t<key>password</key>\n\t<string>S3CR3Tq\nS3CR3Tq2</string>\n</dict>", "[REDACTED]"),
+        ("<key>password</key> <!-- note -->\n<string>S3CR3Tq</string>", "[REDACTED]"),
+        ("<key>password</key>\nS3CR3Tq\nnext line", "[REDACTED]"),
+        ("<label>Password</label>\n<input value=\"S3CR3Tq\">\n<p>after</p>", "[REDACTED]"),
+        ("plist: <key>password</key>\n<string>S3CR3Tq</string>", "plist: [REDACTED]"),
     ])
     func siblingElement(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
     }
 
-    @Test("files that write secrets by name keep what comes before the first one readable", arguments: [
+    @Test("files that write secrets by name are cut at their first tag", arguments: [
         // Android strings.xml
         (
             "<resources>\n    <string name=\"app_name\">My App</string>\n    <string name=\"api_key\">S3CR3Tq</string>\n    <string name=\"title\">Hello</string>\n</resources>",
-            "<resources>\n    [REDACTED]"
+            "[REDACTED]"
         ),
         // Java Properties XML
         (
             "<properties>\n<entry key=\"db.user\">bob</entry>\n<entry key=\"db.password\">\nS3CR3Tq\n</entry>\n<entry key=\"db.url\">jdbc</entry>\n</properties>",
-            "<properties>\n[REDACTED]"
+            "[REDACTED]"
         ),
         // .NET appSettings
         (
@@ -123,12 +126,13 @@ struct RedactionNameAsValueTests {
         #expect(redactor.redact(input) == expected)
     }
 
+    // An element is markup, which cuts the text at its `<` whatever its tag and attributes.
     @Test("names that are not secret keep what follows them after allowed keys", arguments: [
         (#"name="status" ok"#, #"name="status" ok"#),
-        (#"<string name="status">200</string> status=200"#, #"<string name="status">200</string> status=200"#),
+        (#"<string name="status">200</string> status=200"#, "[REDACTED]"),
         (#"user="bob" status=200 path=/x"#, #"user="bob" status=200 path=/x"#),
-        ("login <password> required\nnext line\nlast line", "login <password[REDACTED]"),
-        ("<token>unclosed\nnext line", "<token[REDACTED]"),
+        ("login <password> required\nnext line\nlast line", "login [REDACTED]"),
+        ("<token>unclosed\nnext line", "[REDACTED]"),
     ])
     func plainNames(input: String, expected: String) {
         let allowing = Redactor(allowedTextKeys: ["name", "string", "user"])
@@ -169,7 +173,7 @@ struct RedactionNameAsValueTests {
     func guideExamples() {
         #expect(redactor.redact("field name=\"password\" hunter2") == "field name=\"[REDACTED]")
         #expect(redactor.redact(#"<string name="api_key">k-1</string>"#) == "[REDACTED]")
-        #expect(redactor.redact("<key>password</key>\n<string>k-1</string>") == "<key>[REDACTED]")
+        #expect(redactor.redact("<key>password</key>\n<string>k-1</string>") == "[REDACTED]")
         let pair = #"{"label":"Password","value":"hunter2"}"#
         #expect(redactor.redact(body: Data(pair.utf8), contentType: "application/json") == #"{"label":"Password","value":"[REDACTED]"}"#)
     }

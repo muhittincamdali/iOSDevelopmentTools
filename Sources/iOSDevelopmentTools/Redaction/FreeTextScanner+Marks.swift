@@ -1,4 +1,11 @@
-/// Quotes, brackets and tags in free text.
+/// Markup, quotes and brackets in free text, read by their positions alone.
+///
+/// The scan keeps no tag, quote or bracket open while it reads. An earlier design read a tag as
+/// a key, kept the tag that was open and the closing quote it was in, and searched for a closing
+/// quote to the end of the text: markup it did not know (`<!--`, `<?pi`, `</x>`, `<br/>`) kept
+/// what followed it, an allowed tag kept its text, and a quote that closed on a later line kept
+/// the lines in between. Markup is now never parsed (see ``startsMarkup(at:)``), and one pass of
+/// its own finds the first quote that does not close on its line (see ``noteMarks()``).
 extension FreeTextScanner {
     /// Whether the byte at `i` comes after an odd number of backslashes.
     func isEscaped(_ i: Int) -> Bool {
@@ -11,120 +18,133 @@ extension FreeTextScanner {
         return count % 2 == 1
     }
 
+    /// The first of the backslashes right before byte `i`.
+    func backslashesStart(before i: Int) -> Int {
+        var k = i
+        while k > 0, text.bytes[k - 1] == UInt8(ascii: "\\") { k -= 1 }
+        return k
+    }
+
+    // MARK: Markup
+
+    /// Whether markup starts at byte `i`. Markup in free text is not parsed, and what is allowed
+    /// after a `<` is listed, not what makes it a tag: a `<` is a comparison only before an ASCII
+    /// space, a tab, a line break, an ASCII digit, `=` or the end of the text (`a < b`, `<3`,
+    /// `<=`). Before anything else — a letter of any script, `/`, `!`, `?`, `_`, `:`, a digit
+    /// outside ASCII, a symbol, punctuation, an invisible character — it starts markup, and the
+    /// text is cut at it: `<b>`, `</x>`, `<br/>`, `<!--`, `<![CDATA[`, `<?pi`, `<!DOCTYPE`, `<#`,
+    /// `<-`, `<>`, `List<String>`. No tag is a key that keeps its text, whatever its name.
+    func startsMarkup(at i: Int) -> Bool {
+        guard text.bytes[i] == UInt8(ascii: "<") else { return false }
+        let next = i + 1
+        guard next < text.count else { return false }
+        // A character outside ASCII that the scanning copy reads as one of the allowed ones (`３`,
+        // a space with no width) and an invisible character before it are not allowed.
+        guard text.offsets[next] == text.offsets[i] + 1, source[text.offsets[next]].isASCII else { return true }
+        let byte = text.bytes[next]
+        return !(Self.comparisonFollowers.contains(byte) || ASCII.isDigit(byte) || text.isLineTerminator(next))
+    }
+
+    private static let comparisonFollowers = ByteSet(" \t=")
+
+    // MARK: Quotes and brackets
+
     /// Quotes and brackets, which are a trigger when they do not close.
     static let marks = ByteSet("\"'`([{")
     private static let openings: [UInt8] = Array("([{".utf8)
     private static let closings: [UInt8] = Array(")]}".utf8)
-    private static let simpleQuotes: [UInt8] = Array("'`".utf8)
 
-    /// Notes the last closing bracket of each kind and the last single quote and backtick, in one
-    /// pass.
-    mutating func noteLastMarks() {
+    /// Reads the quotes and brackets of the text, in one pass that keeps one quote and the last
+    /// closing bracket of each kind:
+    ///
+    /// - A `"` or a backtick opens a quote anywhere, a `'` only where no letter or digit of any
+    ///   script comes before it and its backslashes, so the apostrophe of `don't`, `Ayşe'nin` and
+    ///   `it\'s` opens nothing.
+    /// - A quote closes at the next of its own character written the same way, escaped as in
+    ///   escaped JSON (`\"…\"`) or not; nothing else inside it counts.
+    /// - A quote still open at a line break or at the end of the text does not close on its line.
+    ///   What it holds, a key and its value over lines among them (`"note\nQx31": 1`), cannot be
+    ///   told, so the first such quote is where the text is cut at the latest (``unclosedQuote``).
+    mutating func noteMarks() {
+        var quote: (byte: UInt8, escaped: Bool, at: Int)?
         for k in 0..<text.count {
             let byte = text.bytes[k]
-            if let kind = Self.closings.firstIndex(of: byte) {
-                lastCloses[kind] = k
-            } else if let kind = Self.simpleQuotes.firstIndex(of: byte) {
-                lastSimpleQuotes[kind] = k
+            if let kind = Self.closings.firstIndex(of: byte) { lastCloses[kind] = k }
+            guard unclosedQuote == nil else { continue }
+            if let open = quote {
+                if text.isLineTerminator(k) {
+                    unclosedQuote = open.at
+                } else if byte == open.byte, isEscaped(k) == open.escaped {
+                    quote = nil
+                }
+            } else if Self.quotes.contains(byte), opensQuote(at: k) {
+                let escaped = isEscaped(k)
+                quote = (byte, escaped, escaped ? backslashesStart(before: k) : k)
             }
         }
+        if unclosedQuote == nil, let open = quote { unclosedQuote = open.at }
     }
 
-    /// A quote or an opening bracket at the position. It is a trigger when it does not close: a
-    /// double quote, plain or escaped (`\"`), with no other one of its kind after it, a single quote
-    /// or backtick that opens a value or a word (`status='ok`, `login 'open …`) with no other one
-    /// after it, and a bracket with no closing one of its kind after it. A quote that closes is
-    /// passed over and the text inside it is read on, so a name in quotes is read too.
-    /// Apostrophes inside words (`don't`, `Ayşe'nin`) are not quotes.
+    /// A quote or an opening bracket at the position. A quote may open a quoted key (see
+    /// ``quote()``); whether it closes on its line was read by ``noteMarks()``. A bracket is a
+    /// trigger when no closing one of its kind comes after it.
     mutating func readMark() {
         let byte = text.bytes[position]
-        if byte == UInt8(ascii: "\"") {
-            let kind = isEscaped(position) ? 1 : 0
-            if pendingCloses[kind] == position {
-                pendingCloses[kind] = nil
-            } else {
-                guard let close = closingQuote(after: position, escaped: kind == 1) else {
-                    cut(atByte: position)
-                    return
-                }
-                pendingCloses[kind] = close
-            }
-        } else if let kind = Self.simpleQuotes.firstIndex(of: byte) {
-            if opensQuote(at: position), lastSimpleQuotes[kind] <= position {
-                cut(atByte: position)
-                return
-            }
-        } else if let kind = Self.openings.firstIndex(of: byte), lastCloses[kind] < position {
+        if Self.quotes.contains(byte) {
+            quote()
+            return
+        }
+        if let kind = Self.openings.firstIndex(of: byte), lastCloses[kind] < position {
             cut(atByte: position)
             return
         }
         position += 1
     }
 
-    /// The next double quote after `open`, escaped like it (`\"…\"` in escaped JSON) or not.
-    /// The search ends at that quote, and the text up to it is read once more at most, so the
-    /// quotes of a text are found in time linear in its length.
+    /// A quote that opens a quoted key (`"user": …`, `'user'=…`, `\"user\":` in escaped JSON):
+    /// one that closes on its line with a separator after it, white space and line breaks
+    /// between. A quoted key follows the key rule: unless it is on the allowlist (see
+    /// ``allowsQuotedKey(_:)``), the text is cut at its opening quote, so nothing written in the
+    /// quotes shows (`"x": …`, `"hunter2": "v"`, `"session Qz9W": 1`). The text in any quote is
+    /// read on like any other, for the keys and names written in it.
+    private mutating func quote() {
+        let open = position
+        position += 1
+        guard opensQuote(at: open) else { return }
+        let escaped = isEscaped(open)
+        guard let close = closingQuote(after: open, escaped: escaped), let next = firstText(from: close + 1), isSeparator(next) else { return }
+        // In escaped JSON the backslash before the closing quote is not the key's.
+        let key = (open + 1)..<(escaped ? close - 1 : close)
+        if !allowsQuotedKey(key) { cut(atByte: escaped ? backslashesStart(before: open) : open) }
+    }
+
+    /// The next quote of the kind at `open` on its line, escaped like it or not escaped.
     private func closingQuote(after open: Int, escaped: Bool) -> Int? {
+        let quote = text.bytes[open]
         var k = open + 1
-        while k < text.count {
-            if text.bytes[k] == UInt8(ascii: "\""), isEscaped(k) == escaped { return k }
+        while k < text.count, !text.isLineTerminator(k) {
+            if text.bytes[k] == quote, isEscaped(k) == escaped { return k }
             k += 1
         }
         return nil
     }
 
-    /// Whether a single quote or backtick at `k` opens quoted text: it does not follow a letter or
-    /// digit of any script, as the apostrophe of `don't` does.
+    /// Whether the quoted key in the bytes `key` is on the allowlist, compared where it is in the
+    /// text: the key as written, the invisible characters before it included. A key longer than
+    /// ``PlainName/maximumKeyLength`` is turned down before any of it is read, so no key is copied
+    /// whatever its length.
+    private func allowsQuotedKey(_ key: Range<Int>) -> Bool {
+        guard !key.isEmpty else { return false }
+        let region = text.originalWithInvisiblesBefore(key)
+        guard region.count <= PlainName.maximumKeyLength else { return false }
+        return policy.allowsTextKey(source[region], in: allowedKeys)
+    }
+
+    /// Whether the quote character at byte `k` can open a quote: a `'` only where no letter or
+    /// digit comes before it and its backslashes.
     private func opensQuote(at k: Int) -> Bool {
-        k == 0 || !text.isAnyAlphanumeric(k - 1)
+        guard text.bytes[k] == UInt8(ascii: "'") else { return true }
+        let start = backslashesStart(before: k)
+        return start == 0 || !text.isAnyAlphanumeric(start - 1)
     }
-
-    /// Notes where a tag starts (`<` before a letter of any script, or `/` and one) and where its
-    /// name ends, and where it ends (`>`, at byte `i`). The end of a start tag is followed by the
-    /// text of its element.
-    mutating func noteTag(_ byte: UInt8, at i: Int) {
-        if byte == UInt8(ascii: ">") {
-            let endedTag = openTag
-            openTag = nil
-            if let endedTag, isStartTag(endedTag, endingAt: i) { readElementText(of: endedTag, after: i) }
-            return
-        }
-        guard byte == UInt8(ascii: "<"), i + 1 < text.count else { return }
-        var nameEnd = i + 1
-        if text.bytes[nameEnd] == UInt8(ascii: "/") { nameEnd += 1 }
-        guard nameEnd < text.count, text.isAnyLetter(nameEnd) else { return }
-        while nameEnd < text.count, text.isAnyAlphanumeric(nameEnd) || Self.tagNameCharacters.contains(text.bytes[nameEnd]) { nameEnd += 1 }
-        openTag = (i, nameEnd)
-    }
-
-    /// Whether the tag that ends at the `>` at `close` opens an element: it is not an end tag
-    /// (`</a>`) and does not close itself (`<br/>`).
-    private func isStartTag(_ tag: (start: Int, nameEnd: Int), endingAt close: Int) -> Bool {
-        text.bytes[tag.start + 1] != UInt8(ascii: "/") && text.bytes[close - 1] != UInt8(ascii: "/")
-    }
-
-    /// The text of an element is the value of its tag, as the value of a key is: unless the tag's
-    /// name is on ``allowedKeys``, the text is cut where it starts (`<user>bob</user>`,
-    /// `<名前>bob</名前>`, `<key>password</key>`). In an allowed tag that holds a name (`<key>`,
-    /// `<name>`, … when the app allows them), the text up to the next `<` is a name in name
-    /// position, as a property list writes it (`<key>Şifre</key><string>…`): a name that names a
-    /// secret, is not plain ASCII or has no letter hides what follows the start tag.
-    private mutating func readElementText(of tag: (start: Int, nameEnd: Int), after close: Int) {
-        guard let textStart = firstText(from: close + 1), text.bytes[textStart] != UInt8(ascii: "<") else { return }
-        let name = Array(source[text.original((tag.start + 1)..<tag.nameEnd)])
-        guard policy.allowsTextKey(name, in: allowedKeys) else {
-            cut(atByte: textStart)
-            return
-        }
-        guard WrittenName.holdsNameInText(name) else { return }
-        var end = close + 1
-        while end < text.count, text.bytes[end] != UInt8(ascii: "<") { end += 1 }
-        let range = (close + 1)..<end
-        let scalars = range.isEmpty ? [] : Array(source[text.originalWithInvisiblesBefore(range)])
-        if WrittenName.namesSecret(scalars, in: .quoted(after: name), policy: policy, compatibility: compatibility) {
-            cut(afterByte: close)
-        }
-    }
-
-    private static let tagNameCharacters = ByteSet(":-_.")
 }

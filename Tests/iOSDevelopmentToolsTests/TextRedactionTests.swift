@@ -16,7 +16,7 @@ struct TextRedactionTests {
         ("password = hunter2", "password = [REDACTED]"),
         (#"api_key: 'hunter2' ok"#, #"api_key: '[REDACTED]"#),
         (#"note: "a b" status=ok"#, #"note: "[REDACTED]"#),
-        (#"payload {\"token\":\"hunter2\"} sent"#, "payload {\\\"token[REDACTED]"),
+        (#"payload {\"token\":\"hunter2\"} sent"#, "payload {[REDACTED]"),
         ("Authorization: Bearer abc", "Authorization: [REDACTED]"), ("Bearer: abc", "Bearer: [REDACTED]"),
         ("data[password]=hunter2", "data[password[REDACTED]"),
         ("api key: hunter2", "api key: [REDACTED]"),
@@ -91,7 +91,7 @@ struct TextRedactionTests {
     }
 
     @Test("Text that cannot be read with certainty is hidden from the ambiguity on", arguments: [
-        (#"msg="unterminated hunter2"#, #"msg="[REDACTED]"#),
+        (#"msg="unterminated hunter2"#, "msg=[REDACTED]"),
         ("status='ok hunter2", "status=[REDACTED]"),
         (#"said "hello" and 5" of hunter2"#, #"said "hello" and 5[REDACTED]"#),
         ("ok t\u{043E}ken hunter2", "ok [REDACTED]"),

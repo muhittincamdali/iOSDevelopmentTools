@@ -70,16 +70,17 @@ struct RedactionMultiLineTests {
 
     @Test("names that are not secret keep what follows them over lines after allowed keys")
     func usefulness() {
-        // The tag of an element is its key, and `key` is a secret name: the text of a property
-        // list's `<key>` element is always hidden, with everything after it.
-        #expect(redactor.redact("<key>CFBundleName</key>\n<string/>\nMyApp") == "<key>[REDACTED]")
-        #expect(redactor.redact("<key>user</key>\n<string>bob</string>\nstatus=200") == "<key>[REDACTED]")
         #expect(redactor.redact("status=[\n1,\n2\n] ok") == "status=[\n1,\n2\n] ok")
-        #expect(redactor.redact("<string name=\"title\"></string>\nHello") == "[REDACTED]")
+        #expect(Redactor(allowedTextKeys: ["name"]).redact("name=\"title\"\nHello") == "name=\"title\"\nHello")
+        // Markup is not parsed: the first tag cuts the text, whatever its name and whatever keys
+        // the app allows.
         let allowing = Redactor(allowedTextKeys: ["name", "string"])
-        #expect(allowing.redact("<string name=\"title\"></string>\nHello") == "<string name=\"title\"></string>\nHello")
-        #expect(allowing.redact("<string name=\"title\">Hello</string>\nstatus=200") == "<string name=\"title\">Hello</string>\nstatus=200")
-        #expect(redactor.redact("<key>password</key>\n<string>k-1</string>\nnext") == "<key>[REDACTED]")
+        #expect(redactor.redact("<key>CFBundleName</key>\n<string/>\nMyApp") == "[REDACTED]")
+        #expect(redactor.redact("<key>user</key>\n<string>bob</string>\nstatus=200") == "[REDACTED]")
+        #expect(redactor.redact("<string name=\"title\"></string>\nHello") == "[REDACTED]")
+        #expect(allowing.redact("<string name=\"title\"></string>\nHello") == "[REDACTED]")
+        #expect(allowing.redact("status=200\n<string name=\"title\">Hello</string>") == "status=200\n[REDACTED]")
+        #expect(redactor.redact("<key>password</key>\n<string>k-1</string>\nnext") == "[REDACTED]")
     }
 
     /// Generated layouts of a property list and of JSON after `name=`, with names that are secret

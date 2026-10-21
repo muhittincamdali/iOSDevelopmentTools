@@ -56,7 +56,7 @@ struct RedactionObfuscatedValueTests {
         ("pass:word='hunter2' next", "pass:[REDACTED]"),
         ("password=x\"hunter2\" next", "password=[REDACTED]"),
         ("token=YWJj== user=bob", "token=[REDACTED]"),
-        ("<password:>hunter2</password:>", "<password:[REDACTED]"),
+        ("<password:>hunter2</password:>", "[REDACTED]"),
         ("password=)hunter2 next", "password=[REDACTED]"),
     ])
     func valuesEndingInSeparators(input: String, expected: String) {
@@ -80,7 +80,7 @@ struct RedactionObfuscatedValueTests {
         ("password=[hunter2] next", "password=[REDACTED]"),
         ("password={hunter2} next", "password=[REDACTED]"),
         ("password=(hunter2) next", "password=[REDACTED]"),
-        ("{\\\"password\\\":[\\\"hunter2\\\"]}", "{\\\"password[REDACTED]"),
+        ("{\\\"password\\\":[\\\"hunter2\\\"]}", "{[REDACTED]"),
         ("password=[REDACTED] next", "password=[REDACTED]"),
     ])
     func structuredValues(input: String, expected: String) {
@@ -115,7 +115,7 @@ struct RedactionObfuscatedValueTests {
         ("password\u{000C}=hunter2", "password\u{C}=[REDACTED]"),
         ("password=hunter2\u{2028}next", "password=[REDACTED]"),
         ("p\u{0430}ssword\nS3CRETV", "[REDACTED]"),
-        ("<key>p\u{0430}ssword</key>\n<string>S3CRETV</string>", "<key>[REDACTED]"),
+        ("<key>p\u{0430}ssword</key>\n<string>S3CRETV</string>", "[REDACTED]"),
     ])
     func lineBreaks(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -131,7 +131,8 @@ struct RedactionObfuscatedValueTests {
         ("password=(\nS3CRETV)", "password=[REDACTED]"),
         ("token=[\n\"S3CRETV\"\n]", "token=[REDACTED]"),
         // Which of the quotes in `"""` closes the value cannot be told: the lines after it go too.
-        ("key=\"\"\"\nS3CRETV\n\"\"\"\nstatus=200", "key=\"\"\"\n[REDACTED]"),
+        // The third quote does not close on its line, so the text is cut there.
+        ("key=\"\"\"\nS3CRETV\n\"\"\"\nstatus=200", "key=\"\"[REDACTED]"),
         ("x\"y \u{2254}\"\"\"\nS3CRETV\n\"\"\"", "x\"y [REDACTED]"),
     ])
     func openLineEnds(input: String, expected: String) {
@@ -152,7 +153,7 @@ struct RedactionObfuscatedValueTests {
     @Test("a separator with no name hides the rest of the text", arguments: [
         ("=hunter2 x\nnext", "=[REDACTED]"),
         ("status=200, =hunter2 x", "status=200, =[REDACTED]"),
-        ("<:password>b", "<:[REDACTED]"),
+        ("<:password>b", "[REDACTED]"),
         ("=\n  hunter2\nnext", "=\n  [REDACTED]"),
         ("=====\nHeader\n=====", "=====\n[REDACTED]"),
     ])

@@ -65,7 +65,7 @@ struct RedactionNameAsValuePropertyTests {
 
     @Test("plain names without a secret word keep the text after them after an allowed key")
     func plainNamesKeepText() {
-        // The tag of an element is its key, so its text is kept only when the tag is allowed too.
+        // Markup is never parsed: an element cuts the text at its `<` whatever its tag and names.
         let allowing = Redactor(allowedTextKeys: ["name", "string"])
         var random = SeededRandom(seed: 0xA1_2B_0091)
         var checked = 0
@@ -76,10 +76,9 @@ struct RedactionNameAsValuePropertyTests {
             else { continue }
             // Without vowels, `s`, `p`, `c`, `k`, `v` and `w` the text spells no secret word.
             let text = String((0..<12).map { _ in "BDFGHJLMNRTXYZ23456789".randomElement(using: &random)! })
-            #expect(allowing.redact("<string name=\"\(name)\">\(text)</string>").contains(text))
+            #expect(allowing.redact("<string name=\"\(name)\">\(text)</string>") == "[REDACTED]")
             #expect(allowing.redact("name=\"\(name)\" \(text)").contains(text))
             #expect(!redactor.redact("name=\"\(name)\" \(text)").contains(text))
-            #expect(!Redactor(allowedTextKeys: ["name"]).redact("<string name=\"\(name)\">\(text)</string>").contains(text))
             let json = #"{"label":"\#(name)","value":"\#(text)"}"#
             #expect(redactor.redact(body: Data(json.utf8), contentType: "application/json") == json)
             checked += 1

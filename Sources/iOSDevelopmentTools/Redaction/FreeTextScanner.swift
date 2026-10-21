@@ -7,26 +7,32 @@
 /// - a key before `=` or `:` that is not on the allowlist (``RedactionPolicy/allowedTextKeys``),
 ///   is not plain ASCII, names a secret or is missing (`x=…`, `pаssword=…`, `=…`), and JSON
 ///   with a member whose name is not on it (`{"x":…}`): hidden from the value;
+/// - a key in quotes (`"x": …`, `'x'=…`) that is not on the allowlist: hidden from its opening
+///   quote, so nothing written in the quotes shows (see ``quote()``);
 /// - a secret name, with or without a separator, quoted or not, also written as a value
-///   (`name="password"`, `<key>password</key>`): the text is hidden from the value after it;
+///   (`name="password"`): the text is hidden from the value after it;
 /// - a name held by an allowed key that holds one (`name=`, `label=`, …) that names a secret or
 ///   is not plain ASCII: hidden from its value;
 /// - a character outside the safe alphabet (see ``isOutsideSafeAlphabet(_:)``), an escape
 ///   (`%3D`, `&#61;`, `\x41`), which is never decoded, and a word longer than ``longestWord``:
 ///   hidden from there;
+/// - markup: a `<` before anything but an ASCII space, tab or line break, an ASCII digit, `=` or
+///   the end of the text (`<b>`, `</x>`, `<!--`, `<?pi`, `<#`): hidden from the `<` (see
+///   ``startsMarkup(at:)``);
 /// - a word that cannot be read with certainty (mixed scripts, an invisible character in it), a
-///   quote or bracket that does not close, and JSON that does not parse: hidden from there;
+///   quote that does not close on its line, a bracket that does not close and JSON that does not
+///   parse: hidden from there;
 /// - a URL that is not clean: anything but `scheme://host` with an optional path of ASCII
 ///   letters, digits, `.`, `_`, `-` and `/` that names no secret, followed by white space, a line
 ///   break or punctuation that ends a sentence (`?page=2`, `:8080`, `user@`, `%3D`, `/password`):
 ///   hidden from where the URL starts (see ``url(to:)``).
 ///
-/// Everything from the trigger to the end of the text is hidden, whatever lines follow; a trigger
-/// inside a tag that has not ended hides the tag from its `<`. JSON and URLs before the trigger
-/// are read with their parsers and recorded as regions, which the value detectors do not read
-/// again. Besides its position and the cut, the scanner keeps a few positions only: the closing
-/// quote it is in, the last closing bracket and quote of each kind, the open tag and the end of
-/// the line.
+/// Everything from the trigger to the end of the text is hidden, whatever lines follow. JSON and
+/// URLs before the trigger are read with their parsers and recorded as regions, which the value
+/// detectors do not read again. No tag, quote or bracket is open while the scan reads: markup is
+/// never parsed, and one pass of its own finds the first quote that does not close on its line
+/// and the last closing bracket of each kind (see ``noteMarks()``). Besides its position and the
+/// cut, the scanner keeps those positions and the end of the line only.
 struct FreeTextScanner {
     /// What kind of text is read.
     enum Role {
@@ -59,16 +65,12 @@ struct FreeTextScanner {
     private(set) var hidesWholeText = false
 
     var position = 0
-    /// The closing double quote of the quoted text being read, plain and escaped (`\"`).
-    var pendingCloses: [Int?] = [nil, nil]
-    /// The last closing bracket of each kind and the last single quote and backtick in the text,
-    /// so that whether one opened later closes is known without searching (see ``readMark()``).
+    /// The last closing bracket of each kind in the text, so that whether one opened later
+    /// closes is known without searching (see ``readMark()``).
     var lastCloses: [Int] = [-1, -1, -1]
-    var lastSimpleQuotes: [Int] = [-1, -1]
-    /// The `<` of a tag that has not ended yet (`<input value="…"`) and the end of its name. A
-    /// trigger in it after its name moves the cut back to the `<`: an attribute that names a
-    /// secret (`name="password"`, `type="password"`) may name the value of one written before it.
-    var openTag: (start: Int, nameEnd: Int)?
+    /// The first quote that does not close on its line: the byte of the quote, or of the
+    /// backslashes before it when it is escaped (`\"`). The text is cut there at the latest.
+    var unclosedQuote: Int?
     /// The end of the line the position is on, found once per line (see ``currentLineEnd()``).
     private var lineEndCache = -1
 
@@ -89,15 +91,18 @@ struct FreeTextScanner {
     var readsWords: Bool { role == .text }
 
     mutating func run() {
-        if readsWords { noteLastMarks() }
+        if readsWords { noteMarks() }
         while position < text.count, cut == nil, !hidesWholeText { step() }
+        // A quote that does not close on its line may hold a key and its value over lines
+        // (`"note\nQx31": 1`): the text is cut at it, whatever the scan found after it.
+        if !hidesWholeText, let unclosedQuote { cut(atByte: unclosedQuote) }
     }
 
     // MARK: Reading
 
     private mutating func step() {
         if readsWords, let control = hiddenControl(before: position) {
-            cut(atOffset: control, trigger: position)
+            cut(atOffset: control)
             return
         }
         // A character outside ASCII that the scanning copy reads as a space, a quote, a bracket or
@@ -117,6 +122,8 @@ struct FreeTextScanner {
             embeddedJSON()
         } else if Self.marks.contains(byte), readsWords {
             readMark()
+        } else if readsWords, startsMarkup(at: position) {
+            cut(atByte: position)
         } else if Self.boundaries.contains(byte) || Self.quotes.contains(byte), referenceLength(at: position) == nil {
             // A character reference by name (`&amp;`, `&lt;`) is an escape.
             if readsWords, namedReferenceLength(at: position) != nil {
@@ -124,7 +131,6 @@ struct FreeTextScanner {
                 return
             }
             position += 1
-            noteTag(byte, at: position - 1)
         } else if let end = urlEnd(from: position, lineEnd: currentLineEnd()) {
             url(to: end)
         } else {
@@ -232,7 +238,7 @@ struct FreeTextScanner {
     /// Hides the text from byte `i`, the trigger, invisible characters before it included.
     mutating func cut(atByte i: Int) {
         guard i < text.count else { return }
-        setCut(startOffset(ofByte: i), trigger: i)
+        cut(atOffset: startOffset(ofByte: i))
     }
 
     /// The offset where byte `i` starts, invisible characters before it included.
@@ -246,22 +252,14 @@ struct FreeTextScanner {
     mutating func cut(afterByte i: Int) {
         var k = i + 1
         while k < text.count, text.isSpace(k) || text.isLineTerminator(k) || Self.keptAfterName.contains(text.bytes[k]) { k += 1 }
-        setCut(k < text.count ? text.offsets[k - 1] + 1 : text.sourceCount, trigger: i)
+        cut(atOffset: k < text.count ? text.offsets[k - 1] + 1 : text.sourceCount)
     }
 
     private static let keptAfterName = ByteSet("=:\"'`")
 
-    /// Hides the text from the original scalar `offset` to its end; `trigger` is the byte that
-    /// set it off.
-    mutating func cut(atOffset offset: Int, trigger: Int) {
-        setCut(offset, trigger: trigger)
-    }
-
-    /// Ends the scan with the text hidden from `offset`, or from the `<` of the tag the trigger
-    /// is in when it comes after the tag's name.
-    private mutating func setCut(_ offset: Int, trigger: Int) {
-        var offset = offset
-        if let openTag, trigger >= openTag.nameEnd { offset = min(offset, startOffset(ofByte: openTag.start)) }
+    /// Hides the text from the original scalar `offset` to its end, or from an earlier cut, and
+    /// ends the scan.
+    mutating func cut(atOffset offset: Int) {
         cut = min(cut ?? offset, offset)
         position = text.count
     }

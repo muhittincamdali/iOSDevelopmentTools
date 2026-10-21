@@ -42,8 +42,6 @@ extension FreeTextScanner {
         let readable = start..<(stop ?? end)
         if !readable.isEmpty {
             switch read(readable) {
-            case .valueStart where namesNoValue(readable):
-                break
             case .plain:
                 if stop == nil, let secretEnd = secretEndAcrossSpace(after: range, lineEnd: lineEnd) {
                     cut(afterByte: secretEnd - 1)
@@ -58,16 +56,6 @@ extension FreeTextScanner {
             }
         }
         if let stop { cut(atByte: stop) }
-    }
-
-    /// Whether a word that holds a secret name names no value after it: the element name `key` in
-    /// a start tag, whose text the rule for the text of an element cuts where it starts (see
-    /// ``noteTag(_:at:)``). The name of an end tag is a secret name like any other: whether
-    /// `</password` ends an element or what follows it is a value cannot be told (`</pin 1234`).
-    private func namesNoValue(_ word: Range<Int>) -> Bool {
-        let start = word.lowerBound
-        guard start >= 1, text.bytes[start - 1] == UInt8(ascii: "<") else { return false }
-        return word.count == 3 && text.bytes[word].map(ASCII.lowercased).elementsEqual("key".utf8)
     }
 
     /// A secret word split by white space or by one of `|`, `,`, `;`, `&` and `?` (`pass word`,

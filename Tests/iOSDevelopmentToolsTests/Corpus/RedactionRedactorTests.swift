@@ -42,7 +42,7 @@ struct SensitiveDataRedactorTests {
 
     @Test("finds email addresses", arguments: [
         ("contact alice@example.com.", "contact [REDACTED]."),
-        ("<bob.smith+news@mail.example.org>", "<[REDACTED]>"),
+        ("mail <bob.smith+news@mail.example.org>", "mail [REDACTED]"),
         ("fullwidth ａｌｉｃｅ＠ｅｘａｍｐｌｅ．ｃｏｍ", "fullwidth [REDACTED]"),
         ("hidden al\u{200D}ice@example.com", "hidden [REDACTED]"),
     ])

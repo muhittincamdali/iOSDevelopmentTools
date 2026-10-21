@@ -18,7 +18,7 @@ struct RedactionFreeTextRuleTests {
         ("status==200 x", "status==200 x"),
         ("status: 500, attempt: 2, level: warn", "status: 500, attempt: [REDACTED]"),
         ("--status=1 (count=2) [page=3]", "--status=1 (count=2) [page=[REDACTED]"),
-        ("\"status\":\"ok\" 'limit':5", "\"status\":\"ok\" 'limit':[REDACTED]"),
+        ("\"status\":\"ok\" 'limit':5", "\"status\":\"ok\" [REDACTED]"),
         ("status=200 user=bob", "status=200 user=[REDACTED]"),
         ("user=bob status=200", "user=[REDACTED]"),
         ("x=hunter2", "x=[REDACTED]"),
@@ -83,13 +83,13 @@ struct RedactionFreeTextRuleTests {
         ("status=\"bob smith\" count=1", "status=\"bob smith\" count=1"),
         ("status='bob smith' count=1", "status='bob smith' count=1"),
         ("status=`bob` count=1", "status=`bob` count=1"),
-        ("status=\"a\\\"b\" count=1", "status=\"a\\[REDACTED]"),
+        ("status=\"a\\\"b\" count=1", "status=\"a\\\"b\" count=1"),
         ("status={\"count\":[1,2]} path=/a", "status={\"count\":[1,2]} path=/a"),
         ("user=\"bob smith\" status=1", "user=\"[REDACTED]"),
         ("user='bob smith' status=1", "user='[REDACTED]"),
         ("user=`bob` status=1", "user=`[REDACTED]"),
         ("user=\"a\\\"b\" status=1", "user=\"[REDACTED]"),
-        ("{\\\"password\\\":\\\"x\\\"}", "{\\\"password[REDACTED]"),
+        ("{\\\"password\\\":\\\"x\\\"}", "{[REDACTED]"),
         ("data={\"a\":[1,2]} status=1", "data=[REDACTED]"),
         ("data=[\"a\",\"b\"],status=1", "data=[REDACTED]"),
         ("password=hunter 2 status=ok", "password=[REDACTED]"),
@@ -116,8 +116,8 @@ struct RedactionFreeTextRuleTests {
         ("password: // rotate\nhunter2", "password: [REDACTED]"),
         ("password: /* x */\nhunter2", "password: [REDACTED]"),
         ("password: # later\nhunter2", "password: [REDACTED]"),
-        ("password=\"abc\ndef\" status=1", "password=\"[REDACTED]"),
-        ("password=\"abc\nnext line", "password=\"[REDACTED]"),
+        ("password=\"abc\ndef\" status=1", "password=[REDACTED]"),
+        ("password=\"abc\nnext line", "password=[REDACTED]"),
         ("password\n= hunter2", "password\n= [REDACTED]"),
         ("password\n:\n\"hunter2\" status=1", "password\n:\n\"[REDACTED]"),
     ])
@@ -141,7 +141,7 @@ struct RedactionFreeTextRuleTests {
         ("password \u{2236} hunter2", "password [REDACTED]"),
         ("password\u{2254}hunter2", "password[REDACTED]"),
         ("pass word=hunter2", "pass [REDACTED]"),
-        ("<password>hunter2</password>", "<password[REDACTED]"),
+        ("<password>hunter2</password>", "[REDACTED]"),
         ("wrong password", "wrong password"),
     ])
     func secretNameWithoutSeparator(input: String, expected: String) {
@@ -149,11 +149,11 @@ struct RedactionFreeTextRuleTests {
     }
 
     @Test("a secret name that ends its line, also in markup, hides the lines below", arguments: [
-        ("<password>\nhunter2\n</password>", "<password[REDACTED]"),
-        // The text of a property list's key is a name: a secret one hides everything after it.
-        ("<key>password</key>\n<string>hunter2</string>", "<key>[REDACTED]"),
+        // Markup is cut at its first `<`, so a tag that ends its line hides the lines below.
+        ("<password>\nhunter2\n</password>", "[REDACTED]"),
+        ("<key>password</key>\n<string>hunter2</string>", "[REDACTED]"),
         ("password\nhunter2", "password\n[REDACTED]"),
-        ("<password>\u{2028}hunter2\u{2028}</password>", "<password[REDACTED]"),
+        ("<password>\u{2028}hunter2\u{2028}</password>", "[REDACTED]"),
     ])
     func secretNameBeforeNextLine(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)

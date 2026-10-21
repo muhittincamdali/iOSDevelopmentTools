@@ -39,20 +39,20 @@ struct RedactionEdgeCaseTests {
 
     // A secret name hides the rest of the text from where its value may start, whatever
     // brackets, markup or escapes follow it; free text has no grammar to tell where the value
-    // ends.
+    // ends. Markup is not parsed: the text is cut at the `<` of the first tag.
     @Test("finds secret fields in form, XML and percent-encoded syntax", arguments: [
         ("password[]=hunter2", "password[REDACTED]"),
         ("password[0]=a&password[1]=b", "password[REDACTED]"),
         ("user[password]=hunter2&user[name]=bob", "user[password[REDACTED]"),
         ("user[password][confirmation]=x", "user[password[REDACTED]"),
-        ("<password>hunter2</password><user>bob</user>", "<password[REDACTED]"),
-        ("<ApiKey>\nk-1\n</ApiKey>", "<ApiKey[REDACTED]"),
-        ("<token>unclosed\nnext line", "<token[REDACTED]"),
-        ("<password type=\"text\">hunter2</password>", "<password [REDACTED]"),
-        ("<password >hunter2</password>", "<password [REDACTED]"),
-        ("<Token\n  kind=\"a>b\">abc</Token>", "<Token\n  [REDACTED]"),
-        ("<ns:password>hunter2</ns:password>", "<ns:[REDACTED]"),
-        ("<wsse:Password Type=\"PasswordText\">hunter2</wsse:Password>", "<wsse:[REDACTED]"),
+        ("<password>hunter2</password><user>bob</user>", "[REDACTED]"),
+        ("<ApiKey>\nk-1\n</ApiKey>", "[REDACTED]"),
+        ("<token>unclosed\nnext line", "[REDACTED]"),
+        ("<password type=\"text\">hunter2</password>", "[REDACTED]"),
+        ("<password >hunter2</password>", "[REDACTED]"),
+        ("<Token\n  kind=\"a>b\">abc</Token>", "[REDACTED]"),
+        ("<ns:password>hunter2</ns:password>", "[REDACTED]"),
+        ("<wsse:Password Type=\"PasswordText\">hunter2</wsse:Password>", "[REDACTED]"),
         ("password%3Dhunter2", "password[REDACTED]"),
         ("q=password%3dhunter2", "q=[REDACTED]"),
         ("status=password%3dhunter2", "status=password[REDACTED]"),
@@ -147,20 +147,23 @@ struct RedactionEdgeCaseTests {
         #expect(redactor.redact("\(name)=x") == "\(name)=[REDACTED]")
     }
 
-    @Test("leaves markup without a secret name or element text", arguments: ["</status>", "<private>", "<br/> <p>\n</p>", "if a<b"])
-    func markup(input: String) {
+    // A `<` is a comparison only before white space, a line break, an ASCII digit, `=` or the end
+    // of the text.
+    @Test("keeps a comparison sign", arguments: ["if a < b", "a <3", "a <\tb", "a <\nb", "a <", "1 < 2 and 3 < 4"])
+    func comparison(input: String) {
         #expect(redactor.redact(input) == input)
     }
 
-    // The tag of an element is its key: the text of an element whose tag is not allowed is cut.
-    @Test("the text of an element is kept only when its tag is allowed", arguments: [
-        ("<br/> <p>hi</p>", "<br/> <p>[REDACTED]"), ("if a<b && c>d then", "if a<b && c>[REDACTED]"),
-        ("<user>bob</user>", "<user>[REDACTED]"), ("<status>200</status> done", "<status>200</status> done"),
-        // The name of an end tag is a secret name like any other.
-        ("</password>", "</password[REDACTED]"), ("</pin 1234", "</pin [REDACTED]"), ("login </token SECRET", "login </token [REDACTED]"),
-        ("<count>\n  3\n</count>", "<count>\n  3\n</count>"), ("Loaded Array<Item> in 3 ms", "Loaded Array<Item> [REDACTED]"),
+    // Markup is not parsed and no tag keeps its text, whatever its name: the text is cut at the
+    // `<` of the first tag, an end tag, a comment or a type parameter.
+    @Test("markup cuts the text at its first <", arguments: [
+        ("</status>", "[REDACTED]"), ("<private>", "[REDACTED]"), ("<br/> <p>\n</p>", "[REDACTED]"), ("if a<b", "if a[REDACTED]"),
+        ("<br/> <p>hi</p>", "[REDACTED]"), ("if a<b && c>d then", "if a[REDACTED]"),
+        ("<user>bob</user>", "[REDACTED]"), ("<status>200</status> done", "[REDACTED]"),
+        ("</password>", "[REDACTED]"), ("</pin 1234", "[REDACTED]"), ("login </token SECRET", "login [REDACTED]"),
+        ("<count>\n  3\n</count>", "[REDACTED]"), ("Loaded Array<Item> in 3 ms", "Loaded Array[REDACTED]"),
     ])
-    func elementText(input: String, expected: String) {
+    func markup(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
     }
 }
@@ -177,13 +180,15 @@ extension RedactionEdgeCaseTests {
         #expect(redactor.redact(input) == expected)
     }
 
-    // An element's tag is its key, so a tag that is not plain ASCII cuts the text at the element's
-    // text, and one with a word that cannot be read cuts it at the tag.
-    @Test("an XML element is read as a pair of its tag and its text")
+    // An element in free text is markup, which is not parsed: whether its tag is plain ASCII,
+    // names a secret or is allowed, the text is cut at its `<`. A body of XML or a property list
+    // is a structured body (see ``RedactionPolicy/redact(body:contentType:isComplete:)``).
+    @Test("an XML element in free text is cut at its <, whatever its tag")
     func xmlElements() {
-        #expect(redactor.redact("<\u{540D}\u{524D}>bob</\u{540D}\u{524D}>") == "<\u{540D}\u{524D}>[REDACTED]")
-        #expect(Redactor(allowedTextKeys: ["user"]).redact("<user>bob</user>") == "<user>bob</user>")
-        #expect(redactor.redact("<p\u{0430}ssword>bob</p\u{0430}ssword>") == "<[REDACTED]")
+        #expect(redactor.redact("<\u{540D}\u{524D}>bob</\u{540D}\u{524D}>") == "[REDACTED]")
+        #expect(Redactor(allowedTextKeys: ["user"]).redact("<user>bob</user>") == "[REDACTED]")
+        #expect(redactor.redact("<p\u{0430}ssword>bob</p\u{0430}ssword>") == "[REDACTED]")
+        #expect(redactor.redact("status=200 <user>bob</user>") == "status=200 [REDACTED]")
     }
 
     // Free text keeps a value only after an allowed key, so comparisons, times and object
@@ -196,9 +201,9 @@ extension RedactionEdgeCaseTests {
         ("count == 3", "count == 3"),
         ("time: 12:30:45", "time: [REDACTED]"),
         ("Error: connection refused", "Error: [REDACTED]"),
-        ("<a:b:c>x</a:b:c>", "<a:[REDACTED]"),
+        ("<a:b:c>x</a:b:c>", "[REDACTED]"),
         ("finished: <NSHTTPURLResponse: 0x600> { URL: https://example.com/v2/items?id=7 } { Status Code: 200 }", "finished: [REDACTED]"),
-        ("<UIView: 0x7f8; frame = (0 0; 375 812); layer = <CALayer: 0x600>>", "<UIView: [REDACTED]"),
+        ("<UIView: 0x7f8; frame = (0 0; 375 812); layer = <CALayer: 0x600>>", "[REDACTED]"),
     ])
     func pairsInText(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
