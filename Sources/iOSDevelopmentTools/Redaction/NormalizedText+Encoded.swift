@@ -4,7 +4,8 @@ extension NormalizedText {
     static let ibanLength = 15...34
 
     /// A country code, two check digits and up to 30 more capital letters or digits, optionally
-    /// grouped by single spaces, whose mod-97 remainder is 1.
+    /// grouped by single spaces or line separators (see ``isBridgedLineBreak(_:)``), whose mod-97
+    /// remainder is 1.
     func ibanSpans() -> [RedactionPolicy.Span] {
         var spans: [RedactionPolicy.Span] = []
         var i = 0
@@ -35,7 +36,7 @@ extension NormalizedText {
                 characters.append(bytes[j])
                 j += 1
                 ends.append(j)
-            } else if bytes[j] == UInt8(ascii: " "), j + 1 < count, isIBANCharacter(j + 1), !characters.isEmpty {
+            } else if bytes[j] == UInt8(ascii: " ") || isBridgedLineBreak(j), j + 1 < count, isIBANCharacter(j + 1), !characters.isEmpty {
                 j += 1
             } else {
                 break
@@ -69,7 +70,8 @@ extension NormalizedText {
 
     /// Runs of 32 or more hexadecimal digits, and runs of 32 or more base64 characters with both
     /// letters and digits. A run of hex digits and hyphens, such as a UUID, is an identifier and a
-    /// run with many slashes is a path; both are kept.
+    /// run with many slashes is a path; both are kept. A run is read across a line separator (see
+    /// ``isBridgedLineBreak(_:)``), which it does not count and does not end with.
     func longTokenSpans() -> [RedactionPolicy.Span] {
         var spans: [RedactionPolicy.Span] = []
         var i = 0
@@ -79,14 +81,18 @@ extension NormalizedText {
                 continue
             }
             let start = i
-            var digits = 0, letters = 0, slashes = 0, hyphens = 0, nonHex = 0
-            while i < count, isBase64(i) {
+            var digits = 0, letters = 0, slashes = 0, hyphens = 0, nonHex = 0, length = 0
+            var runEnd = i
+            while i < count, isBase64(i) || isBridgedLineBreak(i) {
+                defer { i += 1 }
+                guard !isBridgedLineBreak(i) else { continue }
                 if isDigit(i) { digits += 1 } else if isLetter(i) { letters += 1 }
                 if bytes[i] == UInt8(ascii: "/") { slashes += 1 } else if bytes[i] == UInt8(ascii: "-") { hyphens += 1 }
                 if !isHexDigit(i), bytes[i] != UInt8(ascii: "-") { nonHex += 1 }
-                i += 1
+                length += 1
+                runEnd = i + 1
             }
-            let length = i - start
+            i = runEnd
             guard length >= Self.longTokenLength else { continue }
             var end = i
             while end < count, end - i < 2, bytes[end] == UInt8(ascii: "=") { end += 1 }

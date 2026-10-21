@@ -140,6 +140,28 @@ struct NormalizedText {
         return byte == 0x0A || byte == 0x0D || byte == 0x0B || byte == 0x0C
     }
 
+    /// Whether byte `i` is a line separator that the value detectors read across: a vertical tab,
+    /// a form feed, or a line feed read from U+0085, U+2028 or U+2029. Each of them is outside the
+    /// safe alphabet and cuts free text, so a card number, an IBAN, an email address or a token
+    /// written across one is found whole and the cut, merged with it, moves back to its start
+    /// (`paid 4111 1111 1111` and U+2028 before `1111` keeps `paid `). A line feed or a carriage
+    /// return written as such ends a finding, as it ends a line.
+    func isBridgedLineBreak(_ i: Int) -> Bool {
+        switch bytes[i] {
+        case 0x0B, 0x0C: true
+        case 0x0A: !source[offsets[i]].isASCII
+        default: false
+        }
+    }
+
+    /// The first byte at or after `i` that is not a line separator read across (see
+    /// ``isBridgedLineBreak(_:)``); ``count`` when there is none.
+    func skippingBridgedLineBreaks(from i: Int) -> Int {
+        var k = i
+        while k < count, isBridgedLineBreak(k) { k += 1 }
+        return k
+    }
+
     /// Whether a word starts at `i`: after a character that does not glue to it (see
     /// ``gluesToWord(_:)``), or at a lowercase to uppercase change (`accessToken`).
     func isWordStart(_ i: Int) -> Bool {

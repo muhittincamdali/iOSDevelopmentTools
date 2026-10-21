@@ -223,7 +223,9 @@ struct RedactionFreeTextRuleTests {
     }
 
     // The thirteenth review of the shared rules: a name split by U+0085 (`tok\u{85}en`) and card
-    // digits grouped by VT or U+2028 were read as lines of text.
+    // digits grouped by VT or U+2028 were read as lines of text. The eighteenth found the card
+    // digits before the first separator shown (`paid 4111[REDACTED]`): the detectors read across
+    // these separators (spec section 6), so the card number is hidden from its start.
     @Test("U+2028, U+2029, U+0085, VT and FF are outside the safe alphabet; CR and CRLF end a line, and the cut runs over them")
     func lineSeparators() {
         #expect(redactor.redact("password\u{2028}=hunter2") == "password\u{2028}=[REDACTED]")
@@ -231,7 +233,7 @@ struct RedactionFreeTextRuleTests {
         #expect(redactor.redact("a\u{2029}b\u{85}c\u{0B}d\u{0C}e") == "a[REDACTED]")
         for separator in ["\u{2028}", "\u{2029}", "\u{85}", "\u{0B}", "\u{0C}"] {
             #expect(redactor.redact("login tok\(separator)en Zk422Hv3m") == "login tok[REDACTED]")
-            #expect(redactor.redact("paid 4111\(separator)1111\(separator)1111\(separator)1111") == "paid 4111[REDACTED]")
+            #expect(redactor.redact("paid 4111\(separator)1111\(separator)1111\(separator)1111") == "paid [REDACTED]")
             #expect(redactor.redact("done\(separator)") == "done\(separator)")
         }
         #expect(redactor.redact("status=1\r\nuser=bob\r\nstatus=2") == "status=1\r\nuser=[REDACTED]")

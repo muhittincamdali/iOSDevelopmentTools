@@ -64,15 +64,17 @@ extension RedactionPolicy {
     ///
     /// Text with no trigger is kept as it is (`status=200 method=GET path=/api/items`), except for
     /// what the value detectors find: JWTs, bearer tokens, long hex or Base64 strings, card
-    /// numbers, IBANs and email addresses. JSON in the text (`{"…`, `[{…`, `["…`, `[[…`) is parsed
-    /// with a JSON parser, within the limits of ``maximumJSONDepth`` and
-    /// ``maximumNestedDocuments``, and redacted by the key rule of structured input before its
-    /// members are compared with ``allowedTextKeys``; its strings are free text again, with this
-    /// rule. A URL with a scheme and `//` has no island logic: a clean URL — `scheme://host` with
-    /// an optional path of ASCII letters, digits, `.`, `_`, `-` and `/`, a host name or IPv4
-    /// address, no host or segment that names a secret, and white space, a line break, the end of
-    /// the text or one of `.`, `,`, `!` and `)` followed by one of those after it — is recorded
-    /// as ``redact(url:)`` records it. Any other URL hides the text from where it starts: a query,
+    /// numbers, IBANs and email addresses. The detectors read across VT, FF, U+0085, U+2028 and
+    /// U+2029, so a finding written across one of these triggers is hidden from its start
+    /// (`paid 4111 1111 1111`, U+2028 and `1111` becomes `paid [REDACTED]`). JSON in the text
+    /// (`{"…`, `[{…`, `["…`, `[[…`) is parsed with a JSON parser, within the limits of
+    /// ``maximumJSONDepth`` and ``maximumNestedDocuments``, and redacted by the key rule of
+    /// structured input before its members are compared with ``allowedTextKeys``; its strings are
+    /// free text again, with this rule. A URL with a scheme and `//` has no island logic: a clean
+    /// URL — `scheme://host` with an optional path of ASCII letters, digits, `.`, `_`, `-` and `/`,
+    /// a host name or IPv4 address, no host or segment that names a secret, and white space, a
+    /// line break, the end of the text or one of `.`, `,`, `!` and `)` followed by one of those
+    /// after it — is recorded as ``redact(url:)`` records it. Any other URL hides the text from where it starts: a query,
     /// a fragment, `;`, `%`, `=`, `:`, `@`, `\`, a port, user info, an escape, a character outside
     /// ASCII, a quote, `>` or two marks after it make it so
     /// (`GET https://a.example/x?page=2 done` and `see https://a.example/x), ok` are stored as
