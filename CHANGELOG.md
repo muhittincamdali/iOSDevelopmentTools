@@ -221,6 +221,16 @@ out of logs in the first place.
 - Values are scanned for JWTs, bearer credentials, hex or Base64 strings of 32 or more characters,
   card numbers (Luhn), IBANs (mod 97), email addresses with names and domains in any script and the
   password in `user:password@host`, in the same way in bodies, free text, URLs and JSON strings.
+- The value detectors read across VT, FF, U+0085, U+2028 and U+2029, as the redaction spec says:
+  as white space between the groups of a card number or an IBAN and after `Bearer`, and as
+  nothing inside an email address, a JWT and a long token. Each of these separators cuts free
+  text, and the finding joins the cut, so the text is hidden from where the finding starts:
+  `paid 4111 1111 1111`, U+2028 and `1111` is stored as `paid [REDACTED]`. Before, the detectors
+  stopped at them, and the text before the cut kept 12 of the 16 digits of that card number, 20 of
+  the 22 characters of `DE89 3704 0044 0532 0130` and U+2029 before `00`, and the name of an email
+  address, in free text, JSON strings, text/plain bodies and LogStore lines. A line feed or a
+  carriage return written as such still ends a finding. Card groups are read through a window of
+  the groups a card number can span, so a megabyte of them is not held in one array.
 - Hostile input is bounded: JSON may be open 64 levels deep across every document a text is in, at
   most four documents are read one inside another, and the documents found in one input read at
   most four times its length. The tests run on a thread with 512 KiB of stack and, in a release
@@ -249,7 +259,7 @@ out of logs in the first place.
   name, generated triggers after which no value may show and generated keys, tests that ordinary
   keys, allowlisted headers and text with no trigger stay readable, parser-differential, stack,
   time-limit and peak-memory tests, the probes of every review of the shared rules, and the
-  examples of the guide. 605 tests run on macOS and 602 on an iOS simulator.
+  examples of the guide. 612 tests run on macOS and 609 on an iOS simulator.
 
 ### Changed
 
