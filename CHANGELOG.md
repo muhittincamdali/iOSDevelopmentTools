@@ -100,6 +100,15 @@ out of logs in the first place.
   `pin`, `otp`, `card`, …) followed by such a letter were not found in free text, JSON strings,
   form values, text/plain and multipart parts, an allowed header, LogStore lines and URL path
   segments.
+- Each word of free text is also read as its ASCII skeleton, as the redaction spec says: every
+  letter that has no ASCII form is left out, however many there are and wherever they stand, and
+  the rest is compared with the secret names, the plural `s` included. `tokensı`, `keysꞏ`,
+  `pinsı`, `otpsł`, `user_tokensı`, `myTokensı`, `tokenꞏꞏ`, `tokenꞏsꞏ` and `pıaıssword` are found
+  like `tokens`, `keys`, `pins`, `otps`, `user_tokens`, `myTokens`, `token`, `tokens` and
+  `password`. Before, the match read one such letter and none after the plural `s`, so these
+  words and the values after them were stored as they were in free text, JSON strings, form
+  values, text/plain bodies, an allowed header and URL path segments. A name with two or more of
+  its letters replaced by look-alikes (`pɑsswoʀd hunter2`) is still not found, as the guide says.
 - A backslash before `x`, `u`, `U`, `N`, `o` or an octal digit is an escape in free text whatever
   follows it, so `\x{70}assword`, `\U00000070assword`, `\N{LATIN SMALL LETTER P}assword` and
   `\o{160}assword` cut the text like `\u0070assword` does.
