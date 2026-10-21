@@ -218,7 +218,9 @@ struct ConsoleTests {
         let id = try #require(logger.record(request: request, response: response, body: Data([0, 1, 2]), startDate: Date()))
         let entry = try #require(logger.entry(id: id))
         #expect(entry.requestBody?.redaction == .omitted)
-        let expected = ["POST", "201", "body omitted: 28 bytes, application/json"]
+        // Text recognition reads "json" as "|son" on some runners, so the note is checked up to
+        // the content type, which the Content-Type header line above it draws as well.
+        let expected = ["POST", "201", "body omitted: 28 bytes", "application/json"]
         let text = try renderedText(of: NavigationStack { NetworkEntryView(entry: entry) }, expecting: expected)
         for string in expected {
             #expect(text.contains(string), "\(string) is not drawn in the detail view: \(text)")
