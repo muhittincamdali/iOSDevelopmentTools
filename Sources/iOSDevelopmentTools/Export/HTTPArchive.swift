@@ -8,7 +8,7 @@ import Foundation
 /// bodies are marked with a `comment`; an omitted body's text is the note that replaced it.
 public struct HTTPArchive: Sendable {
     /// The version written to `log.creator.version`.
-    public static let creatorVersion = "2.0.0"
+    public static let creatorVersion = "2.1.0"
 
     /// The entries in the archive, oldest first.
     public let entries: [NetworkEntry]
