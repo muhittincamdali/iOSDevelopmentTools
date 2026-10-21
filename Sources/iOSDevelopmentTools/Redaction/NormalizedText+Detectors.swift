@@ -15,8 +15,10 @@ extension NormalizedText {
                 i += 1
                 continue
             }
-            // Digit groups separated by up to three spaces, tabs, dashes or line separators.
-            var groups: [Range<Int>] = []
+            // Digit groups separated by up to three spaces, tabs, dashes or line separators, read
+            // through a window of the groups a card number can still span: a megabyte of
+            // `4242 4242 …` is one chain of groups, which an array of them all held in memory.
+            var window = CardWindow()
             var groupStart = i
             var j = i
             while j < count {
@@ -29,16 +31,13 @@ extension NormalizedText {
                     separatorEnd += 1
                 }
                 guard separatorEnd > j, separatorEnd < count, isDigit(separatorEnd) else { break }
-                groups.append(groupStart..<j)
+                window.append(groupStart..<j, into: &spans, in: self)
                 groupStart = separatorEnd
                 j = separatorEnd
             }
-            groups.append(groupStart..<j)
-            if j < count, isLetter(j), gluesToWord(j) {
-                // Digits that run into letters are an identifier, not a card number.
-                groups.removeLast()
-            }
-            spans += cardCandidates(in: groups)
+            // Digits that run into letters are an identifier, not a card number.
+            let runsIntoLetters = j < count && isLetter(j) && gluesToWord(j)
+            window.finish(last: runsIntoLetters ? nil : groupStart..<j, into: &spans, in: self)
             i = max(j, i + 1)
         }
         return spans
@@ -51,34 +50,73 @@ extension NormalizedText {
     /// Card numbers written in groups have at most this many digits per group (4-4-4-4, 4-6-5).
     static let maximumCardGroupLength = 6
 
-    /// The longest run of consecutive groups starting at each group that holds 13 to 19 digits and
-    /// passes the Luhn check. A run of several groups holds groups of at most
-    /// ``maximumCardGroupLength`` digits, so the digits of a UUID
+    /// The digit groups of a chain that a card number may still start in. From each group on, the
+    /// longest run of consecutive groups that holds 13 to 19 digits and passes the Luhn check is a
+    /// card number, and the next run starts after it. A run of several groups holds groups of at
+    /// most ``maximumCardGroupLength`` digits, so the digits of a UUID
     /// (`73297603-2915-4643-B7F3-FD58D90F216C`) are not read as a card.
-    private func cardCandidates(in groups: [Range<Int>]) -> [RedactionPolicy.Span] {
-        var spans: [RedactionPolicy.Span] = []
-        var first = 0
-        while first < groups.count {
+    ///
+    /// The runs from a group are read once the groups from it hold more than 19 digits: a run
+    /// then ends before the next group is known. Only the last group of a chain may still be
+    /// dropped (when it runs into letters), and it is never read before the chain is finished. So
+    /// the window holds the groups of 19 digits at most and the groups already read, which it
+    /// drops every 64 of them.
+    private struct CardWindow {
+        private var groups: [Range<Int>] = []
+        private var first = 0
+
+        /// Adds a group that another group follows.
+        mutating func append(_ group: Range<Int>, into spans: inout [RedactionPolicy.Span], in text: NormalizedText) {
+            groups.append(group)
+            while first < groups.count, holdsMoreThanACard(from: first) {
+                read(into: &spans, in: text)
+            }
+            if first > 64 {
+                groups.removeFirst(first)
+                first = 0
+            }
+        }
+
+        /// Adds the last group of the chain, unless it is dropped, and reads the runs left.
+        mutating func finish(last: Range<Int>?, into spans: inout [RedactionPolicy.Span], in text: NormalizedText) {
+            if let last { groups.append(last) }
+            while first < groups.count { read(into: &spans, in: text) }
+        }
+
+        private func holdsMoreThanACard(from start: Int) -> Bool {
+            var digits = 0
+            for k in start..<groups.count {
+                digits += groups[k].count
+                if digits > 19 { return true }
+            }
+            return false
+        }
+
+        /// The card number that starts in group `first`, if any, and the group the next one may
+        /// start in.
+        private mutating func read(into spans: inout [RedactionPolicy.Span], in text: NormalizedText) {
             var digits: [UInt8] = []
             var best: Int?
             var last = first
-            while last < groups.count {
-                let isLongGroup = groups[first].count > Self.maximumCardGroupLength || groups[last].count > Self.maximumCardGroupLength
+            groups: while last < groups.count {
+                let isLongGroup = groups[first].count > maximumCardGroupLength || groups[last].count > maximumCardGroupLength
                 if last > first, isLongGroup { break }
-                digits += groups[last].map { bytes[$0] - UInt8(ascii: "0") }
-                if digits.count > 19 { break }
-                if digits.count >= 13, Self.passesLuhn(digits) { best = last }
+                for k in groups[last] {
+                    digits.append(text.bytes[k] - UInt8(ascii: "0"))
+                    if digits.count > 19 { break groups }
+                }
+                if digits.count >= 13, NormalizedText.passesLuhn(digits) { best = last }
                 last += 1
             }
-            if let best {
-                let range = groups[first].lowerBound..<groups[best].upperBound
-                spans.append(span(range))
-                first = best + 1
-            } else {
+            guard let best else {
                 first += 1
+                return
             }
+            spans.append(text.span(groups[first].lowerBound..<groups[best].upperBound))
+            first = best + 1
         }
-        return spans
+
+        private var maximumCardGroupLength: Int { NormalizedText.maximumCardGroupLength }
     }
 
     static func passesLuhn(_ digits: [UInt8]) -> Bool {
