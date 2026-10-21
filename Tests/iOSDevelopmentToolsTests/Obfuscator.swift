@@ -156,6 +156,29 @@ struct Obfuscator {
         return scalars + Array(generator.element(of: suffixes).unicodeScalars)
     }
 
+    // MARK: Letters without an ASCII form
+
+    /// Letters of the Latin script that have no ASCII form, so a word that holds them with ASCII
+    /// letters does not mix scripts.
+    private static let lettersWithoutASCIIForm: [Unicode.Scalar] = [
+        "\u{0131}", "\u{A78F}", "\u{0142}", "\u{00F8}", "\u{00DF}", "\u{0251}", "\u{0280}", "\u{A78C}", "\u{0294}", "\u{01C3}",
+        "\u{0111}", "\u{0127}",
+    ]
+
+    /// The name, half of the time with its plural `s`, with one to three letters without an ASCII
+    /// form put in anywhere, and half of the plurals with one more right after the `s`
+    /// (`tokensı`, `pıaıssword`, `tokenꞏꞏ`).
+    mutating func insertingLettersWithoutASCIIForm(_ name: String) -> String {
+        var scalars = Array(name.unicodeScalars)
+        let plural = chance(50)
+        if plural { scalars.append("s") }
+        for _ in 0..<(1 + number(below: 3)) {
+            scalars.insert(element(of: Self.lettersWithoutASCIIForm), at: number(below: scalars.count + 1))
+        }
+        if plural, chance(50) { scalars.append(element(of: Self.lettersWithoutASCIIForm)) }
+        return String(String.UnicodeScalarView(scalars))
+    }
+
     // MARK: Random keys
 
     /// A random key of one of several shapes: lowercase letters, camel case, words joined by `_`,

@@ -27,6 +27,20 @@ struct RedactionPropertyTests {
         }
     }
 
+    @Test("No secret name with letters without an ASCII form put in, also after its plural s, lets the word after it through",
+          arguments: RedactionPolicy.defaultSecretNames)
+    func namesWithLettersPutIn(name: String) {
+        var generator = Obfuscator(seed: Obfuscator.seed(for: "skeleton " + name))
+        for _ in 0..<Obfuscator.rounds {
+            let word = generator.insertingLettersWithoutASCIIForm(name)
+            let secret = generator.secret()
+            let line = "\(word) \(secret)"
+            for (place, stored) in RedactionWrittenURLTests.places(line) {
+                #expect(!stored.contains(secret), "\(place): \(line.debugDescription) stored \(stored.debugDescription)")
+            }
+        }
+    }
+
     /// What is stored for the key and secret as a JSON field, a nested JSON field, a form field,
     /// an allowed query parameter, an allowed header and a multipart field.
     private func structuredRecords(key: String, secret: String) throws -> [String] {
