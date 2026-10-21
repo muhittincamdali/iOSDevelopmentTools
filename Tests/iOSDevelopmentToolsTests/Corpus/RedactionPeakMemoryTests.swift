@@ -12,6 +12,16 @@ import Testing
 /// bodies to 256 KiB; the seventeenth measured 17.5 MiB for a megabyte of different characters
 /// outside ASCII and 70.5 MiB for a log message of a million of them, in readings kept for each
 /// character (see ``DistinctScalarShapes``).
+/// Whether the tests run in an optimized build: memory is measured as shipped, with
+/// `swift test -c release`. A debug build keeps values alive longer and takes minutes on a CI runner.
+private var isOptimized: Bool {
+    #if DEBUG
+    false
+    #else
+    true
+    #endif
+}
+
 @Suite("Redaction corpus: peak memory", .serialized)
 struct RedactionPeakMemoryTests {
     static let limit = 16 * 1_048_576
@@ -78,7 +88,7 @@ struct RedactionPeakMemoryTests {
     #if os(macOS) || os(Linux)
     // Other tests allocate while they run beside this one, so the shapes are measured in a process
     // of their own, which runs nothing else and writes one line for each shape.
-    @Test("redacting a megabyte of text or a body of 256 KiB takes less than 16 MB more memory")
+    @Test("redacting a megabyte of text or a body of 256 KiB takes less than 16 MB more memory", .enabled(if: isOptimized, "memory is measured in a release build: swift test -c release"))
     func peak() async throws {
         let result = try await #require(processExitsWith: .success, observing: [\.standardOutputContent]) {
             for input in RedactionPeakMemoryTests.shapes {
@@ -96,7 +106,7 @@ struct RedactionPeakMemoryTests {
     #else
     // Without processes of their own, the shapes are measured beside the other tests, and the
     // fewest of ten runs is taken: their allocations can only add to it.
-    @Test("redacting a megabyte of text or a body of 256 KiB takes less than 16 MB more memory", arguments: shapes)
+    @Test("redacting a megabyte of text or a body of 256 KiB takes less than 16 MB more memory", .enabled(if: isOptimized, "memory is measured in a release build: swift test -c release"), arguments: shapes)
     func peak(input: TimedInput) {
         let bytes = Self.fewestBytes(input, attempts: 10)
         #expect(bytes < Self.limit, "\(input.testDescription): \(bytes / 1_048_576) MB")
