@@ -122,6 +122,29 @@ struct RedactionMarkupQuoteRuleTests {
         #expect(redactor.redact(body: json, contentType: "application/json") == #"{"a":"msg [REDACTED]"}"#)
     }
 
+    /// The eleventh review's inputs: one quote slot let a quote of one kind inside a quote of
+    /// another (`'x "y'`, `"x \"y"`, `"x 'y"`) open nothing, so it did not cut the text although
+    /// it did not close on its line, and the value on the next line showed.
+    static let nestedQuoteInputs = [
+        ("status=x \"y\nhunter2Zq\" ok", "status=x [REDACTED]", "hunter2Zq"),
+        ("status='x \"y'\nhunter2Zq\" ok", "status='x [REDACTED]", "hunter2Zq"),
+        ("status=`x \"y`\nhunter2Zq\" ok", "status=`x [REDACTED]", "hunter2Zq"),
+        ("status=\"x \\\"y\"\nhunter2Zq\\\" ok", "status=\"x [REDACTED]", "hunter2Zq"),
+        ("status=\"x 'y\"\nhunter2Zq' ok", "status=\"x [REDACTED]", "hunter2Zq"),
+        ("'\"note'\nQx31\": 1", "'[REDACTED]", "Qx31"),
+    ]
+
+    @Test("a quote inside a quote of another kind that does not close on its line cuts the text at it", arguments: nestedQuoteInputs)
+    func quotesInsideOtherQuotes(input: String, expected: String, secret: String) throws {
+        #expect(redactor.redact(input) == expected)
+        #expect(redactor.redact(body: Data(input.utf8), contentType: "text/plain") == expected)
+        let json = try JSONSerialization.data(withJSONObject: ["a": input])
+        let output = redactor.redact(body: json, contentType: "application/json")
+        let object = try JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: String]
+        #expect(object?["a"] == expected, "\(output)")
+        Self.expectHidden(input, secret)
+    }
+
     @Test("quotes that close on their line, apostrophes and escaped quotes keep the text", arguments: [
         "say \"hello world\" done", "msg 'ok' and \"fine\"\nnext \"line\"", "don't stop\nwe're done", "it\\'s ok",
         "\"a \\\"b\\\" c\" done", "status=200 count=3 `cmd` ran", "{\"status\":\"say \\\"hi\\\"\"} done", "İstanbul'a gitti",

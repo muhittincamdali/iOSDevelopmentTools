@@ -140,6 +140,24 @@ struct RedactionMarkupQuotePropertyTests {
         }
     }
 
+    @Test("no value after a quote opened inside a quote of another kind and closed on a later line shows on any path", arguments: 0..<4)
+    func quotesInsideOtherQuotesOverLines(seed: Int) {
+        var random = SeededRandom(seed: 0x1B_3F00 + UInt64(seed))
+        for _ in 0..<150 {
+            let value = RedactionCorpusPropertyTests.value(using: &random)
+            let outer = Self.quotes.randomElement(using: &random)!
+            let inner = Self.quotes.filter { $0 != outer }.randomElement(using: &random)!
+            // The inner quote opens at the start of a word, right after the outer one or after a
+            // word and a space; the outer one closes on the first line.
+            let opening = outer + ["", "x ", "note "].randomElement(using: &random)! + inner + ["y", "note", ""].randomElement(using: &random)! + outer
+            let text = Self.prefixes.randomElement(using: &random)! + ["", "status="].randomElement(using: &random)! + opening
+                + Self.lineBreaks.randomElement(using: &random)! + value + inner + [" ok", "", ": 1", "\nnext"].randomElement(using: &random)!
+            for (path, output) in RedactionCutRuleTests.everyPath(text) {
+                #expect(!RedactionCorpusPropertyTests.leaks(value, in: output), "\(path): \(text.debugDescription) -> \(output.debugDescription)")
+            }
+        }
+    }
+
     @Test("comparisons and quotes that close on their lines keep the text")
     func plainTextStays() {
         var random = SeededRandom(seed: 0x18_3C00)
