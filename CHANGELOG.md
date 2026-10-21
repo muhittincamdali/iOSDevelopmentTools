@@ -247,6 +247,22 @@ out of logs in the first place.
   still that digit (`passw０rd` reads as `passw0rd`), numbers written in other scripts stay as
   they are, and a card number written in them is still found. `ᴘwᴅ` now reads as `pw`, which the
   eleventh review listed as not found.
+- An email address with a vertical tab, a form feed, U+0085, U+2028 or U+2029 right after it and a
+  letter, a digit or `-` after that (`alice@example.com`, a vertical tab and `ok`), or with such a
+  separator inside or right before its top-level domain (`example.c`, a vertical tab and `om`), was
+  not found: its domain ran across the separator and the top-level domain was read with it. The cut
+  the separator makes in free text kept the address before it (`mail alice@example.com[REDACTED]`),
+  in free text, LogStore lines, JSON strings, forms, multipart parts, the `User-Agent` header,
+  allowed query values and the network log with its cURL command and HTTP archive. The top-level
+  domain is now read without the separators in it, and a domain that ends in none when read across
+  a separator ends at the separator.
+- A secret name with a line break or a character reference, held by a member that does not hold
+  names (`{"setting":"password\n","value":…}`, `{"Parameter":"api\nkey","Value":…}`,
+  `{"ParameterKey":"&#x0070;in",…}`, `{"setting":"pass&#119;ord",…}`), was taken for a sentence
+  and named nothing, so the value beside it showed in JSON, forms, multipart bodies and URL queries
+  with allowed names. A string of at most 256 scalars with a line break or an `&` is now read as a
+  name once its line breaks are read as spaces and its escapes are decoded; a sentence keeps its
+  `:` or `,` and still leaves the record as it is.
 - Hostile input is bounded: JSON may be open 64 levels deep across every document a text is in, at
   most four documents are read one inside another, and the documents found in one input read at
   most four times its length. The tests run on a thread with 512 KiB of stack and, in a release
@@ -275,7 +291,7 @@ out of logs in the first place.
   name, generated triggers after which no value may show and generated keys, tests that ordinary
   keys, allowlisted headers and text with no trigger stay readable, parser-differential, stack,
   time-limit and peak-memory tests, the probes of every review of the shared rules, and the
-  examples of the guide. 623 tests run on macOS and 620 on an iOS simulator.
+  examples of the guide. 631 tests run on macOS and 628 on an iOS simulator.
 
 ### Changed
 
