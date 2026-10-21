@@ -42,6 +42,18 @@ extension RedactionPolicy {
         return redacted(components, nesting: .document(length: url.absoluteString.unicodeScalars.count))
     }
 
+    /// The URL's host as ``redact(url:)`` records it: the host when it is written, ``replacement``
+    /// when it is not (a host that is not a name of ASCII labels or an address, or one in which
+    /// a value detector finds something); nil when the URL has no host.
+    func redactedHost(of url: URL) -> String? {
+        guard isEnabled else { return url.host() }
+        // Read as ``redact(url:)`` reads it: with `URLComponents`, or from the URL when they
+        // cannot read it.
+        let host = URLComponents(url: url, resolvingAgainstBaseURL: false).map(\.percentEncodedHost) ?? url.host(percentEncoded: true)
+        guard let host else { return nil }
+        return showsHost(host) ? host : Self.replacement
+    }
+
     /// The URL's path as ``redact(url:)`` records it; empty when only the host is recorded.
     func redactedPath(of url: URL) -> String {
         guard isEnabled else { return url.path(percentEncoded: true) }

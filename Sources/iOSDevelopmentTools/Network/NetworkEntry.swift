@@ -137,7 +137,8 @@ public struct NetworkEntry: Sendable, Identifiable, Hashable {
     public let method: String
     /// The request URL as a display string, redacted (see ``RedactionPolicy/redact(url:)``).
     public let url: String
-    /// The host the request went to.
+    /// The host the request went to, as ``url`` records it: `[REDACTED]` when the policy hides
+    /// it (see ``RedactionPolicy/redact(url:)``).
     public let host: String?
     /// The URL path, without query or fragment, redacted like ``url``; empty when the policy
     /// records the host only.
@@ -175,7 +176,7 @@ public struct NetworkEntry: Sendable, Identifiable, Hashable {
         self.startDate = startDate
         self.method = request.httpMethod ?? "GET"
         self.url = request.url.map(policy.redact(url:)) ?? ""
-        self.host = request.url?.host()
+        self.host = request.url.flatMap(policy.redactedHost(of:))
         self.path = request.url.map(policy.redactedPath(of:)) ?? ""
         self.requestHeaders = policy.redact(headers: HTTPHeader.sorted(request.allHTTPHeaderFields ?? [:]))
         self.requestBody = body
