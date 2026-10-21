@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@46cdddcee504e0c7ba46c8a005fb8ad9dd742676 status=reviewed -->
+<!-- i18n-source: README.md@2c3232f3d33d45071739277aa964b2a231998e0a status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 560 Swift-Testing-Tests auf macOS und 557 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 581 Swift-Testing-Tests auf macOS und 578 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -201,7 +201,9 @@ func configureNetworkLogger() {
 - **Nie gespeichert:** User-Info und Fragment der URL, Query-Werte, die nicht auf der Allowlist
   stehen, die Werte aller anderen Header (`Authorization`, `Cookie` und `Set-Cookie` auch dann,
   wenn sie auf der Allowlist stehen), Werte unter geheimen Namen wie `password`, `token` oder
-  `api_key`, Pfadsegmente, die wie Kennungen aussehen (als `:id` angezeigt), und Datei-Parts von
+  `api_key`, Pfadsegmente, die wie Kennungen aussehen (als `:id` angezeigt), Pfad und Query einer URL
+  mit einem Punktsegment (`/pin/./4831`, `..`, `%2E`, ein leeres `;`-Segment: nur Schema und Host
+  bleiben) und Datei-Parts von
   Multipart-Bodys.
 - **Schlüssel, die kein reines ASCII sind**, nachdem Escapes dekodiert, NFKC angewendet und
   Groß-/Kleinschreibung angeglichen wurde (`pаssword` mit kyrillischem `а`, `pass\u200Dword`,
@@ -213,7 +215,9 @@ func configureNetworkLogger() {
   Schlüssel, der nicht auf der Allowlist steht (standardmäßig `status`, `method`, `path`,
   `duration_ms` und `count`; eigene fügen Sie mit `allowedTextKeys` hinzu), ein Zeichen außerhalb
   von ASCII, das weder Buchstabe noch diakritisches Zeichen, Ziffer oder Leerzeichen ist (`꞉`,
-  `…`, ein Emoji), eine Escape-Sequenz wie `%3D`, ein Schlüssel in Anführungszeichen, der nicht
+  `…`, ein Emoji, oder ein Buchstabe, den die Kompatibilitätsnormalisierung als Satzzeichen
+  liest, etwa `🄁` als `0,`), eine Escape-Sequenz jeder Form (ein Backslash vor allem außer
+  Leerraum, `%3D`, ein `&` vor einem Buchstaben oder `#`: `R&D`, `&amp`), ein Schlüssel in Anführungszeichen, der nicht
   erlaubt ist (geschnitten am öffnenden Anführungszeichen: `"x":"hunter2"` wird als `[REDACTED]`
   gespeichert), Markup (ein `<`, das kein Vergleich ist: `<b>`, `</x>`, `<!--`; kein Tag behält
   seinen Text), ein Anführungszeichen, das nicht in seiner Zeile schließt, Anführungszeichen, die

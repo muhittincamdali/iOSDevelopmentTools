@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@46cdddcee504e0c7ba46c8a005fb8ad9dd742676 status=reviewed -->
+<!-- i18n-source: README.md@2c3232f3d33d45071739277aa964b2a231998e0a status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -58,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 560 件、iOS シミュレーターで 557 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 581 件、iOS シミュレーターで 578 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -198,6 +198,8 @@ func configureNetworkLogger() {
 - **決して記録されないもの:** URL のユーザー情報とフラグメント、許可リストにないクエリの値、その他
   すべてのヘッダーの値 (`Authorization`、`Cookie`、`Set-Cookie` は許可リストにあっても記録されません)、
   `password`、`token`、`api_key` などの秘密の名前の値、識別子に見えるパスセグメント (`:id` と表示)、
+  ドットセグメント（`/pin/./4831`、`..`、`%2E`、空の `;` セグメント）を含む URL のパスとクエリ（スキームと
+  ホストのみ記録）、
   multipart ボディのファイルパート。
 - **プレーンな ASCII ではないキー** (エスケープのデコード、NFKC、大文字小文字の統一の後。キリル文字の
   `а` を含む `pаssword`、`pass\u200Dword`、`şifre` など) の値は、デフォルトで隠されます。
@@ -205,8 +207,9 @@ func configureNetworkLogger() {
   切れたボディ) は `[body omitted: 512 bytes, application/xml]` のような注記に置き換えられます。
 - **ログメッセージ**は最初のトリガーまで保持されます。秘密の名前、許可リストにないキー（デフォルトは
   `status`、`method`、`path`、`duration_ms`、`count`。独自のキーは `allowedTextKeys` で追加
-  します）、文字・結合記号・数字・空白以外の ASCII 外の文字（`꞉`、`…`、絵文字）、`%3D` のような
-  エスケープ、許可されていない引用符付きのキー（開き引用符の位置で切られます。`"x":"hunter2"` は
+  します）、文字・結合記号・数字・空白以外の ASCII 外の文字（`꞉`、`…`、絵文字、および互換正規化が句読点として読む文字。
+  例：`0,` と読まれる `🄁`）、あらゆる形のエスケープ（空白以外の文字の前のバックスラッシュ、`%3D`、
+  英字か `#` の前の `&`：`R&D`、`&amp`）、許可されていない引用符付きのキー（開き引用符の位置で切られます。`"x":"hunter2"` は
   `[REDACTED]` として保存されます）、マークアップ（比較ではない `<`。`<b>`、`</x>`、`<!--` など。
   どのタグもテキストを残しません）、同じ行で閉じられていない引用符、重なり合う引用符（`'x "y' z"`）、閉じられていない括弧があると、
   それ以降は下の行も含めてすべてマスキングされます（`login password=hunter2 status=200` は `login password=[REDACTED]`、`x=hunter2` は

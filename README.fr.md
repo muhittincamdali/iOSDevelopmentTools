@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@46cdddcee504e0c7ba46c8a005fb8ad9dd742676 status=reviewed -->
+<!-- i18n-source: README.md@2c3232f3d33d45071739277aa964b2a231998e0a status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 560 tests Swift Testing sur macOS et 557 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 581 tests Swift Testing sur macOS et 578 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -205,7 +205,9 @@ func configureNetworkLogger() {
   query hors de la liste autorisée, les valeurs de tous les autres en-têtes (`Authorization`,
   `Cookie` et `Set-Cookie` même s'ils sont dans la liste), les valeurs placées sous des noms
   secrets comme `password`, `token` ou `api_key`, les segments de chemin qui ressemblent à des
-  identifiants (affichés `:id`) et les parties fichier des corps multipart.
+  identifiants (affichés `:id`), le chemin et la query d'une URL dont le chemin a un segment point
+  (`/pin/./4831`, `..`, `%2E`, un segment `;` vide : seuls le schéma et l'hôte sont gardés) et les
+  parties fichier des corps multipart.
 - **Les clés qui ne sont pas en ASCII simple** une fois les échappements décodés, NFKC appliqué et
   la casse normalisée (`pаssword` avec un `а` cyrillique, `pass\u200Dword`, `şifre`) ont leur
   valeur masquée par défaut.
@@ -215,8 +217,10 @@ func configureNetworkLogger() {
 - **Les messages de journal** sont conservés jusqu'à leur premier déclencheur : un nom secret, une
   clé absente de la liste autorisée (`status`, `method`, `path`, `duration_ms` et `count` par
   défaut ; ajoutez les vôtres avec `allowedTextKeys`), un caractère hors ASCII qui n'est ni une
-  lettre, ni un signe diacritique, ni un chiffre, ni une espace (`꞉`, `…`, un emoji), une séquence
-  d'échappement comme `%3D`, une clé entre guillemets qui n'est pas autorisée (coupée à son
+  lettre, ni un signe diacritique, ni un chiffre, ni une espace (`꞉`, `…`, un emoji, ou une lettre que la
+  normalisation de compatibilité lit comme une ponctuation, comme `🄁`, lu `0,`), une séquence
+  d'échappement de toute forme (une barre oblique inverse devant tout sauf un blanc, `%3D`, un `&`
+  devant une lettre ou `#` : `R&D`, `&amp`), une clé entre guillemets qui n'est pas autorisée (coupée à son
   guillemet ouvrant : `"x":"hunter2"` est stocké sous la forme `[REDACTED]`), du balisage (un
   `<` qui n'est pas une comparaison : `<b>`, `</x>`, `<!--` ; aucune balise ne garde son texte),
   un guillemet qui ne se ferme pas sur sa ligne, des guillemets qui se chevauchent

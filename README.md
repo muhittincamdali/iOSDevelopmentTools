@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 560 Swift Testing tests on macOS and 557 on an iOS simulator. Requests travel
+- **Tested** — 581 Swift Testing tests on macOS and 578 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -195,7 +195,9 @@ func configureNetworkLogger() {
 - **Never recorded:** URL user info and fragments, query values that are not allowlisted, the
   values of all other headers (`Authorization`, `Cookie` and `Set-Cookie` even when allowlisted),
   values under secret names such as `password`, `token` or `api_key`, path segments that look
-  like identifiers (shown as `:id`), and file parts of multipart bodies.
+  like identifiers (shown as `:id`), the path and query of a URL
+  whose path has a dot segment (`/pin/./4831`, `..`, `%2E`, an empty `;` segment: only the
+  scheme and host are kept), and file parts of multipart bodies.
 - **Keys that are not plain ASCII** once escapes are decoded, NFKC is applied and case is folded
   (`pаssword` with a Cyrillic `а`, `pass\u200Dword`, `şifre`) have their values hidden by default.
 - **Bodies that cannot be parsed** (an unknown or missing content type, malformed JSON or
@@ -204,7 +206,9 @@ func configureNetworkLogger() {
 - **Log messages** are kept up to their first trigger: a secret name, a key that is not on the
   allowlist (`status`, `method`, `path`, `duration_ms` and `count` by default; add yours with
   `allowedTextKeys`), a character outside ASCII that is not a letter, mark, digit or space (`꞉`,
-  `…`, an emoji), an escape such as `%3D`, a key in quotes that is not allowed (cut at its
+  `…`, an emoji, or a letter that compatibility normalization reads as punctuation, such as `🄁`
+  read as `0,`), an escape of any form (a backslash before anything but white space, `%3D`, `&`
+  before a letter or `#`: `R&D`, `&amp`), a key in quotes that is not allowed (cut at its
   opening quote: `"x":"hunter2"` is stored as `[REDACTED]`), markup (a `<` that is not a
   comparison: `<b>`, `</x>`, `<!--`; no tag keeps its text), a quote that does not close on its
   line, quotes that overlap (`'x "y' z"`) or a bracket that does not close hides everything
