@@ -33,6 +33,7 @@ struct RedactionRecordUsefulnessTests {
     func forms() {
         #expect(form("name=Ay%C5%9Fe&page=2") == "name=Ay%C5%9Fe&page=2")
         #expect(form("name=Ay%C5%9Fe&value=x&page=2") == "name=Ay%C5%9Fe&value=[REDACTED]&page=2")
+        #expect(form("id=%C4%B0z&id=%C4%B0z&value=v&page=2") == "id=%C4%B0z&id=%C4%B0z&value=[REDACTED]&page=2")
     }
 
     @Test("beside such a name, a field that carries a value is still hidden")
@@ -61,6 +62,17 @@ struct RedactionRecordUsefulnessTests {
         (#"{"name":"Ayse\u0301","x":"S3CR3Tq"}"#, #"{"name":"Ayse\u0301","x":"[REDACTED]"}"#),
         (#"{"name":"Ayşe\u200b","x":"S3CR3Tq"}"#, #"{"name":"[REDACTED]","x":"[REDACTED]"}"#),
         (#"{"name":"P\u0430ssword","x":"S3CR3Tq"}"#, #"{"name":"[REDACTED]","x":"[REDACTED]"}"#),
+        // Names that may be a record's beside one that hides every member, which still does; and
+        // two that hide every member, which hide each other. Each kind is kept apart, so a name of
+        // either kind is found among many of the other.
+        (#"{"name":"Ayşe","name":"Ayşe","label":"Şifre","x":"S3CR3Tq"}"#, #"{"name":"Ayşe","name":"Ayşe","label":"Şifre","x":"[REDACTED]"}"#),
+        (#"{"label":"Şifre","name":"Ayşe","x":"S3CR3Tq","value":"v"}"#, #"{"label":"Şifre","name":"Ayşe","x":"[REDACTED]","value":"[REDACTED]"}"#),
+        (#"{"label":"Şifre","label":"Пароль","x":"S3CR3Tq"}"#, #"{"label":"[REDACTED]","label":"[REDACTED]","x":"[REDACTED]"}"#),
+        (
+            #"{"label":"Şifre","name":"Ayşe","label":"Пароль","note":"n"}"#,
+            #"{"label":"[REDACTED]","name":"Ayşe","label":"[REDACTED]","note":"[REDACTED]"}"#
+        ),
+        (#"{"label":{"x":1},"label":"Şifre","y":"1"}"#, #"{"label":"[REDACTED]","label":"[REDACTED]","y":"[REDACTED]"}"#),
     ])
     func pairs(input: String, expected: String) {
         #expect(json(input) == expected)
@@ -70,5 +82,7 @@ struct RedactionRecordUsefulnessTests {
     func secretForms() {
         #expect(form("id=password&x=S3CR3Tq") == "id=password&x=[REDACTED]")
         #expect(form("label=%C5%9Eifre&x=S3CR3Tq") == "label=%C5%9Eifre&x=[REDACTED]")
+        #expect(form("name=Ay%C5%9Fe&name=Ay%C5%9Fe&label=%C5%9Eifre&x=S3CR3Tq") == "name=Ay%C5%9Fe&name=Ay%C5%9Fe&label=%C5%9Eifre&x=[REDACTED]")
+        #expect(form("label=%C5%9Eifre&label=%D0%9F%D0%B0%D1%80%D0%BE%D0%BB%D1%8C&x=1") == "label=[REDACTED]&label=[REDACTED]&x=[REDACTED]")
     }
 }
