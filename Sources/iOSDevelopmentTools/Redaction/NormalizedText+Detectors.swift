@@ -148,9 +148,8 @@ extension NormalizedText {
             while end < count, isAnyAlphanumeric(end) || bytes[end] == UInt8(ascii: ".") || bytes[end] == UInt8(ascii: "-") || isBridgedLineBreak(end) {
                 end += 1
             }
-            while end > at + 1, bytes[end - 1] == UInt8(ascii: ".") || bytes[end - 1] == UInt8(ascii: "-") || isBridgedLineBreak(end - 1) { end -= 1 }
-            guard start < at, end > at + 1, isDomain(at + 1..<end) else { continue }
-            spans.append(span(start..<end))
+            guard start < at, let domainEnd = domainEnd(from: at + 1, upTo: end) else { continue }
+            spans.append(span(start..<domainEnd))
         }
         return spans
     }
@@ -161,10 +160,28 @@ extension NormalizedText {
 
     private static let localPartMarks = ByteSet("._%+-")
 
-    private func isDomain(_ range: Range<Int>) -> Bool {
-        guard let lastDot = range.last(where: { bytes[$0] == UInt8(ascii: ".") }), lastDot > range.lowerBound else { return false }
-        let topLevel = (lastDot + 1)..<range.upperBound
-        return topLevel.count >= 2 && topLevel.allSatisfy(isAnyLetter)
+    /// The end of the domain that starts at `domainStart` and is read at most up to `limit`, or
+    /// nil when no domain ends there. The top-level domain is read without the line separators in
+    /// it (`c`, a vertical tab and `om` is `com`). Where the domain read across a separator does
+    /// not end in a top-level domain (`example.com`, a vertical tab and `1`), it ends at the
+    /// separator, and so on back. Each byte is read once on the way back.
+    private func domainEnd(from domainStart: Int, upTo limit: Int) -> Int? {
+        var end = limit
+        while true {
+            while end > domainStart, bytes[end - 1] == UInt8(ascii: ".") || bytes[end - 1] == UInt8(ascii: "-") || isBridgedLineBreak(end - 1) {
+                end -= 1
+            }
+            var k = end
+            var letters = 0
+            while k > domainStart, isAnyLetter(k - 1) || isBridgedLineBreak(k - 1) {
+                if !isBridgedLineBreak(k - 1) { letters += 1 }
+                k -= 1
+            }
+            if letters >= 2, k - 1 > domainStart, bytes[k - 1] == UInt8(ascii: ".") { return end }
+            // No end between `k` and `end` has a top-level domain either: the next is a separator before `k`.
+            guard let separator = (domainStart..<k).last(where: isBridgedLineBreak) else { return nil }
+            end = separator
+        }
     }
 
     // MARK: JSON Web Tokens
