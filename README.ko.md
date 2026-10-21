@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
+<!-- i18n-source: README.md@46cdddcee504e0c7ba46c8a005fb8ad9dd742676 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -56,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 556개, iOS 시뮬레이터에서 553개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 560개, iOS 시뮬레이터에서 557개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -204,7 +204,7 @@ func configureNetworkLogger() {
   있습니다), 문자·결합 부호·숫자·공백이 아닌 ASCII 밖의 문자(`꞉`, `…`, 이모지), `%3D` 같은
   이스케이프, 허용되지 않은 따옴표 속 키(여는 따옴표에서 잘립니다. `"x":"hunter2"`는
   `[REDACTED]`로 저장됩니다), 마크업(비교가 아닌 `<`: `<b>`, `</x>`, `<!--`. 어떤 태그도 텍스트를
-  남기지 않습니다), 같은 줄에서 닫히지 않은 따옴표, 닫히지 않은 괄호가 나오면 그 뒤의 모든 내용이
+  남기지 않습니다), 같은 줄에서 닫히지 않은 따옴표, 서로 겹치는 따옴표(`'x "y' z"`), 닫히지 않은 괄호가 나오면 그 뒤의 모든 내용이
   아래 줄까지 가려집니다
   (`login password=hunter2 status=200`은 `login password=[REDACTED]`로, `x=hunter2`는
   `x=[REDACTED]`로 저장됩니다). 트리거가 없는 메시지는 감지된 토큰, 카드 번호, 이메일 주소를 빼고

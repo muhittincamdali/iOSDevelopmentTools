@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
+<!-- i18n-source: README.md@46cdddcee504e0c7ba46c8a005fb8ad9dd742676 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 556 testes de Swift Testing no macOS e 553 em um simulador de iOS. As requisições vão de
+- **Testado** — 560 testes de Swift Testing no macOS e 557 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -214,7 +214,8 @@ func configureNetworkLogger() {
   dígito nem espaço (`꞉`, `…`, um emoji), uma sequência de escape como `%3D`, uma chave entre aspas
   que não está permitida (cortada na aspa de abertura: `"x":"hunter2"` é armazenada como
   `[REDACTED]`), marcação (um `<` que não é uma comparação: `<b>`, `</x>`, `<!--`; nenhuma tag
-  guarda seu texto), uma aspa que não se fecha na sua linha ou um colchete que não se fecha oculta
+  guarda seu texto), uma aspa que não se fecha na sua linha, aspas que se
+  sobrepõem (`'x "y' z"`) ou um colchete que não se fecha oculta
   tudo o que vem depois, inclusive as linhas de baixo
   (`login password=hunter2 status=200` é armazenada como `login password=[REDACTED]`, e
   `x=hunter2` como `x=[REDACTED]`). Uma mensagem sem gatilho é guardada como está, exceto os

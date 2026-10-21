@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
+<!-- i18n-source: README.md@46cdddcee504e0c7ba46c8a005fb8ad9dd742676 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 556, iOS simülatöründe 553 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 560, iOS simülatöründe 557 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -216,7 +216,7 @@ func configureNetworkLogger() {
   dışı bir karakter (`꞉`, `…`, bir emoji), `%3D` gibi bir kaçış dizisi, izin verilmeyen tırnaklı bir
   anahtar (açılış tırnağından kesilir: `"x":"hunter2"`, `[REDACTED]` olarak saklanır), işaretleme
   (karşılaştırma olmayan bir `<`: `<b>`, `</x>`, `<!--`; hiçbir etiket metnini korumaz), kendi
-  satırında kapanmayan bir tırnak ya da kapanmayan bir parantez, ondan sonraki her şeyi alttaki
+  satırında kapanmayan bir tırnak, birbiriyle çakışan tırnaklar (`'x "y' z"`) ya da kapanmayan bir parantez, ondan sonraki her şeyi alttaki
   satırlarla birlikte gizler
   (`login password=hunter2 status=200`, `login password=[REDACTED]`; `x=hunter2` ise
   `x=[REDACTED]` olarak saklanır). Tetikleyici içermeyen bir mesaj, bulunan token'lar, kart

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
+<!-- i18n-source: README.md@46cdddcee504e0c7ba46c8a005fb8ad9dd742676 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 556 tests de Swift Testing en macOS y 553 en un simulador de iOS. Las solicitudes van
+- **Probado** — 560 tests de Swift Testing en macOS y 557 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -215,8 +215,8 @@ func configureNetworkLogger() {
   una marca, un dígito ni un espacio (`꞉`, `…`, un emoji), una secuencia de escape como `%3D`, una
   clave entre comillas que no está permitida (se corta en la comilla de apertura: `"x":"hunter2"`
   se guarda como `[REDACTED]`), marcado (un `<` que no es una comparación: `<b>`, `</x>`, `<!--`;
-  ninguna etiqueta conserva su texto), una comilla que no se cierra en su línea o un corchete que
-  no se cierra oculta todo lo que viene después, también las líneas siguientes (`login password=hunter2 status=200` se guarda como `login password=[REDACTED]`, y
+  ninguna etiqueta conserva su texto), una comilla que no se cierra en su línea, comillas que se
+  solapan (`'x "y' z"`) o un corchete que no se cierra oculta todo lo que viene después, también las líneas siguientes (`login password=hunter2 status=200` se guarda como `login password=[REDACTED]`, y
   `x=hunter2` como `x=[REDACTED]`). Un mensaje sin disparador se guarda tal cual, salvo los tokens,
   los números de tarjeta y las direcciones de correo detectados.
 - **Las URL en los mensajes de log** no tienen lógica de isla. Una URL solo queda visible si está

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
+<!-- i18n-source: README.md@46cdddcee504e0c7ba46c8a005fb8ad9dd742676 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 556 tests Swift Testing sur macOS et 553 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 560 tests Swift Testing sur macOS et 557 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -219,7 +219,8 @@ func configureNetworkLogger() {
   d'échappement comme `%3D`, une clé entre guillemets qui n'est pas autorisée (coupée à son
   guillemet ouvrant : `"x":"hunter2"` est stocké sous la forme `[REDACTED]`), du balisage (un
   `<` qui n'est pas une comparaison : `<b>`, `</x>`, `<!--` ; aucune balise ne garde son texte),
-  un guillemet qui ne se ferme pas sur sa ligne ou une parenthèse qui ne se ferme pas masque tout
+  un guillemet qui ne se ferme pas sur sa ligne, des guillemets qui se chevauchent
+  (`'x "y' z"`) ou une parenthèse qui ne se ferme pas masque tout
   ce qui suit, y compris les lignes suivantes (`login password=hunter2 status=200` est stocké sous la
   forme `login password=[REDACTED]`, et `x=hunter2` sous la forme `x=[REDACTED]`). Un message sans
   déclencheur est conservé tel quel, hormis les jetons, numéros de carte et adresses e-mail

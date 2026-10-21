@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
+<!-- i18n-source: README.md@46cdddcee504e0c7ba46c8a005fb8ad9dd742676 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -59,7 +59,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 556 тестов Swift Testing на macOS и 553 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 560 тестов Swift Testing на macOS и 557 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -214,7 +214,8 @@ func configureNetworkLogger() {
   цифрой или пробелом (`꞉`, `…`, эмодзи), escape-последовательность вроде `%3D`, ключ в кавычках
   не из списка разрешённых (текст обрезается по открывающей кавычке: `"x":"hunter2"` сохраняется
   как `[REDACTED]`), разметка (`<`, который не является сравнением: `<b>`, `</x>`, `<!--`; ни один
-  тег не сохраняет свой текст), кавычка, не закрытая в своей строке, или незакрытая скобка
+  тег не сохраняет свой текст), кавычка, не закрытая в своей строке, перекрывающиеся кавычки
+  (`'x "y' z"`) или незакрытая скобка
   скрывают всё, что идёт после, включая строки ниже
   (`login password=hunter2 status=200` сохраняется как `login password=[REDACTED]`, а `x=hunter2`
   как `x=[REDACTED]`). Сообщение без триггера сохраняется как есть, кроме найденных токенов, номеров

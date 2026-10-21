@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
+<!-- i18n-source: README.md@46cdddcee504e0c7ba46c8a005fb8ad9dd742676 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 556 Swift-Testing-Tests auf macOS und 553 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 560 Swift-Testing-Tests auf macOS und 557 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -216,8 +216,8 @@ func configureNetworkLogger() {
   `…`, ein Emoji), eine Escape-Sequenz wie `%3D`, ein Schlüssel in Anführungszeichen, der nicht
   erlaubt ist (geschnitten am öffnenden Anführungszeichen: `"x":"hunter2"` wird als `[REDACTED]`
   gespeichert), Markup (ein `<`, das kein Vergleich ist: `<b>`, `</x>`, `<!--`; kein Tag behält
-  seinen Text), ein Anführungszeichen, das nicht in seiner Zeile schließt, oder eine Klammer, die
-  nicht schließt, schwärzt alles danach, auch die Zeilen darunter
+  seinen Text), ein Anführungszeichen, das nicht in seiner Zeile schließt, Anführungszeichen, die
+  sich überschneiden (`'x "y' z"`), oder eine Klammer, die nicht schließt, schwärzt alles danach, auch die Zeilen darunter
   (`login password=hunter2 status=200` wird als `login password=[REDACTED]` gespeichert,
   `x=hunter2` als `x=[REDACTED]`). Eine Meldung ohne Auslöser bleibt, wie sie ist, bis auf
   erkannte Tokens, Kartennummern und E-Mail-Adressen.

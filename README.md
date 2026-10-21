@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 556 Swift Testing tests on macOS and 553 on an iOS simulator. Requests travel
+- **Tested** — 560 Swift Testing tests on macOS and 557 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -207,7 +207,8 @@ func configureNetworkLogger() {
   `…`, an emoji), an escape such as `%3D`, a key in quotes that is not allowed (cut at its
   opening quote: `"x":"hunter2"` is stored as `[REDACTED]`), markup (a `<` that is not a
   comparison: `<b>`, `</x>`, `<!--`; no tag keeps its text), a quote that does not close on its
-  line or a bracket that does not close hides everything after it, the lines below too
+  line, quotes that overlap (`'x "y' z"`) or a bracket that does not close hides everything
+  after it, the lines below too
   (`login password=hunter2 status=200` is stored as `login password=[REDACTED]`, `x=hunter2` as
   `x=[REDACTED]`). A message with no trigger is kept as it is, apart from detected tokens, card
   numbers and email addresses.
