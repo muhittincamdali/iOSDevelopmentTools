@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
+<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 554, iOS simülatöründe 551 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 556, iOS simülatöründe 553 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 

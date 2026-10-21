@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
+<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 554 testes de Swift Testing no macOS e 551 em um simulador de iOS. As requisições vão de
+- **Testado** — 556 testes de Swift Testing no macOS e 553 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 

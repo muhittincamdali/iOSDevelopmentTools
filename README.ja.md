@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
+<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -58,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 554 件、iOS シミュレーターで 551 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 556 件、iOS シミュレーターで 553 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 

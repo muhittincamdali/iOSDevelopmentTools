@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
+<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 554 tests Swift Testing sur macOS et 551 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 556 tests Swift Testing sur macOS et 553 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 

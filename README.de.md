@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
+<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 554 Swift-Testing-Tests auf macOS und 551 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 556 Swift-Testing-Tests auf macOS und 553 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@bfc2208e9df16d99e33d4663f4d27b3e1a8a4928 status=reviewed -->
+<!-- i18n-source: README.md@f7af5d1a7f601fa31c65a0857643b8226ac8c734 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 554 tests de Swift Testing en macOS y 551 en un simulador de iOS. Las solicitudes van
+- **Probado** — 556 tests de Swift Testing en macOS y 553 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
