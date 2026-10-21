@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@594705445158fa73fcbdceb59fc7b9d8ed5da233 status=reviewed -->
+<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 520 tests Swift Testing sur macOS et 517 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 522 tests Swift Testing sur macOS et 519 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -232,10 +232,10 @@ func configureNetworkLogger() {
 
 Le masquage est un filet de sécurité, pas une garantie. Il est conçu pour les secrets enregistrés
 par accident : les entrées structurées sont analysées, et ce que l'analyseur ne comprend pas
-entièrement est masqué ; le texte libre est traité au mieux, et un nom secret déguisé avec des
-lettres qui se ressemblent et écrit sans `=` ni `:` (`pɑsswoʀd hunter2`) n'est pas forcément
-trouvé. Gardez les secrets hors des requêtes que vous enregistrez et des messages de journal dès
-le départ, et préférez une journalisation structurée.
+entièrement est masqué ; le texte libre est traité au mieux, et un nom secret écrit sans `=` ni `:`
+dont deux lettres ou plus sont remplacées par des lettres qui se ressemblent (`pɑsswoʀd hunter2`)
+n'est pas forcément trouvé. Gardez les secrets hors des requêtes que vous enregistrez et des
+messages de journal dès le départ, et préférez une journalisation structurée.
 
 Deux autres limites font partie de ce modèle. **Borne de coût :** tous les documents imbriqués
 dans une même entrée (du JSON dans une chaîne, une URL dans un texte) lisent ensemble au plus quatre

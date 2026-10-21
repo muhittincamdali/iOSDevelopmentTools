@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@594705445158fa73fcbdceb59fc7b9d8ed5da233 status=reviewed -->
+<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 520, iOS simülatöründe 517 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 522, iOS simülatöründe 519 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -229,10 +229,10 @@ func configureNetworkLogger() {
 
 Maskeleme bir güvenlik ağıdır, garanti değildir. Yanlışlıkla kaydedilen gizli bilgiler için
 tasarlanmıştır: yapılandırılmış girdi ayrıştırılır ve ayrıştırıcının tam anlamadığı her şey
-gizlenir; serbest metin ise en iyi çabadır ve benzer görünen harflerle gizlenmiş, `=` ya da `:`
-olmadan yazılmış bir gizli adın (`pɑsswoʀd hunter2`) bulunacağı garanti edilmez. Gizli bilgileri
-en baştan kaydettiğiniz isteklerin ve günlük mesajlarının dışında tutun ve yapılandırılmış
-günlük kaydını tercih edin.
+gizlenir; serbest metin ise en iyi çabadır ve `=` ya da `:` olmadan yazılmış, iki ya da daha fazla
+harfi benzer görünen harflerle değiştirilmiş bir gizli adın (`pɑsswoʀd hunter2`) bulunacağı garanti
+edilmez. Gizli bilgileri en baştan kaydettiğiniz isteklerin ve günlük mesajlarının dışında tutun ve
+yapılandırılmış günlük kaydını tercih edin.
 
 Bu modele iki sınır daha dahildir. **Maliyet sınırı:** bir girdinin içine gömülü bütün
 belgeler (bir string içindeki JSON, metindeki bir URL) toplamda girdinin uzunluğunun en çok dört

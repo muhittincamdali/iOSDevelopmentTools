@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@594705445158fa73fcbdceb59fc7b9d8ed5da233 status=reviewed -->
+<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 520 tests de Swift Testing en macOS y 517 en un simulador de iOS. Las solicitudes van
+- **Probado** — 522 tests de Swift Testing en macOS y 519 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -228,10 +228,10 @@ func configureNetworkLogger() {
 
 La ocultación es una red de seguridad, no una garantía. Está pensada para secretos registrados por
 accidente: la entrada estructurada se analiza, y lo que el analizador no entiende del todo se
-oculta; el texto libre es un mejor esfuerzo, y no se garantiza encontrar un nombre secreto
-disfrazado con letras parecidas y escrito sin `=` ni `:` (`pɑsswoʀd hunter2`). Mantén los secretos
-fuera de las solicitudes que registras y de los mensajes de registro desde el principio, y
-prefiere el registro estructurado.
+oculta; el texto libre es un mejor esfuerzo, y no se garantiza encontrar un nombre secreto escrito
+sin `=` ni `:` con dos o más de sus letras sustituidas por otras parecidas (`pɑsswoʀd hunter2`).
+Mantén los secretos fuera de las solicitudes que registras y de los mensajes de registro desde el
+principio, y prefiere el registro estructurado.
 
 Dos límites más forman parte de ese modelo. **Límite de coste:** todos los documentos anidados
 en una entrada (JSON dentro de una cadena, una URL en un texto) leen juntos como mucho cuatro veces

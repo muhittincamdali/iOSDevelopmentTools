@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@594705445158fa73fcbdceb59fc7b9d8ed5da233 status=reviewed -->
+<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 520 Swift-Testing-Tests auf macOS und 517 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 522 Swift-Testing-Tests auf macOS und 519 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -226,11 +226,11 @@ func configureNetworkLogger() {
   URL (`GET https://api.example.com/v1/items?page=2 done` wird als `GET [REDACTED]` gespeichert);
   `allowedQueryParameters` gilt für aufgezeichnete Request-URLs, nicht für URLs im Text.
 
-Schwärzen ist ein Sicherheitsnetz, keine Garantie. Es ist für Geheimnisse gebaut, die
-versehentlich aufgezeichnet werden: Strukturierte Eingaben werden geparst, und was der Parser
-nicht vollständig versteht, wird geschwärzt; Freitext ist ein bestmöglicher Versuch, und ein
-geheimer Name, der mit ähnlich aussehenden Buchstaben getarnt und ohne `=` oder `:` geschrieben
-ist (`pɑsswoʀd hunter2`), wird nicht sicher gefunden. Halte Geheimnisse von vornherein aus den
+Schwärzen ist ein Sicherheitsnetz, keine Garantie. Es ist für Geheimnisse gebaut, die versehentlich
+aufgezeichnet werden: Strukturierte Eingaben werden geparst, und was der Parser nicht vollständig
+versteht, wird geschwärzt; Freitext ist ein bestmöglicher Versuch, und ein geheimer Name, der ohne
+`=` oder `:` geschrieben ist und in dem zwei oder mehr Buchstaben durch ähnlich aussehende ersetzt
+sind (`pɑsswoʀd hunter2`), wird nicht sicher gefunden. Halte Geheimnisse von vornherein aus den
 aufgezeichneten Anfragen und aus Log-Meldungen heraus, und bevorzuge strukturiertes Logging.
 
 Zwei weitere Grenzen gehören zu diesem Modell. **Kostengrenze:** Alle in einer Eingabe

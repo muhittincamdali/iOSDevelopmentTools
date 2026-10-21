@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@594705445158fa73fcbdceb59fc7b9d8ed5da233 status=reviewed -->
+<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 520 testes de Swift Testing no macOS e 517 em um simulador de iOS. As requisições vão de
+- **Testado** — 522 testes de Swift Testing no macOS e 519 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -226,10 +226,10 @@ func configureNetworkLogger() {
 
 A ocultação é uma rede de segurança, não uma garantia. Ela foi feita para segredos registrados por
 acidente: a entrada estruturada é analisada, e o que o analisador não entende por completo é
-ocultado; o texto livre é um melhor esforço, e não há garantia de encontrar um nome secreto
-disfarçado com letras parecidas e escrito sem `=` ou `:` (`pɑsswoʀd hunter2`). Mantenha segredos
-fora das requisições que você registra e das mensagens de log desde o início, e prefira logs
-estruturados.
+ocultado; o texto livre é um melhor esforço, e não há garantia de encontrar um nome secreto escrito
+sem `=` ou `:` com duas ou mais letras trocadas por outras parecidas (`pɑsswoʀd hunter2`). Mantenha
+segredos fora das requisições que você registra e das mensagens de log desde o início, e prefira
+logs estruturados.
 
 Mais dois limites fazem parte desse modelo. **Limite de custo:** todos os documentos aninhados
 em uma entrada (JSON dentro de uma string, uma URL em um texto) leem juntos no máximo quatro vezes

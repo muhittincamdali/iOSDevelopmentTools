@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@594705445158fa73fcbdceb59fc7b9d8ed5da233 status=reviewed -->
+<!-- i18n-source: README.md@47242880e3cb8d9dd7c78c96d16b195d71e1d385 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -58,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 520 件、iOS シミュレーターで 517 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 522 件、iOS シミュレーターで 519 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -221,9 +221,9 @@ func configureNetworkLogger() {
 
 マスキングはセーフティネットであり、保証ではありません。うっかり記録された秘密情報を想定して
 作られています。構造化された入力はパーサーで解析し、パーサーが完全には理解できないものは
-マスキングします。自由形式のテキストはベストエフォートで、似た文字で偽装し `=` や `:` なしで
-書かれた秘密の名前（`pɑsswoʀd hunter2`）が見つかる保証はありません。そもそも記録するリクエストや
-ログメッセージに秘密情報を含めず、構造化ログを使ってください。
+マスキングします。自由形式のテキストはベストエフォートで、`=` や `:` なしで書かれ、2 文字以上を
+似た文字に置き換えた秘密の名前（`pɑsswoʀd hunter2`）が見つかる保証はありません。そもそも記録する
+リクエストやログメッセージに秘密情報を含めず、構造化ログを使ってください。
 
 このモデルにはさらに 2 つの制限があります。**コストの上限:** 1 つの入力に入れ子になったすべての
 ドキュメント（文字列内の JSON、テキスト内の URL）は、合わせて入力の長さの最大 4 倍までしか
