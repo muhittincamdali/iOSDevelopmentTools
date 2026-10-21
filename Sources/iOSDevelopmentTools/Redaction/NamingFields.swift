@@ -23,40 +23,49 @@ struct NamingFields {
     /// A field: its name, and its value as the rule reads it.
     typealias Field = (name: [Unicode.Scalar], value: Value)
 
-    /// The positions of the fields that name a secret, and whether each hides every other field or
-    /// only those that carry a value. Only these are kept, so a body of many fields is not held a
-    /// second time as Unicode scalars.
-    private let naming: [(index: Int, hidesEveryField: Bool)]
+    /// Two positions are enough to tell whether a field other than a given one is among them.
+    private static let keptPositions = 2
+
+    /// The positions of the first two fields that name a secret, and of the first two of those that
+    /// hide every other field. Whether a field other than the one being written does is then told
+    /// in constant time: reading every naming field again for every field made a form or an object
+    /// of many `name=Ayşe` quadratic, about two seconds a megabyte and four times that at two.
+    private let naming: [Int]
+    private let hidingEveryField: [Int]
 
     /// Whether any field names a secret in its value.
     var hasNamingField: Bool { !naming.isEmpty }
 
     /// Reads the fields one at a time, in order.
     init(_ fields: some Sequence<Field>, policy: RedactionPolicy, compatibility: CompatibilityText) {
-        var naming: [(index: Int, hidesEveryField: Bool)] = []
+        var naming: [Int] = []
+        var hidingEveryField: [Int] = []
         for (index, (name, value)) in fields.enumerated() {
+            let hidesEveryField: Bool
             switch value {
             case .string(let text):
                 guard WrittenName.namesSecret(text, in: .field(name), policy: policy, compatibility: compatibility) else { continue }
-                let isRecordValue = WrittenName.mayBeRecordValue(text, field: name, policy: policy, compatibility: compatibility)
-                naming.append((index, !isRecordValue))
+                hidesEveryField = !WrittenName.mayBeRecordValue(text, field: name, policy: policy, compatibility: compatibility)
             case .structure:
-                if WrittenName.holdsName(name) { naming.append((index, true)) }
+                guard WrittenName.holdsName(name) else { continue }
+                hidesEveryField = true
             case .other:
                 continue
             }
+            if naming.count < Self.keptPositions { naming.append(index) }
+            if hidesEveryField, hidingEveryField.count < Self.keptPositions { hidingEveryField.append(index) }
         }
         self.naming = naming
+        self.hidingEveryField = hidingEveryField
     }
 
     /// Whether the value of field `index` is hidden because another field names a secret. The
     /// field is made again only then.
     func hidesValue(at index: Int, of field: @autoclosure () -> Field) -> Bool {
-        let others = naming.lazy.filter { $0.index != index }
-        guard !others.isEmpty else { return false }
+        guard naming.contains(where: { $0 != index }) else { return false }
         let (name, value) = field()
         if WrittenName.carriesValue(name) { return true }
-        guard others.contains(where: \.hidesEveryField) else { return false }
+        guard hidingEveryField.contains(where: { $0 != index }) else { return false }
         guard case .string(let text) = value else { return true }
         return !WrittenName.staysBesideName(name, value: text)
     }
