@@ -83,6 +83,9 @@ struct RedactionGuideTests {
         #expect(policy.redact(text: "p\u{0251}sswo\u{0280}d=hunter2") == "p\u{0251}sswo\u{0280}d=[REDACTED]")
         // Such letters put in beside the name's own are left out of its skeleton.
         #expect(policy.redact(text: "p\u{0131}a\u{0131}ssword hunter2") == "p\u{0131}a\u{0131}ssword [REDACTED]")
+        // A combining mark in place of one letter of a name is not read as that letter.
+        #expect(policy.redact(text: "t\u{0366}ken hunter2") == "t\u{0366}ken hunter2")
+        #expect(policy.redact(text: "t\u{0366}ken=hunter2") == "t\u{0366}ken=[REDACTED]")
         // A secret word in another language is not one of the names.
         #expect(policy.redact(text: "пароль hunter2") == "пароль hunter2")
         // In a body, a plain name that is not a secret name keeps its value; in free text the key

@@ -33,8 +33,9 @@ is not built to stop someone who writes a log line on purpose to get a secret pa
 - **Free text is a best effort.** A log line has no grammar, so the policy does not try to tell
   where a value ends. After the first trigger, such as a secret name, everything to the end of
   the text is hidden, the lines below included. A secret name written without a separator and
-  disguised on purpose by writing two or more of its letters as look-alikes (`pɑsswoʀd hunter2`)
-  is not guaranteed to be found; see "What it does not find". No table of look-alikes is kept to chase such names,
+  disguised on purpose by writing two or more of its letters as look-alikes (`pɑsswoʀd hunter2`),
+  or with a combining mark in place of one letter (`tͦken hunter2`), is not guaranteed to be
+  found; see "What it does not find". No table of look-alikes is kept to chase such names,
   since none is ever complete, and none would make free text safe. Use structured logging
   instead: separate fields, and secrets kept out of messages.
 - **Hostile input has a cost bound.** All the documents found inside one input, one inside
@@ -425,6 +426,10 @@ Use ``RedactionPolicy/disabled`` only with test servers and test accounts.
   put in beside the name's own are left out of its skeleton, so `pıaıssword hunter2` is hidden.
   With a separator (`pɑsswoʀd=hunter2`) the value is hidden. A secret word in another language, such as
   `пароль hunter2`, is not one either.
+- A secret name in free text written without a separator with a combining mark in place of one
+  of its letters: `tͦken hunter2` (a `t`, then U+0366 where the `o` belongs) is stored as it
+  is. Only a letter put in place of a letter is read as any letter. With a separator
+  (`tͦken=hunter2`) the key is not plain ASCII and the value is hidden.
 - A value written before its name, with no key before it: `hunter2 is my password` is stored as
   it is.
 - A card number grouped with `+` or `.` (`4111+1111+1111+1111`).
