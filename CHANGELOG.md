@@ -117,8 +117,16 @@ out of logs in the first place.
   `password`. Before, the match read one such letter and none after the plural `s`, so these
   words and the values after them were stored as they were in free text, JSON strings, form
   values, text/plain bodies, an allowed header and URL path segments. A name with two or more of
-  its letters replaced by look-alikes (`pɑsswoʀd hunter2`) is still not found, as the guide says,
-  and neither is one with a combining mark in place of one letter (`tͦken hunter2`).
+  its letters replaced by look-alikes (`pɑsswoʀd hunter2`) is still not found, as the guide says.
+- The one wildcard rule of the redaction spec covers marks and numbers as well as letters: one
+  letter, mark or number with no ASCII form inside a word stands for any one letter or for none.
+  A mark written after an ASCII letter in place of the next one (`tͦken`, `pͥn`, `passwͦrd`,
+  `sͤcret`, `p\u{0301}ssword`) and a number without an ASCII form (`passw〇rd`, `t〇ken`, with
+  U+3007 in place of the `o`) were not read as a letter: the scanned text leaves marks out, and
+  only a letter counted as a wildcard. These names and the values after them were stored as they
+  were in free text, JSON strings, form values, multipart parts, text/plain bodies and LogStore
+  lines. A mark on a letter that is a wildcard belongs to it (`pɑ́ssword`), and marks on every
+  letter are still left out (`t̷o̷k̷e̷n̷`).
 - Markup in free text is not parsed, as the redaction spec says, and what may follow a `<` is
   listed instead of what makes a tag: a `<` is a comparison only before an ASCII space, a tab, a
   line break, an ASCII digit, `=` or the end of the text. Before anything else it cuts the text,
@@ -183,6 +191,14 @@ out of logs in the first place.
   the text. A host such as `auth.example.com` names `auth` and now hides its path and query too.
   `NetworkEntry.path` is also empty when the host is hidden: `myapp://pin_x/4831` kept `/4831`
   there while its URL was `myapp://[REDACTED]`.
+- A URL path segment is read by the key rule, as the spec says: a segment that, decoded, is not
+  plain ASCII (letters, digits, `_`, `-`, `.` and spaces, with a letter or digit among them) is a
+  label, and the segment after it becomes `:id`, as after a secret name. Before, only a segment
+  in which free text read a secret word labelled the next one, so
+  `https://x.example/t%CD%A6ken/…`, `/p%CD%A5n/…`, `/passw%CD%A6rd/…`, `/s%CD%A4cret/…`,
+  `/user/passw%E3%80%87rd/…` and `/api/%C5%9Eifre/…` kept the segment after the name. Paths such
+  as `/caf%C3%A9/menu`, `/u/ada%40example.com/profile`, `/a+b/c` and `/.../x` now keep only
+  their first segment (`/caf%C3%A9/:id`), which over-hides on purpose.
 - A quoted key that is not on `allowedTextKeys` cuts the text at its opening quote, whichever
   quote it is written in: `"x":"hunter2"`, `"x"="hunter2"`, `'x': 'hunter2'` and `"hunter2":"v"`
   are stored as `[REDACTED]`. Before, the cut came after the separator, so the key showed.
@@ -210,6 +226,14 @@ out of logs in the first place.
   most four times its length. The tests run on a thread with 512 KiB of stack and, in a release
   build, check that a megabyte of input takes less than a second and, on macOS, that a megabyte of
   free text takes less than 16 MB of memory beyond the input.
+- What a character outside ASCII is read as is kept in one table of a fixed number of slots, at
+  most 4,096, for a whole text, body, URL or list of headers, as the spec says. Two dictionaries
+  that grew with every different character, each reading with an array of its own and every
+  character normalized twice, took 17.5 MiB for a megabyte of different characters in free text,
+  a kept header value, a text/plain body or a JSON array of strings, and 70.5 MiB and 1.46 s for
+  a log message of a million of them; every form field, multipart part, path segment, query value
+  and header made a table of its own. The same inputs now take 2.5 to 5.7 MiB, and the log
+  message 11.2 MiB and 1.3 s.
 
 ### Added
 
@@ -225,7 +249,7 @@ out of logs in the first place.
   name, generated triggers after which no value may show and generated keys, tests that ordinary
   keys, allowlisted headers and text with no trigger stay readable, parser-differential, stack,
   time-limit and peak-memory tests, the probes of every review of the shared rules, and the
-  examples of the guide. 591 tests run on macOS and 588 on an iOS simulator.
+  examples of the guide. 605 tests run on macOS and 602 on an iOS simulator.
 
 ### Changed
 
