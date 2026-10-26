@@ -62,7 +62,7 @@ is not built to stop someone who writes a log line on purpose to get a secret pa
 | --- | --- | --- |
 | URL | Scheme, host, port, path, query parameter names, values of allowlisted query parameters | User info (`user:password@`), the fragment (`#…`), other query values, path segments that look like identifiers or secrets (shown as `:id`), the segment after one that names a secret or is not plain ASCII (`/caf%C3%A9/menu` is recorded as `/caf%C3%A9/:id`), a host that is not a name of ASCII labels or an address or in which a value detector finds something, and a host that names a secret, with its port, path and query (`myapp://pin/4831` is recorded as `myapp://[REDACTED]`; also in ``NetworkEntry/host`` and ``NetworkEntry/path``) |
 | Headers | Names; values of the allowlisted headers, after the free-text rule | Values of every other header, and always the values of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key`, any header whose name contains `token`, `secret`, `key`, `auth`, `session` or `signature`, and values that start with an authentication scheme (`Bearer …`, `Basic …`, `Token …`) |
-| JSON, form and multipart bodies | Keys and member names, and values, as sent, with hidden values replaced | Values of secret keys and of keys that are not plain ASCII; values beside a field that holds a secret name or a name that is not plain ASCII, and beside a label that names a secret or is written outside ASCII (`{"title":"ΡΙΝ:","value":…}`); file parts and file names of multipart bodies |
+| JSON, form and multipart bodies | Keys and member names, and values, as sent, with hidden values replaced | Values of secret keys and of keys that are not plain ASCII; values beside a field that holds a secret name or a name that is not plain ASCII, and beside a label that names a secret or is written outside ASCII (`{"title":"ΡΙΝ:","value":…}`); file parts and file names of multipart bodies, and the values of part headers other than `Content-Length` and `Content-Transfer-Encoding` |
 | Other bodies | `text/plain` after the free-text rule; a note for everything else | Bodies with an unknown or missing content type (XML, property lists, HTML), bodies that do not parse, bodies that servers could split into fields differently, and bodies that were cut off at ``NetworkLogger/Configuration/maximumBodySize`` or are larger than ``RedactionPolicy/maximumBodySize`` (256 KiB by default) |
 | Log messages, error descriptions and other free text (kept header values, `text/plain` bodies, strings in JSON and forms) | The text up to its first trigger, after the value detectors | Everything from the first trigger to the end of the text, and what the value detectors find |
 
@@ -217,11 +217,14 @@ rule.
 - **Multipart form data** is read only with a single unquoted boundary of at most 70 characters,
   and only when every `--boundary` in it is a delimiter line after a CRLF and every part header
   ends with CRLF. Every part is written again with its field name and its type, and the body ends
-  at its closing delimiter. Another part header keeps its name only when the name is on
-  ``RedactionPolicy/allowedHeaders`` and no value detector finds something in it; any other is
-  written as `[REDACTED]: [REDACTED]`, and a kept one's value follows the header rule. File parts
-  are always replaced by a note, and the file name is never written. Each field is read by its own
-  content type (`text/plain` when it has none).
+  at its closing delimiter. A part header name is a key of the part, so of the other part headers
+  only `Content-Length` and `Content-Transfer-Encoding` are written with their value, read as free
+  text; `Content-ID`, `Content-Description`, `Content-Language`, `Content-Location` and
+  `Content-Encoding` are written with `[REDACTED]` as their value, and any other is written as
+  `[REDACTED]: [REDACTED]` (`User-Agent: …` and `X-4111111111111111: 1` alike).
+  ``RedactionPolicy/allowedHeaders`` does not apply to part headers. File parts are always
+  replaced by a note, and the file name is never written. Each field is read by its own content
+  type (`text/plain` when it has none).
 - **`text/plain`** goes through the free-text rule.
 
 Any other content type (XML, property lists, HTML, binary data), a missing content type, a body
@@ -233,9 +236,10 @@ the body is marked ``RedactionOutcome/omitted``.
 
 ### Headers
 
-Only the headers on ``RedactionPolicy/allowedHeaders`` keep their values: by default `Accept`,
-`Accept-Encoding`, `Accept-Language`, `Cache-Control`, `Content-Encoding`, `Content-Length`,
-`Content-Type`, `ETag` and `User-Agent`. A kept value goes through the free-text rule, read on
+Only the request and response headers on ``RedactionPolicy/allowedHeaders`` keep their values:
+by default `Accept`, `Accept-Encoding`, `Accept-Language`, `Cache-Control`, `Content-Encoding`,
+`Content-Length`, `Content-Type`, `ETag` and `User-Agent`. Multipart part headers follow their
+own list, described under Bodies above. A kept value goes through the free-text rule, read on
 after ``RedactionPolicy/allowedTextKeys`` and after the parameters these headers are written with
 (``RedactionPolicy/headerParameterNames``: `charset`, `boundary`, `q`, `max-age`, …), so
 `application/json; charset=utf-8` and `max-age=60` stay as they are. The headers listed in the
