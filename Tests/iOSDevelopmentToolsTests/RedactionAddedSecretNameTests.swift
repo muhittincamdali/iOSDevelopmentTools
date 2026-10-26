@@ -62,6 +62,16 @@ struct RedactionAddedSecretNameTests {
             == "https://api.example.com/a?ticket=[REDACTED]")
     }
 
+    /// The guide's example of an added name ("Change the policy").
+    @Test("the guide's example: an added name in free text and written as a value")
+    func guideExample() {
+        let policy = RedactionPolicy(additionalSecretNames: ["license_number"])
+        #expect(policy.redact(text: "license_number 12345") == "license_number [REDACTED]")
+        let body = policy.redact(body: Data(#"{"name":"license_number","value":"12345"}"#.utf8), contentType: "application/json").body
+        #expect(String(decoding: body, as: UTF8.self) == #"{"name":"license_number","value":"[REDACTED]"}"#)
+        #expect(policy.isSensitive(name: "licenseNumber") && policy.isSensitive(name: "LICENSE-NUMBER"))
+    }
+
     @Test("no allowlist takes an added name")
     func allowlists() {
         let allowing = RedactionPolicy(additionalSecretNames: ["ticket"], allowedHeaders: ["X-Ticket"], allowedQueryParameters: ["ticket_id"], allowedTextKeys: ["ticket"])
