@@ -11,7 +11,9 @@ import Testing
 ///   member beside it, in objects, forms and multipart bodies.
 /// - The documentation of the type said that words of five or more letters count anywhere in a
 ///   key, while `token` and `secret` counted only as a word or at the end, and `pw` only as a word.
-///   This library reads `token`, `secret` and `bearer` the same way.
+///   A later review of iOS-Networking-Architecture-Pro found keys such as `secretanswer` showing
+///   their value. This library's 2.1.0 read `token`, `secret` and `bearer` the same way; they now
+///   count anywhere, as the documentation says.
 @Suite("Redaction corpus: twenty-sixth review")
 struct RedactionTwentySixthReviewTests {
     private static let secret = "Qz26Wk5m"
@@ -100,13 +102,15 @@ struct RedactionTwentySixthReviewTests {
         #expect(Self.form("name=region%0A&value=x") == "name=region%0A&value=[REDACTED]")
     }
 
-    /// Where a secret word counts in a key: the long names and `session` anywhere, `token`,
-    /// `secret`, `bearer` and the short words as a word or at the end, `pass`, `sid` and `pw` only
-    /// as a word.
+    /// The redaction guide says where a secret word counts in a key: a word of five or more letters
+    /// anywhere (`token`, `secret`, `bearer` and `session` too, `session_start` and `tokenizer`
+    /// included), the shorter words as a word or at the end, `pass`, `sid` and `pw` only as a word.
+    /// In 2.1.0, `token`, `secret` and `bearer` counted only as a word or at the end, and
+    /// `{"secretanswer":…}` kept its value (see ``RedactionSecretWordPlacementTests``).
     @Test("a secret word counts in a key where the documentation says", arguments: [
         ("dbpassword", true), ("dbPassword", true), ("xpassphrasey", true), ("myapikeyhash", true), ("oldcredentials", true),
         ("user_pin", true), ("X-Auth-Key", true), ("apitoken", true), ("mysecret", true), ("refresh_token", true),
-        ("tokenvalue", false), ("TOKENID", false), ("secretvalue", false), ("secrethash", false), ("tokenizer", false),
+        ("tokenvalue", true), ("TOKENID", true), ("secretvalue", true), ("secrethash", true), ("tokenizer", true),
         ("DB_PASS", true), ("user_pw", true), ("bypass", false), ("dbpw", false), ("userpw", false),
         ("laravel_session", true), ("session_start", true), ("sessionCount", true), ("keyboard", false), ("spinner", false),
     ])
@@ -118,13 +122,17 @@ struct RedactionTwentySixthReviewTests {
     }
 
     /// The pinned behaviour this review's test called "known limitations" was written in neither
-    /// the README nor the guide. A string of control characters and spaces longer than 256
-    /// characters beside a value leaked, and is hidden now.
+    /// the README nor the guide. Two of its cases leaked: keys that hold `token` or `secret`
+    /// before more letters, and a string of control characters and spaces longer than 256
+    /// characters beside a value. Both are hidden now.
     @Test("the cases pinned as known limitations hide what they kept")
     func formerLimitations() {
         #expect(Self.json(#"{"name":"Hello\nWorld","value":"x"}"#) == #"{"name":"Hello\nWorld","value":"[REDACTED]"}"#)
         #expect(Self.json(#"{"note":"pass\nword","id":"7"}"#) == #"{"note":"pass[REDACTED]","id":"[REDACTED]"}"#)
-        for key in ["tokenvalue", "TOKENID", "secretvalue", "secrethash", "userpw", "dbpw"] {
+        for key in ["tokenvalue", "TOKENID", "secretvalue", "secrethash"] {
+            #expect(Self.json(#"{"\#(key)":"x"}"#) == #"{"\#(key)":"[REDACTED]"}"#)
+        }
+        for key in ["userpw", "dbpw"] {
             #expect(Self.json(#"{"\#(key)":"x"}"#) == #"{"\#(key)":"x"}"#)
         }
         #expect(Self.json(#"{"title":"\n","data":"x"}"#) == #"{"title":"\n","data":"[REDACTED]"}"#)

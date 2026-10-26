@@ -97,10 +97,11 @@ public struct RedactionPolicy: Sendable, Hashable {
     /// `signature`) and this library's extensions (`passphrase`, `passcode`, `credential`, `cvc`,
     /// `sessid`, `pincode`, `verificationcode`, `cardnumber`, `bearer`, `pass`, `pw`, …).
     ///
-    /// Words of five or more letters count anywhere in a key (`dbPassword`, `session_data`),
-    /// shorter ones and `token`, `secret` and `bearer` as a word of the key or at its end
-    /// (`user_pin`, `X-Auth-Key`, `apitoken`), `pass`, `pw` and `sid` only as a word (`DB_PASS`,
-    /// but not `bypass` or `inside`). A plural `s` after the word counts too (`tokens`).
+    /// Words of five or more letters count anywhere in a key (`dbPassword`, `secretAnswer`,
+    /// `tokenValue`, `session_data`, also `secretary` and `tokenizer`), shorter ones as a word of
+    /// the key or at its end (`user_pin`, `X-Auth-Key`, `licensekey`), `pass`, `pw` and `sid` only
+    /// as a word (`DB_PASS`, but not `bypass` or `inside`). A plural `s` after the word counts too
+    /// (`tokens`).
     public static let defaultSecretNames: [String] = SecretNameTable.defaultWords
 
     /// The headers whose values are kept by default.
