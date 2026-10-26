@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
+<!-- i18n-source: README.md@10b56acb79d2a2ada5bb9937d6a18346ec576d2d status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -58,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 631 件、iOS シミュレーターで 628 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 847 件、iOS シミュレーターで 844 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -72,7 +72,7 @@ Xcode で **File › Add Package Dependencies…** を選び、リポジトリ�
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-ウィンドウ右上の検索フィールドに貼り付けます。**Dependency Rule** は `2.1.0` からの
+ウィンドウ右上の検索フィールドに貼り付けます。**Dependency Rule** は `2.1.1` からの
 **Up to Next Major Version** のままにして、**Add Package** をクリックします。次のウィンドウで
 **iOSDevelopmentTools** の横にあるアプリのターゲットを選び、もう一度 **Add Package** をクリックします。
 
@@ -129,7 +129,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -200,19 +200,22 @@ func configureNetworkLogger() {
   `password`、`token`、`api_key` などの秘密の名前の値、識別子に見えるパスセグメント (`:id` と表示)、
   秘密の名前を表すセグメントまたはプレーンな ASCII ではないセグメントの次のセグメント
   （`/caf%C3%A9/menu` は `/caf%C3%A9/:id` として記録）、
-  ドットセグメント（`/pin/./4831`、`..`、`%2E`）または `;`（`/cart;jsessionid=…`、`%3B`）を含む URL のパスと
-  クエリ（スキームとホストのみ記録。マトリックスパラメーターは解析しません）、秘密の名前を表す
-  ホストの後のパスとクエリ（`myapp://pin/4831` は `myapp://pin` として記録。`auth.example.com`
-  のようなホストもパスを隠します）、multipart ボディのファイルパート。
+  ドットセグメント（`/pin/./4831`、`..`）、`;`（`/cart;jsessionid=…`）、またはエスケープされた `.`・`/`・`\`・`;`・`%`
+  （`%2E`、`%2F`、`%5C`、`%3B`、`%25`）を含む URL のパスとクエリ（スキームとホストのみ記録。
+  マトリックスパラメーターは解析しません）、秘密の名前を表すホストとその後のすべて
+  （`myapp://pin/4831` と `myapp://pin-4831` は `myapp://[REDACTED]` として記録。
+  `auth.example.com` のようなホストも隠します）、multipart ボディのファイルパート。
 - **プレーンな ASCII ではないキー** (エスケープのデコード、NFKC、大文字小文字の統一の後。キリル文字の
   `а` を含む `pаssword`、`pass\u200Dword`、`şifre` など) の値は、デフォルトで隠されます。
 - **解析できないボディ** (不明または欠落した Content-Type、不正な JSON や multipart、サイズ上限で
   切れたボディ) は `[body omitted: 512 bytes, application/xml]` のような注記に置き換えられます。
 - **ログメッセージ**は最初のトリガーまで保持されます。秘密の名前、許可リストにないキー（デフォルトは
   `status`、`method`、`path`、`duration_ms`、`count`。独自のキーは `allowedTextKeys` で追加
-  します）、文字・結合記号・数字・空白以外の ASCII 外の文字（`꞉`、`…`、絵文字、および互換正規化が句読点として読む文字。
-  例：`0,` と読まれる `🄁`）、あらゆる形のエスケープ（空白以外の文字の前のバックスラッシュ、`%3D`、
-  英字か `#` の前の `&`：`R&D`、`&amp`）、許可されていない引用符付きのキー（開き引用符の位置で切られます。`"x":"hunter2"` は
+  します）、文字・結合記号・数字以外の ASCII 外の文字（`꞉`、`…`、絵文字、U+00A0 のような空白、
+  および互換正規化が句読点として読む文字。例：`0,` と読まれる `🄁`）、文字体系が混ざった単語
+  （キリル文字の `о` を含む `tоken`）、単語の先頭で切られるあらゆる形のエスケープ（空白以外の
+  文字の前のバックスラッシュ、`%3D`、英字か `#` の前の `&`：`R&D`、`&amp`。`status=200&count=3`
+  のようにフィールドを始める `&` はエスケープではありません）、許可されていない引用符付きのキー（開き引用符の位置で切られます。`"x":"hunter2"` は
   `[REDACTED]` として保存されます）、マークアップ（比較ではない `<`。`<b>`、`</x>`、`<!--` など。
   どのタグもテキストを残しません）、同じ行で閉じられていない引用符、重なり合う引用符（`'x "y' z"`）、閉じられていない括弧があると、
   それ以降は下の行も含めてすべてマスキングされます（`login password=hunter2 status=200` は `login password=[REDACTED]`、`x=hunter2` は

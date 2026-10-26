@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
+<!-- i18n-source: README.md@10b56acb79d2a2ada5bb9937d6a18346ec576d2d status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 631, iOS simülatöründe 628 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 847, iOS simülatöründe 844 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -74,7 +74,7 @@ Xcode'da **File › Add Package Dependencies…** menüsünü seçin ve depo adr
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-Pencerenin sağ üstündeki arama alanına yapıştırın. **Dependency Rule** ayarını `2.1.0` sürümünden
+Pencerenin sağ üstündeki arama alanına yapıştırın. **Dependency Rule** ayarını `2.1.1` sürümünden
 itibaren **Up to Next Major Version** olarak bırakın, ardından **Add Package**'a tıklayın.
 Sonraki pencerede **iOSDevelopmentTools** yanındaki hedef olarak uygulamanızın target'ını seçin ve
 yeniden **Add Package**'a tıklayın.
@@ -133,7 +133,7 @@ Ya da `Package.swift` dosyanızdaki `dependencies` listesine ekleyin:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -203,11 +203,12 @@ func configureNetworkLogger() {
   değerleri, diğer bütün header'ların değerleri (`Authorization`, `Cookie` ve `Set-Cookie` izin
   listesinde olsa bile), `password`, `token` veya `api_key` gibi gizli adlar altındaki değerler,
   tanımlayıcıya benzeyen yol parçaları (`:id` olarak gösterilir), gizli bir ad olan ya da düz
-  ASCII olmayan bir parçadan sonraki parça (`/caf%C3%A9/menu`, `/caf%C3%A9/:id` olarak kaydedilir), nokta parçası
-  (`/pin/./4831`, `..`, `%2E`) ya da `;` (`/cart;jsessionid=…`, `%3B`) içeren bir URL'nin yolu ve
-  sorgusu (yalnız şema ve host kalır; matris parametreleri hiç ayrıştırılmaz), gizli bir ad olan
-  host'tan sonraki yol ve sorgu (`myapp://pin/4831` `myapp://pin` olarak kaydedilir;
-  `auth.example.com` gibi bir host da yolunu gizler) ve multipart gövdelerindeki dosya parçaları.
+  ASCII olmayan bir parçadan sonraki parça (`/caf%C3%A9/menu`, `/caf%C3%A9/:id` olarak kaydedilir), nokta parçası,
+  `;` ya da kaçışlı bir `.`, `/`, `\`, `;` veya `%` (`/pin/./4831`, `..`, `/cart;jsessionid=…`,
+  `%2E`, `%2F`, `%5C`, `%3B`, `%25`) içeren bir URL'nin yolu ve sorgusu (yalnız şema ve host
+  kalır; matris parametreleri hiç ayrıştırılmaz), gizli bir ad olan host ve ondan sonraki her şey
+  (`myapp://pin/4831` ve `myapp://pin-4831`, `myapp://[REDACTED]` olarak kaydedilir;
+  `auth.example.com` gibi bir host da gizlenir) ve multipart gövdelerindeki dosya parçaları.
 - **Düz ASCII olmayan anahtarların** değerleri varsayılan olarak gizlenir: kaçış dizileri
   çözüldükten, NFKC uygulandıktan ve harfler katlandıktan sonra ASCII dışı karakter içeren
   anahtarlar (Kiril `а` içeren `pаssword`, `pass\u200Dword`, `şifre`).
@@ -216,11 +217,13 @@ func configureNetworkLogger() {
   değiştirilir.
 - **Günlük mesajları** ilk tetikleyiciye kadar tutulur: gizli bir ad, izin listesinde olmayan bir
   anahtar (varsayılan olarak `status`, `method`, `path`, `duration_ms` ve `count`; kendi
-  anahtarlarınızı `allowedTextKeys` ile ekleyin), harf, işaret, rakam ya da boşluk olmayan ASCII
-  dışı bir karakter (`꞉`, `…`, bir emoji ya da uyumluluk normalleştirmesinin noktalama
-  olarak okuduğu bir harf: `0,` olarak okunan `🄁`), her biçimde bir kaçış dizisi (boşluk dışında
-  herhangi bir şeyden önce gelen ters eğik çizgi, `%3D`, bir harften ya da `#` işaretinden önce gelen
-  `&`: `R&D`, `&amp`), izin verilmeyen tırnaklı bir
+  anahtarlarınızı `allowedTextKeys` ile ekleyin), harf, işaret ya da rakam olmayan ASCII
+  dışı bir karakter (`꞉`, `…`, bir emoji, U+00A0 gibi bir boşluk ya da uyumluluk
+  normalleştirmesinin noktalama olarak okuduğu bir harf: `0,` olarak okunan `🄁`), yazı
+  sistemlerini karıştıran bir kelime (Kiril `о` içeren `tоken`), kelimesinin başından kesilen her
+  biçimde bir kaçış dizisi (boşluk dışında herhangi bir şeyden önce gelen ters eğik çizgi, `%3D`,
+  bir harften ya da `#` işaretinden önce gelen `&`: `R&D`, `&amp`; `status=200&count=3`
+  içindeki gibi bir alanı başlatan `&` kaçış değildir), izin verilmeyen tırnaklı bir
   anahtar (açılış tırnağından kesilir: `"x":"hunter2"`, `[REDACTED]` olarak saklanır), işaretleme
   (karşılaştırma olmayan bir `<`: `<b>`, `</x>`, `<!--`; hiçbir etiket metnini korumaz), kendi
   satırında kapanmayan bir tırnak, birbiriyle çakışan tırnaklar (`'x "y' z"`) ya da kapanmayan bir parantez, ondan sonraki her şeyi alttaki
