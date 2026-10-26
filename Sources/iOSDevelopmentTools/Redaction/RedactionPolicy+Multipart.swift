@@ -12,8 +12,14 @@ extension RedactionPolicy {
         "content-description", "content-encoding", "content-id", "content-language", "content-location",
     ])
 
+    /// The transfer encodings a part can name (RFC 2045), in lowercase.
+    private static let transferEncodingNames: Set<String> = ["7bit", "8bit", "binary", "base64", "quoted-printable"]
+
     /// The transfer encodings that leave the content as it is.
     private static let identityTransferEncodings: Set<String> = ["7bit", "8bit", "binary"]
+
+    /// The white space a header value may have around it (RFC 9110 `OWS`).
+    private static let headerWhiteSpace = CharacterSet(charactersIn: " \t")
 
     /// The body is read only with one plain `boundary` parameter: servers differ in which of
     /// several they take, and in whether they undo the quotes and `\` escapes of a quoted one.
@@ -37,10 +43,11 @@ extension RedactionPolicy {
 
     /// The disposition with only the field name, read as free text; the content type as
     /// `type/subtype`; other headers by name when the name is one of ``namedPartHeaders`` and as
-    /// ``replacement`` otherwise, their values hidden unless they are kept, and a kept value read as
-    /// free text. A file name is never written. Header names are keys of the part: the app or a
-    /// library writes them into the body, so a name outside the list, such as one that holds a
-    /// card number or a token, is never written.
+    /// ``replacement`` otherwise, their values hidden unless they are kept, and a kept value
+    /// written by its form (see ``keptValue(ofHeader:_:nesting:compatibility:)``). A file name is
+    /// never written. Header names are keys of the part: the app or a library writes them into the
+    /// body, so a name outside the list, such as one that holds a card number or a token, is never
+    /// written.
     private func renderedHeaders(of part: MultipartBody.Part, nesting: Nesting, compatibility: CompatibilityText) -> [String] {
         let fieldName = redactedName(part.name, nesting: nesting, compatibility: compatibility)
         var lines = ["Content-Disposition: form-data; name=\"\(Self.quotedStringContent(fieldName))\""]
@@ -49,11 +56,30 @@ extension RedactionPolicy {
             let name = header.name.lowercased()
             guard name != "content-disposition", name != "content-type" else { continue }
             let shownName = Self.namedPartHeaders.contains(name) ? header.name : Self.replacement
-            let value = header.value.trimmingCharacters(in: .whitespaces)
-            let shownValue = Self.keptPartHeaders.contains(name) ? redact(value, nesting: nesting, compatibility: compatibility) : Self.replacement
-            lines.append(shownName + ": " + shownValue)
+            let shownValue = keptValue(ofHeader: name, header.value, nesting: nesting, compatibility: compatibility)
+            lines.append(shownName + ": " + (shownValue ?? Self.replacement))
         }
         return lines
+    }
+
+    /// The value of a kept header in the one form it takes, nil for any other value. It is not
+    /// read as free text, which keeps the text before a finding (`pin-4831` would keep `pin`) and
+    /// all of a value without a trigger (`12 hunter2`): a `Content-Length` is written only as
+    /// ASCII digits, and only when the value detectors find nothing in them (a card number);
+    /// a `Content-Transfer-Encoding` only as one of ``transferEncodingNames``, in lowercase.
+    private func keptValue(ofHeader name: String, _ value: String, nesting: Nesting, compatibility: CompatibilityText) -> String? {
+        switch name {
+        case "content-length":
+            let digits = value.trimmingCharacters(in: Self.headerWhiteSpace)
+            guard !digits.isEmpty, digits.utf8.allSatisfy(ASCII.isDigit),
+                  textSpans(in: Array(digits.unicodeScalars), compatibility: compatibility, nesting: nesting).isEmpty
+            else { return nil }
+            return digits
+        case "content-transfer-encoding":
+            return Self.transferEncoding(value)
+        default:
+            return nil
+        }
     }
 
     /// The content of a part, read as a body one level inside the multipart body. A part is a
@@ -63,9 +89,8 @@ extension RedactionPolicy {
         if hidesValue(ofKey: part.name.unicodeScalars) { return Self.replacement }
         let defaultType = part.filename == nil ? "text/plain" : "application/octet-stream"
         guard let type = part.contentType ?? MediaType(defaultType) else { return Self.omitted(part.content.count, defaultType) }
-        let encodings = Self.transferEncodings(of: part)
-        guard part.filename == nil, !type.essence.hasPrefix("multipart/"), encodings.allSatisfy(Self.identityTransferEncodings.contains),
-              encodings.count <= 1, let inner = nesting.enteringDocument(), inner.reads(Self.scalarCount(part.content))
+        guard part.filename == nil, !type.essence.hasPrefix("multipart/"), Self.leavesContentAsSent(part),
+              let inner = nesting.enteringDocument(), inner.reads(Self.scalarCount(part.content))
         else {
             return Self.omitted(part.content.count, type.essence)
         }
@@ -88,17 +113,28 @@ extension RedactionPolicy {
     /// The content of a field sent as plain UTF-8 text without a transfer encoding; nil for a
     /// file, a part of another type or charset, or encoded content.
     private static func plainText(of part: MultipartBody.Part) -> String? {
-        guard part.filename == nil, part.contentType.map(\.isPlainText) ?? true, part.contentType?.isUTF8 ?? true else { return nil }
-        let encodings = transferEncodings(of: part)
-        guard encodings.count <= 1, encodings.allSatisfy(identityTransferEncodings.contains) else { return nil }
+        guard part.filename == nil, part.contentType.map(\.isPlainText) ?? true, part.contentType?.isUTF8 ?? true,
+              leavesContentAsSent(part)
+        else { return nil }
         return BodyText.utf8(part.content, dropsByteOrderMark: true)
     }
 
-    /// The transfer encodings a part names, lowercased; servers differ in which of several they
-    /// read.
-    private static func transferEncodings(of part: MultipartBody.Part) -> [String] {
-        part.headers.filter { $0.name.lowercased() == "content-transfer-encoding" }
-            .map { $0.value.trimmingCharacters(in: .whitespaces).lowercased() }
+    /// Whether the part names no transfer encoding or one that leaves the content as it is.
+    /// Servers differ in which of several they read, and a value written as ``replacement`` is
+    /// one this package cannot read, so the content is read only when the header that is written
+    /// says it is as sent.
+    private static func leavesContentAsSent(_ part: MultipartBody.Part) -> Bool {
+        let encodings = part.headers.filter { $0.name.lowercased() == "content-transfer-encoding" }.map { transferEncoding($0.value) }
+        return encodings.count <= 1 && encodings.allSatisfy { $0.map(identityTransferEncodings.contains) ?? false }
+    }
+
+    /// The transfer encoding a header value names, in lowercase; nil when the value, without the
+    /// white space around it, is not one of ``transferEncodingNames`` in any ASCII letter case.
+    private static func transferEncoding(_ value: String) -> String? {
+        let encoding = value.trimmingCharacters(in: headerWhiteSpace)
+        guard encoding.utf8.allSatisfy({ $0 < 0x80 }) else { return nil }
+        let lowercased = encoding.lowercased()
+        return transferEncodingNames.contains(lowercased) ? lowercased : nil
     }
 
     /// The text with `"` and `\` escaped, for a quoted header parameter.

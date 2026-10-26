@@ -69,6 +69,17 @@ struct RedactionSpecKeyAndBodyTests {
         let part = "--B0und\r\nContent-Disposition: form-data; name=\"a\"\r\nX-4111111111111111: 1\r\n" + "Content-Length: 1\r\n\r\nx\r\n--B0und--"
         #expect(body(part, "multipart/form-data; boundary=B0und")
             == "--B0und\r\nContent-Disposition: form-data; name=\"a\"\r\n[REDACTED]: [REDACTED]\r\nContent-Length: 1\r\n\r\nx\r\n--B0und--")
+        // #17b: a kept part header value is written by its form, never read as free text.
+        for (header, shown, content) in [
+            ("Content-Length: pin-4831", "Content-Length: [REDACTED]", "x"),
+            ("Content-Length: 12 hunter2", "Content-Length: [REDACTED]", "x"),
+            ("Content-Transfer-Encoding: hunter2", "Content-Transfer-Encoding: [REDACTED]", "[body omitted: 1 byte, text/plain]"),
+            ("Content-Transfer-Encoding: BASE64", "Content-Transfer-Encoding: base64", "[body omitted: 1 byte, text/plain]"),
+        ] {
+            let text = "--B0und\r\nContent-Disposition: form-data; name=\"a\"\r\n\(header)\r\n\r\nx\r\n--B0und--"
+            #expect(body(text, "multipart/form-data; boundary=B0und")
+                == "--B0und\r\nContent-Disposition: form-data; name=\"a\"\r\n\(shown)\r\n\r\n\(content)\r\n--B0und--")
+        }
         let bareLineFeed = "--B0und\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nx\n--B0und\r\n"
             + "Content-Disposition: form-data; name=\"password\"\r\n\r\nhunter2\r\n--B0und--"
         #expect(body(bareLineFeed, "multipart/form-data; boundary=B0und") == omitted(bareLineFeed, "multipart/form-data"))
