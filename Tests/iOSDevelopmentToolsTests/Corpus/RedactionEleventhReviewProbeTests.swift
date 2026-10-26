@@ -5,12 +5,12 @@ import Testing
 @Suite("Redaction corpus: eleventh review probes")
 struct RedactionEleventhReviewProbeTests {
     /// The probes whose secret still shows, each one a limitation that the documentation names
-    /// ("What it does not find" in RedactingSensitiveData, the threat model, and the members
+    /// ("What it does not find" in KeepingSecretsOutOfLogs, the threat model, and the members
     /// that stay beside a name), by probe number.
     static let documentedLimitations: [Int: String] = {
         var limitations: [Int: String] = [:]
         let byReason: [(String, [Int])] = [
-            ("a name without a separator with two or more letters replaced by letters that have no ASCII form, on any path that reads free text",
+            ("a name without a separator in two or more letters that have no ASCII form, on any path that reads free text",
              Array(1...14) + Array(23...25) + Array(27...33) + [35] + Array(37...42) + [336]),
             ("a name and its value in two JSON objects or arrays", [79, 93]),
             ("a name in another script as an element of an array of more than two", [92]),
@@ -29,19 +29,12 @@ struct RedactionEleventhReviewProbeTests {
 
     /// The probes that showed their secret when they were written and are hidden now: values laid
     /// out over lines after a property list's key, an element that holds nothing or JSON after
-    /// `name=`, multipart parts that hold a name that cannot be read as text, the value of a
-    /// plain key on the line after a name written without quotes (`name=password`, `label: Şifre`),
-    /// since a key that is not allowed cuts free text, the value of a key that names no secret
-    /// after a separator outside ASCII (`user：…`, `user⩵…`) and after `bob:` in `curl -u`, and,
-    /// since a character outside the safe alphabet cuts it, the value after a dash or an arrow
-    /// that looks like `=` (`user゠…`, `user⭢…`), and, since the ASCII skeleton of a word leaves out
-    /// its letters without an ASCII form, a name with two of them put in (`passꞏwoꞏrd`), and,
-    /// since a path segment that is not plain ASCII is a label, the segment after
-    /// `p%C9%91sswo%CA%80d` and after `%C5%9Eifre` in a URL path, and, since each letter without an
-    /// ASCII form counts as nothing or as one letter on its own, `ᴘwᴅ`, which reads as `pw` with
-    /// its `p` in place and the `ᴅ` as nothing.
-    static let fixed = [184, 185, 186, 189, 328, 329, 354, 360] + Array(367...374) + Array(376...383) + [319, 337]
-        + Array(254...260) + [266, 291] + [261, 262, 272] + [36] + [43, 169] + [34]
+    /// `name=`, multipart parts that hold a name that cannot be read as text, the value of an
+    /// allowed key on the line after a name written without quotes (`name=password`, `label: Şifre`),
+    /// two names whose skeleton spells them (`ᴘwᴅ` as `pw` without its `p`, `passꞏwoꞏrd`), and two
+    /// URL path segments that are not plain-ASCII names, after which the segment is a value
+    /// (`/pɑsswoʀd/…`, `/Şifre/…`).
+    static let fixed = [184, 185, 186, 189, 328, 329, 354, 360] + Array(367...374) + Array(376...383) + [319, 337, 34, 36, 43, 169]
 
     @Test("the set has 475 probes")
     func count() {
@@ -59,7 +52,7 @@ struct RedactionEleventhReviewProbeTests {
 
     @Test("the probes that showed their secret when they were written hide it")
     func fixedProbes() {
-        #expect(Self.fixed.count == 42)
+        #expect(Self.fixed.count == 30)
         for id in Self.fixed {
             let probe = EleventhReviewProbeSet.all[id - 1]
             #expect(probe.leakedPiece(in: probe.redacted()) == nil, "#\(id) \(probe.input.debugDescription)")

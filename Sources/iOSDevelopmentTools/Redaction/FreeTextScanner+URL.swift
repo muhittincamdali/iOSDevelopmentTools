@@ -1,26 +1,24 @@
-import Foundation
-
 /// URLs written into free text.
 ///
 /// A URL in free text is not read on its own terms: it is shown only when it is clean (see
 /// ``isCleanURL(to:)``), and any other URL cuts the text where it starts. Earlier designs read
 /// the query, fragment and path parameters of a URL in text and kept the text after it when they
 /// looked complete; reviews got values past every version of that reading, one ending at a time.
-/// The query parameters that ``RedactionPolicy/allowedQueryParameters`` allows are not read here:
-/// they apply to the URL of a request, not to a URL in text.
 extension FreeTextScanner {
     /// The end of a URL with a scheme and `//` that starts at `i` (`https://…`, `redis://…`): up to
-    /// white space, a quote, an angle bracket, a backtick or the end of the line, without the
-    /// punctuation that ends a sentence.
-    func urlEnd(from i: Int, lineEnd: Int) -> Int? {
+    /// white space, a line break, a quote, an angle bracket, a backtick or ``scanEnd``, without
+    /// the punctuation that ends a sentence. A URL never runs past ``scanEnd``, so the character
+    /// that cuts the text there is never inside it.
+    func urlEnd(from i: Int) -> Int? {
+        let limit = scanEnd
         guard ASCII.isLetter(text.bytes[i]), i == 0 || !Self.isSchemeCharacter(text.bytes[i - 1]) else { return nil }
         var k = i + 1
-        while k < lineEnd, k - i <= Self.maximumSchemeLength, Self.isSchemeCharacter(text.bytes[k]) { k += 1 }
-        guard k + 2 < lineEnd, text.bytes[k] == UInt8(ascii: ":"), text.bytes[k + 1] == UInt8(ascii: "/"), text.bytes[k + 2] == UInt8(ascii: "/") else {
+        while k < limit, k - i <= Self.maximumSchemeLength, Self.isSchemeCharacter(text.bytes[k]) { k += 1 }
+        guard k + 2 < limit, text.bytes[k] == UInt8(ascii: ":"), text.bytes[k + 1] == UInt8(ascii: "/"), text.bytes[k + 2] == UInt8(ascii: "/") else {
             return nil
         }
         var end = k + 3
-        while end < lineEnd, !text.isSpace(end), !Self.urlEnds.contains(text.bytes[end]) { end += 1 }
+        while end < limit, !text.isSpace(end), !text.isLineTerminator(end), !Self.urlEnds.contains(text.bytes[end]) { end += 1 }
         while end > k + 3, Self.trailingPunctuation.contains(text.bytes[end - 1]) { end -= 1 }
         return end
     }
@@ -36,11 +34,10 @@ extension FreeTextScanner {
     /// The URL from ``position`` to byte `end`. A clean URL is recorded as
     /// ``RedactionPolicy/redact(url:)`` records it, so a path segment that looks like an
     /// identifier becomes `:id`, and the text after it is read on; its last segment is read with
-    /// the next word, as a word is (`https://x.example/to ken hunter2`). Any other URL cuts the text
-    /// where it starts, which is never after a trigger inside it: a clean URL holds only ASCII
-    /// letters, digits, `.`, `_`, `-` and `/`. A clean URL one level too many, or longer than the
-    /// reading budget leaves, hides the whole text it is in when the text is inside a document,
-    /// and cuts it at the URL otherwise.
+    /// the next word, as a word is. Any other URL cuts the text
+    /// where it starts. A clean URL one level too many, or longer than the reading budget leaves,
+    /// hides the whole text it is in when the text is inside a document, and cuts it at the URL
+    /// otherwise.
     mutating func url(to end: Int) {
         guard isCleanURL(to: end) else {
             cut(atByte: position)
@@ -53,13 +50,12 @@ extension FreeTextScanner {
         }
         let written = String(String.UnicodeScalarView(source[region]))
         let redacted = policy.redactedURL(written, nesting: inner, compatibility: compatibility)
-        let span = RedactionPolicy.Span(start: region.lowerBound, end: region.upperBound, replacement: redacted)
+        let span = RedactionPolicy.Span(start: region.lowerBound, end: region.upperBound, kind: .secretFields, replacement: redacted)
         record(spans: redacted == written ? [] : [span], region: region)
         // The last segment and the word after the URL may spell a secret name across the space,
-        // as two words do.
-        if readsWords, let segment = lastSegment(before: end), let secretEnd = secretEndAcrossSpace(after: segment, lineEnd: currentLineEnd()) {
-            cut(afterByte: secretEnd - 1)
-            return
+        // as two words do (`https://x.example/to ken hunter2`).
+        if role == .text, let segment = lastSegment(before: end), let secretEnd = secretEndAcrossSpace(after: segment) {
+            cut(atByte: valueStart(after: secretEnd))
         }
         position = end
     }
@@ -76,26 +72,21 @@ extension FreeTextScanner {
     ///
     /// - it is `scheme://host` with an optional path, at most ``longestWord`` characters long;
     /// - after the scheme it holds only the ASCII letters, digits, `.`, `_`, `-` and `/`, so no
-    ///   `?`, `#`, `;`, `%`, `=`, `:`, `@`, `\`, no escape and no character outside ASCII,
-    ///   invisible ones included;
+    ///   `?`, `#`, `;`, `%`, `=`, `:`, `@`, `\` and no letter, mark or digit outside ASCII;
     /// - the host is a name of ASCII labels or an IPv4 address in which the value detectors find
     ///   nothing (see ``RedactionPolicy/showsHost(_:compatibility:)``);
     /// - neither the host nor any path segment names a secret by the key rule
-    ///   (``RedactionPolicy/hidesValue(ofKey:)``), which also hides a segment without a letter or
-    ///   digit;
-    /// - it ends where the text ends, before white space or a line break, or before one of
-    ///   ``sentencePunctuation`` that the end of the text, white space or a line break follows
-    ///   (see ``endsCleanURL(at:)``).
+    ///   (``FieldName/hidesValue(_:)``), which also hides a segment without a letter or digit;
+    /// - it ends cleanly (see ``endsCleanly(at:)``), and not at the character outside the safe
+    ///   alphabet where the scan ends.
     private func isCleanURL(to end: Int) -> Bool {
-        guard endsCleanURL(at: end) else { return false }
+        if end == scanEnd, scanEnd < text.count { return false }
+        guard endsCleanly(at: end) else { return false }
         let range = position..<end
         guard !isOpaque(range) else { return false }
-        // The invisible and control characters that the scanning copy left out, before the URL and
-        // before what follows it, count as part of it.
-        let written = startOffset(ofByte: position)..<(end < text.count ? text.offsets[end] : text.sourceCount)
         var bytes: [UInt8] = []
-        bytes.reserveCapacity(written.count)
-        for scalar in source[written] {
+        bytes.reserveCapacity(range.count)
+        for scalar in source[text.original(range)] {
             guard scalar.isASCII else { return false }
             bytes.append(UInt8(scalar.value))
         }
@@ -106,37 +97,30 @@ extension FreeTextScanner {
         guard rest.allSatisfy(Self.isCleanURLCharacter) else { return false }
         let host = rest.prefix { $0 != UInt8(ascii: "/") }
         guard !host.isEmpty, policy.showsHost(String(decoding: host, as: UTF8.self), compatibility: compatibility), !namesSecret(host) else { return false }
-        guard !rest[host.endIndex...].split(separator: UInt8(ascii: "/")).contains(where: namesSecret) else { return false }
-        // The host as `URLComponents` reads it, which ``RedactionPolicy/redact(url:)`` writes: an
-        // internationalized name in Punycode (`xn--…`) is read in its own letters, no host name.
-        guard let parsed = URLComponents(string: String(decoding: bytes, as: UTF8.self))?.percentEncodedHost else { return false }
-        return policy.showsHost(parsed, compatibility: compatibility)
+        return !rest[host.endIndex...].split(separator: UInt8(ascii: "/")).contains(where: namesSecret)
     }
 
-    /// Whether a clean URL may end at byte `end`: the text ends there, white space or a line
-    /// break follows, or one of ``sentencePunctuation`` and then the end of the text, white space
-    /// or a line break. Each is written in ASCII, with no invisible character between. Anything
-    /// else after the URL — a quote, `>`, a backtick, a second mark (`x),`, `x..`), a letter right
-    /// after the mark (`x.y`) — leaves where the URL ends unknown, so the URL is not clean.
-    private func endsCleanURL(at end: Int) -> Bool {
-        guard end < text.count else { return true }
-        if isPlainBreak(end) { return true }
-        guard Self.sentencePunctuation.contains(text.bytes[end]), source[text.offsets[end]].isASCII else { return false }
-        let next = end + 1
-        guard (next < text.count ? text.offsets[next] : text.sourceCount) == text.offsets[end] + 1 else { return false }
-        return next == text.count || isPlainBreak(next)
+    /// Whether a URL that ends at byte `end` ends cleanly: the end of the text, white space or a
+    /// line break follows it, or one of ``sentenceEnds`` and then the end of the text, white space
+    /// or a line break (`see https://x.example/a. Next`, `(https://x.example/a) ok`). Any other
+    /// character after a URL — a quote, a backtick, `>`, `]`, `}`, two marks (`).`), or a `?`, `#`,
+    /// `;` or `:`, which start a query, a fragment, path parameters or a port — leaves open where
+    /// the URL ends: a URL parser reads `https://x.example/a'#token` and
+    /// `https://x.example/a>?token` on past it, and `…/a? token` has an empty query. Such a URL is
+    /// not clean, so the text is cut where it starts.
+    func endsCleanly(at end: Int) -> Bool {
+        guard end < text.count, !isBlank(end) else { return true }
+        guard Self.sentenceEnds.contains(text.bytes[end]) else { return false }
+        return end + 1 == text.count || isBlank(end + 1)
     }
 
-    /// Whether byte `k` is white space or a line break written in ASCII.
-    private func isPlainBreak(_ k: Int) -> Bool {
-        (text.isSpace(k) || text.isLineTerminator(k)) && source[text.offsets[k]].isASCII
-    }
+    /// The one mark that may end a sentence right after a clean URL: `.`, `,`, `!` or `)`. None of
+    /// them starts a part of a URL.
+    static let sentenceEnds = ByteSet(".,!)")
 
-    /// The one mark that may come between a clean URL and the white space after it: the marks
-    /// that end a sentence or a clause, and `)` that closes the bracket a URL is written in. A
-    /// `:`, `;`, `?` or `=` after a URL is left for the text after it to complete
-    /// (`/token: hunter2`), so it is not among them, and neither is a quote, `>`, `]` or `}`.
-    static let sentencePunctuation = ByteSet(".,!)")
+    private func isBlank(_ i: Int) -> Bool {
+        text.isSpace(i) || text.isLineTerminator(i)
+    }
 
     /// The characters of a clean URL after its scheme: ASCII letters, digits, `.`, `_`, `-`, `/`.
     private static func isCleanURLCharacter(_ byte: UInt8) -> Bool {
@@ -146,6 +130,6 @@ extension FreeTextScanner {
     /// Whether a host or path segment of ASCII bytes hides a value by the key rule: it names a
     /// secret, or it has no letter or digit.
     private func namesSecret(_ bytes: some Collection<UInt8>) -> Bool {
-        policy.hidesValue(ofKey: bytes.lazy.map { Unicode.Scalar($0) })
+        FieldName.hidesValue(bytes.lazy.map { Unicode.Scalar($0) }, names: names)
     }
 }

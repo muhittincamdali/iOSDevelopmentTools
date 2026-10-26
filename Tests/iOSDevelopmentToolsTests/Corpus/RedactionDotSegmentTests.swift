@@ -35,11 +35,14 @@ struct RedactionDotSegmentTests {
         let url = try #require(URL(string: "https://h.example:8443\(path)?page=2#f"))
         #expect(redactor.redact(url: url) == "https://h.example:8443")
         #expect(RedactionPolicy.default.redactedPath(of: url).isEmpty)
-        // The network inspector records the same.
+        // The network inspector and the cURL command record the same.
         let entry = NetworkEntry(startDate: Date(), request: URLRequest(url: url), body: nil, policy: .default)
         #expect(entry.url == "https://h.example:8443")
         #expect(entry.host == "h.example")
         #expect(entry.path.isEmpty)
+        let logged = LoggedOutput.request(URLRequest(url: url))
+        #expect(logged.contains(" GET https://h.example:8443\n"), "\(logged)")
+        #expect(logged.hasSuffix("curl --globoff 'https://h.example:8443'"), "\(logged)")
     }
 
     @Test("`URL.standardized` resolves the review's paths to the segment after the name")
@@ -54,7 +57,7 @@ struct RedactionDotSegmentTests {
         // `...` has no letter or digit, so it is a label as a name with none is.
         ("/v1/pin/4831", "/v1/pin/:id"), ("/v1/items.json", "/v1/items.json"), ("/a//b", "/a//b"), ("/.../x", "/.../:id"),
         ("/a.b/c..d", "/a.b/c..d"), ("/token//4831", "/token//:id"), ("/v1/users/12345678/orders", "/v1/users/:id/orders"),
-        ("/50%25off", "/50%25off"), ("/a%2Cb", "/a%2Cb"),
+        ("/50%25off", ""), ("/a%2Cb", "/a%2Cb"),
     ])
     func otherPaths(path: String, expected: String) throws {
         let url = try #require(URL(string: "https://h.example\(path)"))

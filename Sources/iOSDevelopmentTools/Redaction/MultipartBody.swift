@@ -69,7 +69,8 @@ struct MultipartBody {
             headerEnd = end
             contentStart = end + 4
         }
-        guard let headers = String(bytes: bytes[range.lowerBound..<headerEnd], encoding: .utf8) else { return nil }
+        // A byte order mark before a header name is kept: a server reads it as part of the name.
+        guard let headers = BodyText.utf8(bytes[range.lowerBound..<headerEnd], dropsByteOrderMark: false) else { return nil }
         var disposition: String?
         var contentType: String?
         var fields: [(name: String, value: String)] = []

@@ -2,24 +2,24 @@ import Foundation
 import Testing
 @testable import iOSDevelopmentTools
 
-/// A quoted key in free text (`"…": value`, `"…"=value`, `'…': value`) follows the key rule:
-/// unless its folded form is on `allowedTextKeys`, the text is cut at its opening quote, so
-/// nothing written in the quotes shows. The tenth review of this package found the cut after the
-/// separator, so the key showed (`"hunter2":"v"` was stored as `"hunter2":"[REDACTED]`); the
-/// sixteenth review of the shared rules in iOSSecurityTools got secrets written in such keys past
-/// a reading of them as JSON names. JSON that parses is read by the key rule of structured input,
-/// which shows the names of its members and hides their values.
+/// A quoted key in free text (`"…": value`, `"…"=value`) follows the key rule: unless its folded
+/// form is on `allowedTextKeys`, the text is cut at its opening quote, so nothing written in the
+/// quotes shows. The sixteenth review got values past the reading of quoted keys as JSON names,
+/// whose words are not triggers, on every path that reads free text: a secret name, a word in two
+/// scripts and a tag inside the quotes showed what came after them (`cache miss for "session
+/// Qz9Wk7rX": refetching`). In structured JSON the names of members are shown and their values
+/// hidden.
 @Suite("Redaction corpus: quoted keys in free text")
 struct RedactionQuotedKeyTests {
     let redactor = Redactor()
 
-    /// The review lines, which showed the secret in the quotes.
+    /// The sixteenth review's lines, which showed the secret in the quotes on all six paths.
     static let reviewLines = [
         #""password hunter2": x"#, #"cache miss for "session Qz9Wk7rX": refetching"#, #"wrong "pin 4321": retry"#,
         "\"p\u{0430}ssword hunter2\": x", #""<password>hunter2</password>": x"#, #""status=ok password hunter2": 1"#,
         #""pass word hunter2": x"#, #""p|wd hunter2": x"#, #""my token is hunter2": ok"#, #""status: password hunter2": 1"#,
         #""password hunter2"=x"#, "\"password hunter2\"\n: x", #"{\"password hunter2\": 1}"#, #""\"password hunter2\":1": 2"#,
-        #""hunter2":"v""#, #"'hunter2': 'v'"#, #"`hunter2`: v"#, #""x":"hunter2""#, #"'x': 'hunter2'"#, #""x"="hunter2""#,
+        #"{"password hunter2": 1}"#, #"["password hunter2","x"]"#,
     ]
 
     @Test("a quoted key that is not allowed shows nothing of itself or what follows, on every path", arguments: reviewLines)
@@ -39,33 +39,21 @@ struct RedactionQuotedKeyTests {
         (#"see \\\"user\\\": 1"#, "see [REDACTED]"),
         (#""status": "ok", "user": "bob""#, #""status": "ok", [REDACTED]"#),
         (#""status"="ok" "user"="bob""#, #""status"="ok" [REDACTED]"#),
+        (#"{"status":200,"user":"bob"}"#, #"{"status":200,[REDACTED]"#),
+        (#"got {"password hunter2": 1} ok"#, "got {[REDACTED]"),
+        (#"got ["user","bob"] ok"#, "got [[REDACTED]"),
         (#""(status": 1"#, "[REDACTED]"),
-        // Spaces fold away, so `stat us` is the allowed key `status`; the last word before the
-        // separator, `us`, is not allowed, so the value is hidden.
-        (#""stat us": 1"#, #""stat us": [REDACTED]"#),
+        (#""stat us": 1"#, "[REDACTED]"),
         ("\"\u{200B}status\": 1", "[REDACTED]"),
         ("\"st\u{0430}tus\": 1", "[REDACTED]"),
-        (#"'user': 'bob'"#, "[REDACTED]"),
-        (#"`user`: bob"#, "[REDACTED]"),
     ])
     func cuts(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
     }
 
-    // JSON that parses is structured input: the names of its members show, and the text is cut at
-    // the value of the first member whose name is not allowed.
-    @Test("JSON in a line shows its member names and cuts at the first value that is not allowed", arguments: [
-        (#"{"status":200,"user":"bob"}"#, #"{"status":200,"user":[REDACTED]"#),
-        (#"got {"password hunter2": 1} ok"#, #"got {"password hunter2": [REDACTED]"#),
-        (#"got ["user","bob"] ok"#, #"got ["user",[REDACTED]"#),
-    ])
-    func embeddedJSON(input: String, expected: String) {
-        #expect(redactor.redact(input) == expected)
-    }
-
     @Test("allowed quoted keys keep their values, also when the app allows a key", arguments: [
         #""status": "ok", "count": 3"#, #""duration_ms": 12"#, #""STATUS": "ok""#, #"{"status":200,"count":1}"#, #""method"="GET""#,
-        #"[["status","200"]]"#, "\"status\" : \"ok\"\n\"count\": 2", #"'status': 'ok'"#,
+        #"[["status","200"]]"#, "\"status\" : \"ok\"\n\"count\": 2",
     ])
     func allowedKeys(line: String) {
         #expect(redactor.redact(line) == line)
@@ -103,29 +91,26 @@ struct RedactionQuotedKeyTests {
         { random in [" ", "  ", "|", ",", ";", "-", "_", ".", "/", "\t", "\u{00A0}", "\u{200B}", "\u{00AD}"].randomElement(using: &random)! },
     ]
 
-    /// How the key is written: quotes, the separator after it, and what holds it. JSON that
-    /// parses shows its member names by design, so no shape is JSON.
+    /// How the key is written: quotes, the separator after it, and what holds it.
     static let shapes: [@Sendable (String, String) -> String] = [
         { k, v in "\"\(k)\": \(v)" }, { k, v in "\"\(k)\"=\(v)" }, { k, v in "\"\(k)\" : \(v)" }, { k, v in "\"\(k)\"\n: \(v)" },
-        { k, v in "log \"\(k)\": \"\(v)\" done" }, { k, v in "\\\"\(k)\\\": \(v)" }, { k, v in "'\(k)': \(v)" },
-        { k, v in "status=200 \"\(k)\":\(v)" }, { k, v in "\"status\": 1, \"\(k)\": \(v)" }, { k, v in "x `\(k)`=\(v)" },
+        { k, v in "log \"\(k)\": \"\(v)\" done" }, { k, v in "\\\"\(k)\\\": \(v)" }, { k, v in "{\"\(k)\": \"\(v)\"}" },
+        { k, v in "status=200 \"\(k)\":\(v)" }, { k, v in "\"status\": 1, \"\(k)\": \(v)" },
     ]
 
     @Test("no generated quoted key shows a secret written in it or after it, on any path")
     func generatedKeys() {
         var random = SeededRandom(seed: 0x51_6B_E7)
-        let policy = RedactionPolicy.default
         var checked = 0
         for _ in 0..<700 {
             let inside = RedactionCorpusPropertyTests.value(using: &random)
             var key: [String] = []
             for _ in 0..<Int.random(in: 1...4, using: &random) { key.append(Self.pieces.randomElement(using: &random)!(&random)) }
             key.insert(" " + inside, at: Int.random(in: 0...key.count, using: &random))
-            let joined = key.joined().replacingOccurrences(of: "\"", with: "").replacingOccurrences(of: "'", with: "")
-                .replacingOccurrences(of: "`", with: "")
+            let joined = key.joined().replacingOccurrences(of: "\"", with: "")
             // A key that holds a secret name or cannot be read is the point; a plain key on the
             // allowlist would be read on by design, and is checked by the usefulness tests.
-            guard !policy.allowsTextKey(joined.unicodeScalars, in: policy.allowedTextKeys) else { continue }
+            guard !redactor.allowsTextKey(joined.unicodeScalars) else { continue }
             let value = RedactionCorpusPropertyTests.value(using: &random)
             let line = Self.shapes.randomElement(using: &random)!(joined, value)
             for (path, output) in RedactionCutRuleTests.everyPath(line) {

@@ -102,7 +102,7 @@ final class NetworkCaptureTests {
         let entry = try await finishedEntry("/echo?\(RedactionPolicy.replacement)")
         let sent = try #require(entry.requestBody)
         #expect(sent.redaction == .omitted)
-        #expect(sent.text == "[body omitted: 25 bytes, no known content type]")
+        #expect(sent.text == "[body omitted: 25 bytes, no content type]")
     }
 
     @Test("Bodies over the capture limit are sent whole but omitted in the entry")

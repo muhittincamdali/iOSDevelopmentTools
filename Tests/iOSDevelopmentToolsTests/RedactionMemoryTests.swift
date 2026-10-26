@@ -4,16 +4,6 @@ import Foundation
 import Testing
 @testable import iOSDevelopmentTools
 
-/// Whether the tests run in an optimized build: memory is measured as shipped, with
-/// `swift test -c release`.
-private var isOptimized: Bool {
-    #if DEBUG
-    false
-    #else
-    true
-    #endif
-}
-
 /// The peak memory that redacting a megabyte of free text takes. Each input is redacted in a child
 /// process of its own (an exit test), so no other test runs beside it, on a thread with a 512 KiB
 /// stack. The free-text rule keeps only its position and the cut, so beyond the input it needs a

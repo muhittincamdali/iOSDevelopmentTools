@@ -4,7 +4,7 @@ import Testing
 
 /// Generated secret names written as values, disguised the ways ``DisguisedName`` disguises them,
 /// in the shapes of free text, XML, HTML, property lists and JSON objects: the secret that follows
-/// never shows. Plain names that hold no secret word keep what follows them.
+/// never shows. Plain names that hold no secret word keep what follows them after an allowed key.
 @Suite("Redaction corpus: names written as values property tests")
 struct RedactionNameAsValuePropertyTests {
     let redactor = Redactor()
@@ -65,18 +65,18 @@ struct RedactionNameAsValuePropertyTests {
 
     @Test("plain names without a secret word keep the text after them after an allowed key")
     func plainNamesKeepText() {
-        // Markup is never parsed: an element cuts the text at its `<` whatever its tag and names.
         let allowing = Redactor(allowedTextKeys: ["name", "string"])
         var random = SeededRandom(seed: 0xA1_2B_0091)
         var checked = 0
         for _ in 0..<4_000 {
-            let name = RedactionCutPropertyTests.name(using: &random)
-            guard let plain = PlainName(name.unicodeScalars), !plain.namesSecret(in: .standard),
-                  !FreeTextScanner.mentionsSecret(Array(name.unicodeScalars), policy: .default, compatibility: CompatibilityText())
+            let name = RedactionAllowlistPropertyTests.key(using: &random)
+            guard let plain = PlainName(name.unicodeScalars), !plain.namesSecret(),
+                  !FreeTextScanner.mentionsSecret(Array(name.unicodeScalars), compatibility: CompatibilityText())
             else { continue }
             // Without vowels, `s`, `p`, `c`, `k`, `v` and `w` the text spells no secret word.
             let text = String((0..<12).map { _ in "BDFGHJLMNRTXYZ23456789".randomElement(using: &random)! })
-            #expect(allowing.redact("<string name=\"\(name)\">\(text)</string>") == "[REDACTED]")
+            // Markup is never parsed: the element's text goes, whatever keys are allowed.
+            #expect(!allowing.redact("<string name=\"\(name)\">\(text)</string>").contains(text))
             #expect(allowing.redact("name=\"\(name)\" \(text)").contains(text))
             #expect(!redactor.redact("name=\"\(name)\" \(text)").contains(text))
             let json = #"{"label":"\#(name)","value":"\#(text)"}"#

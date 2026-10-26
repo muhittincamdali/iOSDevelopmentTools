@@ -74,11 +74,21 @@ struct RedactionSafeAlphabetTests {
 
     @Test("letters, marks and digits of any script are text", arguments: [
         "Kullanıcı İstanbul'da giriş yaptı", "Straße naïve café", "Zaloguj się, użytkownik", "заказ 42 отправлен", "张伟 登录成功",
-        "ユーザー登録", "Γειά σου κόσμε", "שלום עולם", "مرحبا بالعالم", "١٢٣ ٤٥٦", "x² + y²", "took 120µs", "ｆｕｌｌ ｗｉｄｔｈ",
-        "done \u{1F44D}", "status=200 \u{2026}", "a\u{A0}b\u{3000}c\u{2003}d",
+        "ユーザー登録", "Γειά σου κόσμε", "שלום עולם", "مرحبا بالعالم", "١٢٣ ٤٥٦", "x² + y²", "ｆｕｌｌ ｗｉｄｔｈ",
     ])
     func safeText(text: String) {
         #expect(policy.redact(text: text) == text)
+    }
+
+    // Only the ASCII space, tab and line breaks are white space of the safe alphabet: a space
+    // outside ASCII, an emoji or an ellipsis cuts the text where it stands, and the micro sign,
+    // read as a Greek letter, makes `120µs` a word of two scripts. Over-hiding, by design.
+    @Test("a space outside ASCII, an emoji, an ellipsis and a word of two scripts cut the text", arguments: [
+        ("took 120µs", "took [REDACTED]"), ("done \u{1F44D}", "done [REDACTED]"), ("status=200 \u{2026}", "status=200 [REDACTED]"),
+        ("a\u{A0}b\u{3000}c\u{2003}d", "a[REDACTED]"),
+    ])
+    func cutText(text: String, expected: String) {
+        #expect(policy.redact(text: text) == expected)
     }
 
     @Test("an escape in free text is a trigger where it starts and is never decoded", arguments: [
@@ -93,7 +103,8 @@ struct RedactionSafeAlphabetTests {
                 #expect(!output.contains(Self.secret), "\(text.debugDescription) -> \(output.debugDescription)")
             }
         }
-        #expect(policy.redact(text: "ok a\(escape)b \(Self.secret)") == "ok a\(RedactionPolicy.replacement)")
+        // The text is cut at the start of the word the escape is in.
+        #expect(policy.redact(text: "ok a\(escape)b \(Self.secret)") == "ok \(RedactionPolicy.replacement)")
     }
 
     @Test("a percent sign, an ampersand or a backslash that starts no escape is text", arguments: [

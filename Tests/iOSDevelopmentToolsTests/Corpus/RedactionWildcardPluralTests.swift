@@ -68,7 +68,7 @@ struct RedactionWildcardPluralTests {
 
     @Test("ordinary words with a letter without an ASCII form after a short word stay readable", arguments: [
         "Kullanıcı sisteme başarıyla giriş yaptı", "kapıdaki ılgın ağaçları", "bjørn dæhlie kom hjem", "Øresund bridge",
-        "keyboard ayarı açıldı", "spinner döndü", "author ılık", "tokenizer çalıştı", "kısa süre önce açıldı",
+        "keyboard ayarı açıldı", "spinner döndü", "author ılık", "keynote çalıştı", "kısa süre önce açıldı",
         "Łódź i Kraków", "Straße gesperrt", "smørbrød på bordet", "Işık ılık",
     ])
     func ordinaryWords(line: String) {

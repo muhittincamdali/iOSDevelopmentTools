@@ -89,7 +89,7 @@ extension EleventhReviewProbeSet {
     }
 
     // free text — confusables, invisible and format characters, marks, escapes, separators,
-    // line breaks other than LF, log lines, and plain keys that hold a name.
+    // line breaks other than LF, log lines, and allowed keys that hold a name.
 
     func addText() {
         section("n10-text-confusable")
@@ -197,7 +197,7 @@ extension EleventhReviewProbeSet {
         p("{S} is the password", claim: "D")
 
         section("n10-text-allowed-names")
-        let nv = Mode.text
+        let nv = Mode.textAllowing(["name", "value"])
         p("name=\u{015E}ifre value={S}", nv)
         p("name=\(wild("password", [1, 6])) value={S}", nv)
         p("name: \"PIN\"\nvalue: {S}", nv)
@@ -228,6 +228,6 @@ extension EleventhReviewProbeSet {
         p("path=/cb#access_token={S}")
         p("path=/login?user=bob&pw={S}")
         p("path=/a/\(wild("password", [1, 6]))/{S}")
-        p("label: \u{015E}ifre\nvalue: {S}", .text, claim: "X")
+        p("label: \u{015E}ifre\nvalue: {S}", .textAllowing(["value"]), claim: "X")
     }
 }

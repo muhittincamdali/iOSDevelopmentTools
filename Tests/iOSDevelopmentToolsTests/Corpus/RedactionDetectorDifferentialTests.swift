@@ -3,13 +3,13 @@ import Testing
 @testable import iOSDevelopmentTools
 
 /// Every value detector gives the same result on every path: the same text as a log line, after a
-/// plain key, as a text/plain body, as a JSON string, name or array element, inside JSON
+/// key on the allowlist, as a text/plain body, as a JSON string, name or array element, inside JSON
 /// in a line, as a form value or name, as a multipart part, as a query value on the allowlist, as
 /// a path segment and inside a URL in a line, with the punctuation that ends a sentence after it.
 @Suite("Redaction corpus: detector differential")
 struct RedactionDetectorDifferentialTests {
-    /// A query parameter on the allowlist, so the detectors and not the query rule decide.
-    let redactor = Redactor(allowedQueryParameters: ["note"])
+    /// Keys on the allowlists, so the detectors and not the key rule decide.
+    let redactor = Redactor(allowedTextKeys: ["note"], allowedQueryParameters: ["note"])
 
     /// A value for each detector, and part of it that must never show.
     static let samples: [(value: String, part: String)] = [
@@ -55,7 +55,7 @@ struct RedactionDetectorDifferentialTests {
         let multipart = "--B0und\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\n\(text)\r\n--B0und--\r\n"
         var paths: [(String, String)] = [
             ("text", redactor.redact(text)),
-            ("plain key", redactor.redact("note=" + text)),
+            ("allowed key", redactor.redact("note=" + text)),
             ("text body", redactor.redact(body: Data(text.utf8), contentType: "text/plain")),
             ("JSON string", redactor.redact(body: Self.json(["note": text]), contentType: "application/json")),
             ("JSON name", redactor.redact(body: Self.json([text: 1]), contentType: "application/json")),
@@ -85,13 +85,14 @@ struct RedactionDetectorDifferentialTests {
 
     @Test("a finding that runs past the end of a URL in a line is hidden", arguments: [
         // The URL ends before the dot that ends a sentence, and an unsigned token ends in a dot: the
-        // token is found in the query without it and in the text with it, and both are hidden.
-        ("see https://h.example/p?note=eyJhbGciOiJub25lIn0.eyJzdWIiOiIxIn0.", "see [REDACTED]"),
-        ("see https://h.example/p?note=x%20eyJhbGciOiJub25lIn0.eyJzdWIiOiIxIn0..", "see [REDACTED]"),
-        // A card number that starts in the query and goes on after the URL, and one after a
-        // clean URL.
-        ("see https://h.example/p?note=4242 4242 4242 4242 ok", "see [REDACTED]"),
+        // token is found in the path without it and in the text with it, and both are hidden.
+        ("see https://h.example/p/eyJhbGciOiJub25lIn0.eyJzdWIiOiIxIn0.", "see [REDACTED]"),
+        // Two dots after a URL leave its end open, so the text is cut where it starts.
+        ("see https://h.example/p/eyJhbGciOiJub25lIn0.eyJzdWIiOiIxIn0..", "see [REDACTED]"),
+        // A card number that starts in the path and goes on after the URL.
         ("see https://h.example/p/4242 4242 4242 4242 ok", "see https://h.example/p/[REDACTED] ok"),
+        // A URL with a query is not clean: the text is cut where it starts.
+        ("see https://h.example/p?note=4242 4242 4242 4242 ok", "see [REDACTED]"),
     ])
     func findingAcrossURLEnd(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)

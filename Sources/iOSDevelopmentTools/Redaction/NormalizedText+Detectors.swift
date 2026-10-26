@@ -1,23 +1,63 @@
 import Foundation
 
-/// The value detectors read across a vertical tab, a form feed, U+0085, U+2028 and U+2029 (see
-/// ``NormalizedText/isBridgedLineBreak(_:)``): as white space between the groups of a card number
-/// or an IBAN and after `Bearer`, and as nothing inside an email address, a JSON Web Token and a
-/// long token, which white space would end. A finding never starts or ends with one.
+/// Where a value detector puts what it finds. The detectors run twice: once into a sink that only
+/// counts, then into one that keeps the findings in an array of exactly that capacity. An array
+/// that grows while it is filled holds its old and its new storage at once, and a megabyte of
+/// short findings (`1:2@`, `a@b.cd`) took most of 16 MB that way. A finding is made only when it
+/// is kept.
+struct SpanSink {
+    private(set) var spans: [RedactionPolicy.Span] = []
+    private(set) var count = 0
+    private let keeps: Bool
+
+    /// A sink that counts what it is given.
+    init() {
+        keeps = false
+    }
+
+    /// A sink that keeps what it is given, in an array of `capacity`.
+    init(capacity: Int) {
+        keeps = true
+        spans.reserveCapacity(capacity)
+    }
+
+    mutating func add(_ span: @autoclosure () -> RedactionPolicy.Span) {
+        count += 1
+        if keeps { spans.append(span()) }
+    }
+}
+
+/// The value detectors. Each takes `startLimit`, the byte where free text is cut (``count`` when
+/// it is not): no finding starts at or after it, since the cut hides what is there, and the text
+/// after it is read only to complete a finding that starts before it. A finding that the cut
+/// falls inside is joined with the cut, so the text is hidden from the start of the finding (see
+/// ``RedactionPolicy/merged(_:)``). A megabyte of addresses after a character that cuts the
+/// text at its start finds nothing and takes no memory for them.
+///
+/// The detectors read across a vertical tab, a form feed, U+0085, U+2028 and U+2029 only through
+/// ``isGap(_:)`` and ``readable(after:)`` (see ``NormalizedText``'s line separators): as white
+/// space between the groups of a card number or an IBAN and after `Bearer`, and as nothing inside
+/// an email address, a JSON Web Token, a long token and the token after `Bearer`. Each byte is
+/// read a fixed number of times, so a megabyte of `eyJ` and line separators is read in one pass.
 extension NormalizedText {
     // MARK: Card numbers
 
-    func cardSpans() -> [RedactionPolicy.Span] {
-        var spans: [RedactionPolicy.Span] = []
+    /// The most bytes a card number spans: 19 digits in groups of one or more, with up to three
+    /// spaces, tabs or dashes between them.
+    static let longestCard = 19 + 18 * 3
+
+    func cardSpans(startLimit: Int = .max, into spans: inout SpanSink) {
+        // No card number that starts before the limit runs past this byte.
+        let chainLimit = startLimit >= count ? count : min(count, startLimit + Self.longestCard)
         var i = 0
-        while i < count {
+        while i < min(count, startLimit) {
             guard isDigit(i), i == 0 || !gluesToWord(i - 1) else {
                 i += 1
                 continue
             }
-            // Digit groups separated by up to three spaces, tabs, dashes or line separators, read
-            // through a window of the groups a card number can still span: a megabyte of
-            // `4242 4242 …` is one chain of groups, which an array of them all held in memory.
+            // Digit groups separated by up to three spaces, tabs or dashes, read through a window
+            // of the groups a card number can still span: a megabyte of `4242 4242 …` is one chain
+            // of groups, which an array of them all held in memory.
             var window = CardWindow()
             var groupStart = i
             var j = i
@@ -30,7 +70,7 @@ extension NormalizedText {
                 while separatorEnd < count, separatorEnd - j < 3, isCardSeparator(separatorEnd) {
                     separatorEnd += 1
                 }
-                guard separatorEnd > j, separatorEnd < count, isDigit(separatorEnd) else { break }
+                guard separatorEnd > j, separatorEnd < chainLimit, isDigit(separatorEnd) else { break }
                 window.append(groupStart..<j, into: &spans, in: self)
                 groupStart = separatorEnd
                 j = separatorEnd
@@ -40,35 +80,24 @@ extension NormalizedText {
             window.finish(last: runsIntoLetters ? nil : groupStart..<j, into: &spans, in: self)
             i = max(j, i + 1)
         }
-        return spans
     }
 
     private func isCardSeparator(_ i: Int) -> Bool {
-        bytes[i] == UInt8(ascii: " ") || bytes[i] == UInt8(ascii: "-") || bytes[i] == UInt8(ascii: "\t") || isBridgedLineBreak(i)
+        isGap(i) || bytes[i] == UInt8(ascii: "-")
     }
-
-    /// Card numbers written in groups have at most this many digits per group (4-4-4-4, 4-6-5).
-    static let maximumCardGroupLength = 6
 
     /// The digit groups of a chain that a card number may still start in. From each group on, the
     /// longest run of consecutive groups that holds 13 to 19 digits and passes the Luhn check is a
-    /// card number, and the next run starts after it. A run of several groups holds groups of at
-    /// most ``maximumCardGroupLength`` digits, so the digits of a UUID
-    /// (`73297603-2915-4643-B7F3-FD58D90F216C`) are not read as a card.
-    ///
-    /// The runs from a group are read once the groups from it hold more than 19 digits: a run
-    /// then ends before the next group is known. Only the last group of a chain may still be
-    /// dropped (when it runs into letters), and it is never read before the chain is finished. So
-    /// the window holds the groups of 19 digits at most and the groups already read, which it
-    /// drops every 64 of them.
+    /// card number, and the next run starts after it. A run is read once the groups after its start
+    /// hold more than 19 digits without the newest group, which may still turn out to run into
+    /// letters, so the window holds the groups of 19 digits at most and a few more.
     private struct CardWindow {
         private var groups: [Range<Int>] = []
         private var first = 0
 
-        /// Adds a group that another group follows.
-        mutating func append(_ group: Range<Int>, into spans: inout [RedactionPolicy.Span], in text: NormalizedText) {
+        mutating func append(_ group: Range<Int>, into spans: inout SpanSink, in text: NormalizedText) {
             groups.append(group)
-            while first < groups.count, holdsMoreThanACard(from: first) {
+            while first < groups.count, digitCount(from: first, to: groups.count - 1) > 19 {
                 read(into: &spans, in: text)
             }
             if first > 64 {
@@ -77,59 +106,58 @@ extension NormalizedText {
             }
         }
 
-        /// Adds the last group of the chain, unless it is dropped, and reads the runs left.
-        mutating func finish(last: Range<Int>?, into spans: inout [RedactionPolicy.Span], in text: NormalizedText) {
+        mutating func finish(last: Range<Int>?, into spans: inout SpanSink, in text: NormalizedText) {
             if let last { groups.append(last) }
             while first < groups.count { read(into: &spans, in: text) }
         }
 
-        private func holdsMoreThanACard(from start: Int) -> Bool {
+        private func digitCount(from start: Int, to end: Int) -> Int {
             var digits = 0
-            for k in start..<groups.count {
+            var k = start
+            while k < end, digits <= 19 {
                 digits += groups[k].count
-                if digits > 19 { return true }
+                k += 1
             }
-            return false
+            return digits
         }
 
         /// The card number that starts in group `first`, if any, and the group the next one may
-        /// start in.
-        private mutating func read(into spans: inout [RedactionPolicy.Span], in text: NormalizedText) {
-            var digits: [UInt8] = []
+        /// start in. The Luhn sum of every run of groups from `first` is kept as it grows: the
+        /// digits at even and at odd places from the start, each as written and doubled, so that
+        /// either can be the last digit.
+        private mutating func read(into spans: inout SpanSink, in text: NormalizedText) {
+            var count = 0
+            var even = (plain: 0, doubled: 0)
+            var odd = (plain: 0, doubled: 0)
             var best: Int?
             var last = first
             groups: while last < groups.count {
-                let isLongGroup = groups[first].count > maximumCardGroupLength || groups[last].count > maximumCardGroupLength
-                if last > first, isLongGroup { break }
                 for k in groups[last] {
-                    digits.append(text.bytes[k] - UInt8(ascii: "0"))
-                    if digits.count > 19 { break groups }
+                    let digit = Int(text.bytes[k] - UInt8(ascii: "0"))
+                    let doubled = digit < 5 ? digit * 2 : digit * 2 - 9
+                    if count % 2 == 0 {
+                        even.plain += digit
+                        even.doubled += doubled
+                    } else {
+                        odd.plain += digit
+                        odd.doubled += doubled
+                    }
+                    count += 1
+                    if count > 19 { break groups }
                 }
-                if digits.count >= 13, NormalizedText.passesLuhn(digits) { best = last }
+                // The last digit is never doubled, the one before it is, and so on.
+                let sum = (count - 1) % 2 == 0 ? even.plain + odd.doubled : even.doubled + odd.plain
+                if count >= 13, sum % 10 == 0 { best = last }
                 last += 1
             }
             guard let best else {
                 first += 1
                 return
             }
-            spans.append(text.span(groups[first].lowerBound..<groups[best].upperBound))
+            let range = groups[first].lowerBound..<groups[best].upperBound
+            spans.add(text.span(range, .cardNumbers, RedactionPolicy.replacement))
             first = best + 1
         }
-
-        private var maximumCardGroupLength: Int { NormalizedText.maximumCardGroupLength }
-    }
-
-    static func passesLuhn(_ digits: [UInt8]) -> Bool {
-        var sum = 0
-        for (position, digit) in digits.reversed().enumerated() {
-            var value = Int(digit)
-            if position % 2 == 1 {
-                value *= 2
-                if value > 9 { value -= 9 }
-            }
-            sum += value
-        }
-        return sum % 10 == 0
     }
 
     // MARK: Email addresses
@@ -137,34 +165,43 @@ extension NormalizedText {
     /// An address: a name of letters, marks and digits of any script and `.`, `_`, `%`, `+` and
     /// `-` (`ayşe.yılmaz`, `bjørn.dæhlie`, `张伟`), `@`, and a domain of such letters and digits,
     /// `.` and `-` that ends in a top-level domain of two or more letters (`example.com`,
-    /// `例子.中国`). The whole address is one finding.
-    func emailSpans() -> [RedactionPolicy.Span] {
-        var spans: [RedactionPolicy.Span] = []
-        for at in 0..<count where bytes[at] == UInt8(ascii: "@") {
+    /// `例子.中国`). The whole address is one finding, written as ``RedactionPolicy/replacement``.
+    func emailSpans(startLimit: Int = .max, into spans: inout SpanSink) {
+        // An address whose `@` comes after the limit starts before it only when the name between
+        // them runs over it.
+        var reach = readable(from: min(count, startLimit))
+        while reach < count, isLocalPart(reach) { reach = readable(after: reach) }
+        for at in 0..<min(count, reach + 1) where bytes[at] == UInt8(ascii: "@") {
             var start = at
-            while start > 0, isLocalPart(start - 1) { start -= 1 }
-            while start < at, bytes[start] == UInt8(ascii: ".") || isBridgedLineBreak(start) { start += 1 }
+            while let previous = readable(before: start), isLocalPart(previous) { start = previous }
+            while start < at, bytes[start] == UInt8(ascii: ".") { start = readable(after: start) }
             var end = at + 1
-            while end < count, isAnyAlphanumeric(end) || bytes[end] == UInt8(ascii: ".") || bytes[end] == UInt8(ascii: "-") || isBridgedLineBreak(end) {
-                end += 1
+            var next = readable(after: at)
+            while next < count, isDomainCharacter(next) {
+                end = next + 1
+                next = readable(after: next)
             }
             guard start < at, let domainEnd = domainEnd(from: at + 1, upTo: end) else { continue }
-            spans.append(span(start..<domainEnd))
+            spans.add(span(start..<domainEnd, .emailAddresses, RedactionPolicy.replacement))
         }
-        return spans
     }
 
     private func isLocalPart(_ i: Int) -> Bool {
-        isAnyAlphanumeric(i) || Self.localPartMarks.contains(bytes[i]) || isBridgedLineBreak(i)
+        isAnyAlphanumeric(i) || Self.localPartMarks.contains(bytes[i])
     }
 
     private static let localPartMarks = ByteSet("._%+-")
 
-    /// The end of the domain that starts at `domainStart` and is read at most up to `limit`, or
-    /// nil when no domain ends there. The top-level domain is read without the line separators in
-    /// it (`c`, a vertical tab and `om` is `com`). Where the domain read across a separator does
-    /// not end in a top-level domain (`example.com`, a vertical tab and `1`), it ends at the
-    /// separator, and so on back. Each byte is read once on the way back.
+    private func isDomainCharacter(_ i: Int) -> Bool {
+        isAnyAlphanumeric(i) || bytes[i] == UInt8(ascii: ".") || bytes[i] == UInt8(ascii: "-")
+    }
+
+    /// Where the domain that starts at `domainStart` and is read at most up to `limit` ends, or
+    /// nil when no domain ends there. A domain holds a `.` after its first byte and ends in two or
+    /// more letters after its last `.`, read across line separators (`c`, a vertical tab and `om`
+    /// is `com`). Where the domain read across a separator does not end so (`example.com`, a
+    /// vertical tab and `1`), it ends at the separator, and so on back: the address before the
+    /// separator is still found. Each byte is read a fixed number of times on the way back.
     private func domainEnd(from domainStart: Int, upTo limit: Int) -> Int? {
         var end = limit
         while true {
@@ -178,7 +215,7 @@ extension NormalizedText {
                 k -= 1
             }
             if letters >= 2, k - 1 > domainStart, bytes[k - 1] == UInt8(ascii: ".") { return end }
-            // No end between `k` and `end` has a top-level domain either: the next is a separator before `k`.
+            // No end between `k` and `end` ends in a top-level domain: the next is a separator before `k`.
             guard let separator = (domainStart..<k).last(where: isBridgedLineBreak) else { return nil }
             end = separator
         }
@@ -186,77 +223,86 @@ extension NormalizedText {
 
     // MARK: JSON Web Tokens
 
-    func jsonWebTokenSpans() -> [RedactionPolicy.Span] {
+    /// Two to five segments of base64url characters with `.` between them, the first two of four
+    /// characters or more, from an `eyJ` that no ASCII letter or digit is glued to. A candidate
+    /// reads its segments once, and the next one starts after its first segment: where the
+    /// payload starts is kept as it is read, and a candidate that is not a token moves on by the
+    /// bytes of its first segment, line separators included.
+    func jsonWebTokenSpans(startLimit: Int = .max, into spans: inout SpanSink) {
         let prefix = Array("eyJ".utf8)
-        var spans: [RedactionPolicy.Span] = []
         var i = 0
-        while i + 3 <= count {
+        while i + 3 <= count, i < startLimit {
             // A token glued to a word by `_` or `-` (`id_eyJ…`) is still a token.
             guard bytes[i] == prefix[0], bytes[i + 1] == prefix[1], bytes[i + 2] == prefix[2], i == 0 || !gluesToWord(i - 1) else {
                 i += 1
                 continue
             }
-            var j = i
             var segments = 0
-            // The characters of each segment, without the line separators read across in it.
-            var segmentLengths: [Int] = []
+            var header = 0
+            var payload = 0
+            var payloadStart = count
+            // After the last byte of the token read so far, and the next byte to read.
+            var end = i
+            var next = i
             var headerEnd = i
             while true {
-                let segmentStart = j
                 var length = 0
-                while j < count, isBase64URL(j) || isBridgedLineBreak(j) {
-                    if !isBridgedLineBreak(j) { length += 1 }
-                    j += 1
+                while next < count, isBase64URL(next) {
+                    length += 1
+                    end = next + 1
+                    next = readable(after: next)
                 }
-                // A token does not end with a line separator; the text goes on after it.
-                while j > segmentStart, isBridgedLineBreak(j - 1) { j -= 1 }
-                if segments == 0 { headerEnd = j }
-                segmentLengths.append(length)
+                if segments == 0 {
+                    header = length
+                    headerEnd = end
+                } else if segments == 1 {
+                    payload = length
+                }
                 segments += 1
-                let dot = skippingBridgedLineBreaks(from: j)
-                guard segments < 5, dot < count, bytes[dot] == UInt8(ascii: ".") else { break }
+                guard segments < 5, next < count, bytes[next] == UInt8(ascii: ".") else { break }
                 // The signature (third segment) is empty in unsecured tokens ("alg": "none").
-                let next = skippingBridgedLineBreaks(from: dot + 1)
-                let nextIsSegment = next < count && isBase64URL(next)
-                guard nextIsSegment || segments == 2 else { break }
-                j = nextIsSegment ? next : dot + 1
+                let segmentStart = readable(after: next)
+                guard (segmentStart < count && isBase64URL(segmentStart)) || segments == 2 else { break }
+                if segments == 1 { payloadStart = segmentStart }
+                end = next + 1
+                next = segmentStart
             }
             // A header and a payload that are both JSON (`eyJ….eyJ…`) are a token whose last dot was
             // cut off, as a URL in a sentence loses it to the full stop after it.
-            let payload = skippingBridgedLineBreaks(from: skippingBridgedLineBreaks(from: headerEnd) + 1)
-            let isCutToken = segments == 2 && segmentLengths[1] >= 4 && payload + 3 <= count && bytes[payload..<(payload + 3)].elementsEqual(prefix)
-            if segments >= 3 || isCutToken, segmentLengths[0] >= 4, segmentLengths[1] >= 4 {
-                spans.append(span(i..<j))
-                i = j
+            let isCutToken = segments == 2 && payload >= 4 && payloadStart + 3 <= count && bytes[payloadStart..<(payloadStart + 3)].elementsEqual(prefix)
+            if segments >= 3 || isCutToken, header >= 4, payload >= 4 {
+                spans.add(span(i..<end, .jsonWebTokens, RedactionPolicy.replacement))
+                i = end
             } else {
-                // No token starts inside the header: skip it in bytes, line separators included, so
-                // that a megabyte of them after `eyJ` is read once.
                 i = max(headerEnd, i + 1)
             }
         }
-        return spans
     }
 
     // MARK: Bearer tokens
 
-    /// The token after the word `Bearer` and white space of any kind, line separators included
-    /// (see ``NormalizedText/isBridgedLineBreak(_:)``), whatever its length.
-    func bearerSpans() -> [RedactionPolicy.Span] {
+    func bearerSpans(startLimit: Int = .max, into spans: inout SpanSink) {
         let word = Array("bearer".utf8)
-        var spans: [RedactionPolicy.Span] = []
         var i = 0
-        while i < count {
-            guard matches(word, at: i), isWordStart(i), i + word.count < count, isSpace(i + word.count) || isBridgedLineBreak(i + word.count) else {
+        while i < min(count, startLimit) {
+            guard matches(word, at: i), isWordStart(i), i + word.count < count, isGap(i + word.count) else {
                 i += 1
                 continue
             }
             var start = i + word.count
-            while start < count, isSpace(start) || isBridgedLineBreak(start) { start += 1 }
+            while start < count, isGap(start) { start += 1 }
             var end = start
-            while end < count, isTokenCharacter(end) { end += 1 }
-            if end > start { spans.append(span(start..<end)) }
+            var length = 0
+            var next = start
+            while next < count, isTokenCharacter(next) {
+                length += 1
+                end = next + 1
+                next = readable(after: next)
+            }
+            if length >= 8 {
+                spans.add(span(start..<end, .bearerTokens, RedactionPolicy.replacement))
+            }
             i = max(end, i + 1)
         }
-        return spans
     }
 }

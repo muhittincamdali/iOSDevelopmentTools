@@ -1,75 +1,91 @@
-/// Words read after their escapes are decoded, and the secret words in them.
+/// Words read as written and with their escapes decoded, and the secret words in them.
 extension FreeTextScanner {
-    /// Reads a word that no separator follows, after its escapes are decoded (see
-    /// ``EscapeDecoder``): whether it can be read with certainty, and where the first secret word
-    /// in it ends.
+    /// Reads a word that no separator follows: whether it can be read with certainty, and where
+    /// the first secret word in it ends. Free text never reaches the decoding: an escape cuts it
+    /// first (see ``isEscape(at:)``). The words of a name written as a value, of an array element,
+    /// of a URL path segment and of JSON written into a line can hold percent escapes and
+    /// character references (see ``mentionsSecret(_:compatibility:)``). A word is read as written
+    /// and, where `&#x` or `%u` is in it or right before it, with the letter that starts the hex
+    /// escape read as punctuation; a word with `%` or `&` is also read with its escapes decoded
+    /// (see ``EscapeDecoder``). The reading that hides most counts: one that cannot be read, then
+    /// the secret word that ends first. Decoding alone takes the first letters of a name for
+    /// digits of an escape (`%card` decodes to U+FFFD and `rd`, `&#xcvv` to U+000C and `vv`), and
+    /// the written word alone glues the `x` of `&#x` to the name (`&#xpass`, in free text too), so
+    /// each reads less than all of them. A backslash escape is not decoded in any form: a word
+    /// with one cannot be read, as it cuts free text (see ``backslashEscapes(at:)``). Nor is a word
+    /// longer than ``longestWord`` read.
     func read(_ range: Range<Int>) -> WordReading {
+        if isOpaque(range) || holdsBackslashEscape(range) { return .ambiguous }
         let scalars = source[text.originalWithInvisiblesBefore(range)]
-        guard scalars.contains(where: EscapeDecoder.startsEscape) else {
-            if Self.isAmbiguous(scalars) { return .ambiguous }
-            return LooseReading(text, [range], source: source, names: policy.secretNameTable)?.secretEnd { _ in true }.map { .valueStart($0) } ?? .plain
-        }
+        if Self.isAmbiguous(scalars) { return .ambiguous }
+        let written = LooseReading(text, [range], source: source, names: names)?.secretEnd { _ in true }
+        let unescaped = LooseReading.holdsEscapeStart(text, in: range)
+            ? LooseReading(text, [range], source: source, names: names, readsEscapeStartsAsPunctuation: true)?.secretEnd { _ in true } : nil
+        let writtenEnd = Self.earliest(written, unescaped)
+        guard scalars.contains(where: EscapeDecoder.startsEscape) else { return writtenEnd.map { .valueStart($0) } ?? .plain }
         let decoded = DecodedWord(range, in: self)
-        if Self.isAmbiguous(scalars) || Self.isAmbiguous(decoded.scalars) { return .ambiguous }
-        let reading = LooseReading(decoded.text, [0..<decoded.text.count], source: decoded.scalars, names: policy.secretNameTable)
-        return decoded.byteIndex(of: reading?.secretEnd { _ in true }).map { .valueStart($0) } ?? .plain
+        if Self.isAmbiguous(decoded.scalars) { return .ambiguous }
+        let reading = LooseReading(decoded.text, [0..<decoded.text.count], source: decoded.scalars, names: names)
+        return Self.earliest(writtenEnd, decoded.byteIndex(of: reading?.secretEnd { _ in true })).map { .valueStart($0) } ?? .plain
+    }
+
+    private static func earliest(_ first: Int?, _ second: Int?) -> Int? {
+        guard let first, let second else { return first ?? second }
+        return min(first, second)
+    }
+
+    private func holdsBackslashEscape(_ range: Range<Int>) -> Bool {
+        range.contains { text.bytes[$0] == UInt8(ascii: "\\") && backslashEscapes(at: $0) }
     }
 
     /// Whether a word cannot be read with certainty: it holds a character that only hides text
-    /// (see ``ScalarClass/hidesText(_:)``) or mixes scripts (see ``ScriptMix``).
+    /// (see ``ScalarClass/isHiding(_:)``) or mixes scripts (see ``ScriptMix``).
     static func isAmbiguous(_ scalars: some Collection<Unicode.Scalar>) -> Bool {
         // Printable ASCII hides nothing and is all one script; most words are read here.
         if scalars.allSatisfy({ $0.isASCII && !ASCII.isHidingControl(UInt8($0.value)) }) { return false }
-        return ScalarClass.hidesText(scalars) || ScriptMix.mixesScripts(scalars)
-    }
-
-    /// Where a value written into a word with escapes starts: at an escaped `=` or `:`
-    /// (`password%3D…`, `a&#61;b`), or where a value detector finds something once the word is
-    /// decoded (`a\u0040b.com`, `eyJ…%2EeyJ…`).
-    func escapedValueStart(in range: Range<Int>) -> Int? {
-        guard source[text.original(range)].contains(where: EscapeDecoder.startsEscape) else { return nil }
-        let decoded = DecodedWord(range, in: self)
-        let separator = decoded.text.bytes.firstIndex { $0 == UInt8(ascii: "=") || $0 == UInt8(ascii: ":") }
-        let finding = policy.detectorSpans(in: decoded.text).map(\.start).min().map { decoded.text.byteIndex(atOrAfter: $0) }
-        return decoded.byteIndex(of: [separator, finding].compactMap { $0 }.min())
+        return scalars.contains(where: ScalarClass.isHiding) || ScriptMix.mixesScripts(scalars)
     }
 
     /// Whether a text, read in words as the free-text rule reads them, has a word that holds a
     /// secret name or cannot be read: in an array such as `["password","…"]`, the elements after
     /// it are hidden, as such a word hides the rest of a line, and in a URL path the segment after
     /// such a segment is hidden.
-    static func mentionsSecret(_ scalars: [Unicode.Scalar], policy: RedactionPolicy, compatibility: CompatibilityText) -> Bool {
-        guard !policy.isQuietWord(scalars) else { return false }
-        return mentionsSecret(scalars, text: NormalizedText(scalars, compatibility: compatibility), policy: policy, compatibility: compatibility)
+    static func mentionsSecret(_ scalars: [Unicode.Scalar], compatibility: CompatibilityText) -> Bool {
+        guard !RedactionPolicy.isQuietWord(scalars, names: compatibility.secretNames) else { return false }
+        return mentionsSecret(scalars, text: NormalizedText(scalars, compatibility: compatibility), compatibility: compatibility)
     }
 
     /// Whether a name written as a value (a quoted value, a JSON string) names a secret or cannot
-    /// be read: a word of it does (see ``mentionsSecret(_:policy:compatibility:)``), its words mix scripts
-    /// (`рԝ d`, as a word that mixes them cannot be read), or its words, with their escapes
-    /// decoded, read as one name, as the words of a key are (`pass word`, `id_tok e n`,
-    /// `c v%2576`).
-    static func nameNamesSecret(_ scalars: [Unicode.Scalar], policy: RedactionPolicy, compatibility: CompatibilityText) -> Bool {
+    /// be read: a word of it does (see ``mentionsSecret(_:compatibility:)``), its words mix scripts
+    /// (`рԝ d`, as a word that mixes them cannot be read), or its words read as one name, as the
+    /// words of a key are (`pass word`, `id_tok e n`). A name with an escape is read the three ways
+    /// a word is (see ``read(_:)``), and any of them that names a secret counts: as written
+    /// (`%card`, `&#xcvv`, though decoding takes `ca` and `c` for hex digits), with the letter
+    /// that starts a hex escape read as punctuation (`&#xpass`) and decoded (`c v%2576`). With
+    /// `readsLongWords`, a word longer than ``longestWord`` is read as any other word is (see
+    /// ``readsLongWords``).
+    static func nameNamesSecret(_ scalars: [Unicode.Scalar], compatibility: CompatibilityText, readsLongWords: Bool = false) -> Bool {
         // One short plain word holds no secret word, alone or read with others.
-        guard !policy.isQuietWord(scalars) else { return false }
-        let plainText = NormalizedText(scalars, compatibility: compatibility)
-        if mentionsSecret(scalars, text: plainText, policy: policy, compatibility: compatibility) { return true }
-        let hasEscapes = scalars.contains(where: EscapeDecoder.startsEscape)
-        let decoded = hasEscapes ? EscapeDecoder.decode(scalars).scalars : scalars
+        guard !RedactionPolicy.isQuietWord(scalars, names: compatibility.secretNames) else { return false }
+        let names = compatibility.secretNames
+        let writtenText = NormalizedText(scalars, compatibility: compatibility)
+        if mentionsSecret(scalars, text: writtenText, compatibility: compatibility, readsLongWords: readsLongWords) { return true }
+        if ScriptMix.mixesScripts(scalars) { return true }
+        let writtenWords = words(of: writtenText)
+        if LooseReading(writtenText, writtenWords, source: scalars, names: names)?.secretEnd(where: { _ in true }) != nil { return true }
+        if LooseReading.holdsEscapeStart(writtenText, in: 0..<writtenText.count) {
+            let unescaped = LooseReading(writtenText, writtenWords, source: scalars, names: names, readsEscapeStartsAsPunctuation: true)
+            if unescaped?.secretEnd(where: { _ in true }) != nil { return true }
+        }
+        guard scalars.contains(where: EscapeDecoder.startsEscape) else { return false }
+        let decoded = EscapeDecoder.decode(scalars).scalars
         if ScriptMix.mixesScripts(decoded) { return true }
-        let text = hasEscapes ? NormalizedText(decoded, compatibility: compatibility) : plainText
-        return wordsNameSecret(text, decoded: decoded, endingInLastWord: false, policy: policy)
+        let decodedText = NormalizedText(decoded, compatibility: compatibility)
+        return LooseReading(decodedText, words(of: decodedText), source: decoded, names: names)?.secretEnd { _ in true } != nil
     }
 
-    /// Whether words, with their escapes decoded, read as one name name a secret, as the words
-    /// of a key are read; with `endingInLastWord`, only a secret that ends in the last word counts.
-    static func wordsNameSecret(_ scalars: [Unicode.Scalar], endingInLastWord: Bool, policy: RedactionPolicy, compatibility: CompatibilityText) -> Bool {
-        let hasEscapes = scalars.contains(where: EscapeDecoder.startsEscape)
-        let decoded = hasEscapes ? EscapeDecoder.decode(scalars).scalars : scalars
-        let text = NormalizedText(decoded, compatibility: compatibility)
-        return wordsNameSecret(text, decoded: decoded, endingInLastWord: endingInLastWord, policy: policy)
-    }
-
-    private static func wordsNameSecret(_ text: NormalizedText, decoded: [Unicode.Scalar], endingInLastWord: Bool, policy: RedactionPolicy) -> Bool {
+    /// The runs of `text` between white space and line breaks.
+    static func words(of text: NormalizedText) -> [Range<Int>] {
         var words: [Range<Int>] = []
         var k = 0
         while k < text.count {
@@ -81,21 +97,17 @@ extension FreeTextScanner {
             while k < text.count, !text.isSpace(k), !text.isLineTerminator(k) { k += 1 }
             words.append(start..<k)
         }
-        guard let last = words.last, let reading = LooseReading(text, words, source: decoded, names: policy.secretNameTable) else { return false }
-        return reading.secretEnd { !endingInLastWord || $0.upperBound > last.lowerBound } != nil
+        return words
     }
 
-    /// ``mentionsSecret(_:policy:compatibility:)`` on a scanning copy that is already made. A
-    /// backslash escape is not read in any form: a name with one cannot be read
-    /// (`pa\x{73}sword`), as it cuts free text (see ``backslashEscapes(at:)``). The words of JSON
-    /// written into a line are read without this rule (see ``mentionsSecret(in:)``): a backslash
-    /// in them is a JSON escape, which the JSON parser reads.
-    static func mentionsSecret(_ scalars: [Unicode.Scalar], text: NormalizedText, policy: RedactionPolicy, compatibility: CompatibilityText) -> Bool {
+    /// ``mentionsSecret(_:compatibility:)`` on a scanning copy that is already made.
+    static func mentionsSecret(
+        _ scalars: [Unicode.Scalar], text: NormalizedText, compatibility: CompatibilityText, readsLongWords: Bool = false
+    ) -> Bool {
         // Only words are read here, never JSON or URLs, so no nesting is entered.
         let scanner = FreeTextScanner(
-            source: scalars, text: text, policy: policy, compatibility: compatibility, nesting: .text(length: 0), allowedKeys: policy.allowedTextKeys)
-        if (0..<text.count).contains(where: scanner.startsBackslashEscape) { return true }
-        return scanner.mentionsSecret(in: 0..<text.count) || ScalarClass.hidesText(scalars)
+            source: scalars, text: text, policy: .standard, compatibility: compatibility, nesting: .text(length: 0), readsLongWords: readsLongWords)
+        return scanner.mentionsSecret(in: 0..<text.count) || scalars.contains(where: ScalarClass.isHiding)
     }
 
     /// Whether a word in the bytes `range` of the text holds a secret name or cannot be read.
@@ -115,30 +127,30 @@ extension FreeTextScanner {
 }
 
 /// Words of the scanned text compared with the secret names by their ASCII skeleton: the one
-/// wildcard rule of free text.
+/// rule that every path reading a word of text uses (free text, names written as values, array
+/// elements, URL path segments, form, query and multipart values).
 ///
-/// The scanned text has already read each character as the ASCII it stands for under
+/// The scanning copy has already read each character as the ASCII it stands for under
 /// compatibility normalization and left out marks and format characters (`pässword`, `ｐａｓｓ`
 /// are `password`, `pass`). Every letter, mark or number outside ASCII that is still without an
-/// ASCII form is then left out: a letter or number such as `ꞏ`, `ı`, `ɑ`, `ø` or `〇`, a decimal
-/// digit of another script, which the scanned text reads as its ASCII digit for numbers and the
-/// detectors (`၀`, `०`, see ``ScalarClass/isDigitWithoutASCIIForm(_:)``), and a mark that the
-/// scanned text left out (`ͦ`, U+0366). What remains is compared, lowercased, with the secret
-/// names, a plural `s` included (see ``PlainName/firstSecret(in:where:)``).
-///
-/// Each such character counts as nothing or as any one letter. As nothing, `piꞏn`, `tokeın`,
-/// `tokenꞏs`, `to၀ken` and `keyıs` read as `pin`, `token`, `tokens`, `token` and `keys`, however
-/// many are put in. As a letter, a name counts with one of its letters missing where such a
-/// character was left out, so one put in place of one of its letters is found too (`pɑssword`,
-/// `user_pın`, `tͦken`, `passw〇rd`, `t၀ken`), also with more of them put in elsewhere
-/// (`tͦkenͦ`, `pını`), and a word of another language that reads as a name this way is read as
-/// that name (Turkish `yapın` as `pin`), which hides more on purpose. Two or more letters put in
-/// place of letters of one name (`pɑsswoʀd`) are not found: no list of look-alikes is kept, a
-/// documented limit of free text written without a separator. Punctuation between letters is read
-/// as a separator (`pass~word`, `t*okens`), and read with the next word, `pass word` holds a
+/// ASCII form — a letter or number such as `ꞏ`, `ı`, `ɑ`, `ø` or `〇`, a decimal digit of another
+/// script, which the copy reads as its ASCII digit (`၀`, `०`, see
+/// ``ScalarClass/isDigitWithoutASCIIForm(_:)``), and a mark that the copy left out (`ͦ`, U+0366)
+/// — is then left out, and what remains is compared, lowercased, with the secret names, a plural
+/// `s` included (see ``PlainName/firstSecret(where:)``). That is the one wildcard rule: each such
+/// character counts as nothing or as any one letter. As nothing, `piꞏn`, `tokeın`, `tokenꞏs` and
+/// `keyıs` read as `pin`, `token`, `tokens` and `keys`, however many are put in. As a letter, a
+/// name counts with one of its letters missing where such a character was left out, so a letter,
+/// mark or number put in place of one of its letters is found too (`pɑssword`, `user_pın`,
+/// `tͦken`, `passw〇rd`, `t၀ken`), and a word of another language that reads as a name this way is
+/// read as that name (Turkish `yapın` as `pin`), which hides more on purpose. Two or more letters
+/// put in place of letters of one name (`pɑsswoʀd`) are not found: no list of look-alikes is kept,
+/// a documented limit of free text written without a separator. Punctuation between letters is
+/// read as a separator (`pass~word`), and a word read with the next one (`pass word`) holds a
 /// secret name across the space.
 struct LooseReading {
     private let name: PlainName
+    /// The secret names the skeleton is compared with.
     private let names: SecretNameTable
     /// The bytes of the skeleton, with the byte of the scanned text each came from. Where a
     /// letter came from is looked up only when a secret word is found.
@@ -146,8 +158,13 @@ struct LooseReading {
     private let origins: [Int]
 
     /// Reads the bytes of `ranges` of `text`, in order, as one word with a separator between the
-    /// ranges. `source` is the text `text` was made from; `names` are the secret words looked for.
-    init?(_ text: NormalizedText, _ ranges: [Range<Int>], source: [Unicode.Scalar], names: SecretNameTable) {
+    /// ranges. `source` is the text `text` was made from, and `names` the secret names it is
+    /// compared with. With `readsEscapeStartsAsPunctuation`, the letter that starts a hex escape is
+    /// read as punctuation (see ``isEscapeStart(_:after:)``).
+    init?(
+        _ text: NormalizedText, _ ranges: [Range<Int>], source: [Unicode.Scalar], names: SecretNameTable,
+        readsEscapeStartsAsPunctuation: Bool = false
+    ) {
         var bytes: [UInt8] = []
         var origins: [Int] = []
         var leftOutBefore: [Bool] = []
@@ -162,23 +179,26 @@ struct LooseReading {
             leftOutBefore.append(isLeavingOut)
             if ASCII.isAlphanumeric(byte) { isLeavingOut = false }
         }
+        // A copy in which each byte came from the scalar at its own index left nothing out.
+        let readsGaps = text.leavesOutScalars
         for range in ranges {
             if !bytes.isEmpty { append(UInt8(ascii: " "), from: range.lowerBound) }
             for k in range {
-                if Self.leftOutLetter(before: k, in: text, source: source) { isLeavingOut = true }
+                if readsGaps, Self.leftOutMark(before: k, in: text, source: source) { isLeavingOut = true }
                 let byte = text.bytes[k]
-                let scalar = source[text.offsets[k]]
-                if byte == CompatibilityText.unreadable, ScalarClass.isLetterOrNumber(scalar) {
+                if byte == CompatibilityText.unreadable, ScalarClass.isLetterOrNumber(source[text.offsets[k]]) {
                     isLeavingOut = true
-                } else if ASCII.isDigit(byte), ScalarClass.isDigitWithoutASCIIForm(scalar) {
-                    // The scanned text reads a digit of another script as its digit, for numbers
-                    // and the detectors. It has no ASCII form, so a word leaves it out.
+                } else if ASCII.isDigit(byte), ScalarClass.isDigitWithoutASCIIForm(source[text.offsets[k]]) {
+                    // A digit of another script is read as its digit by the copy, for numbers and
+                    // the detectors, and has no ASCII form: in a word it is the wildcard.
                     isLeavingOut = true
+                } else if readsEscapeStartsAsPunctuation, k > 0, Self.isEscapeStart(byte, after: text.bytes[k - 1]) {
+                    append(UInt8(ascii: "_"), from: k)
                 } else {
                     append(byte, from: k)
                 }
             }
-            if !range.isEmpty, Self.leftOutLetter(before: range.upperBound, in: text, source: source) { isLeavingOut = true }
+            if readsGaps, !range.isEmpty, Self.leftOutMark(before: range.upperBound, in: text, source: source) { isLeavingOut = true }
         }
         guard let name = PlainName(skeleton: bytes, leftOutBefore: leftOutBefore, leftOutAtEnd: isLeavingOut) else { return nil }
         self.name = name
@@ -187,25 +207,70 @@ struct LooseReading {
         self.origins = origins
     }
 
-    /// Whether the scanned text left out a mark, or a letter or number, right before byte `k`:
-    /// between the scalar of the byte before it and the scalar of byte `k`, or the end of the text.
-    /// Such a mark is left out of the word like a letter without an ASCII form (`tͦken`).
-    private static func leftOutLetter(before k: Int, in text: NormalizedText, source: [Unicode.Scalar]) -> Bool {
+    /// Whether the scanning copy left out a mark, or a letter or number, right before byte `k`:
+    /// between the scalar of the byte before it and the scalar of byte `k`, or the end of the copy.
+    /// Such a mark is read as any one letter, like a letter without an ASCII form (`tͦken`). At
+    /// most ``longestGap`` scalars are looked at: a copy may end before the text does.
+    private static func leftOutMark(before k: Int, in text: NormalizedText, source: [Unicode.Scalar]) -> Bool {
         let start = k > 0 ? text.offsets[k - 1] + 1 : 0
-        let end = text.offset(at: k)
+        let end = min(text.offset(at: k), start + longestGap)
         guard start < end else { return false }
         return source[start..<end].contains(where: ScalarClass.isLetterOrNumber)
     }
 
-    /// The byte after the last letter of the first secret word that `accepts` takes. `accepts` is
-    /// given the bytes of the scanned text from the first letter of the secret word to its last.
-    func secretEnd(where accepts: (Range<Int>) -> Bool) -> Int? {
-        var letterBytes: [Int] = []
-        func span(_ letters: Range<Int>) -> Range<Int> {
-            if letterBytes.isEmpty { letterBytes = bytes.indices.filter { ASCII.isAlphanumeric(bytes[$0]) } }
-            return origins[letterBytes[letters.lowerBound]]..<(origins[letterBytes[letters.upperBound - 1]] + 1)
+    /// The most scalars left out between two bytes that are read for a mark.
+    private static let longestGap = 32
+
+    /// Whether `byte` is the letter that starts a hex escape, the `x` of `&#x` or the `u` of `%u`,
+    /// and not a letter of a name: `&#xpass` is `&#x` and `pass`. The byte before a word counts,
+    /// as `&` and `#` end a word where no reference follows them. No secret name holds an `x`, and
+    /// the word is also read as written, for a `u`, so this reading only ever hides more.
+    private static func isEscapeStart(_ byte: UInt8, after previous: UInt8) -> Bool {
+        switch ASCII.lowercased(byte) {
+        case UInt8(ascii: "x"): previous == UInt8(ascii: "#")
+        case UInt8(ascii: "u"): previous == UInt8(ascii: "%")
+        default: false
         }
-        return name.firstSecret(in: names) { accepts(span($0)) }.map { span($0).upperBound }
+    }
+
+    /// Whether the bytes `range` of `text`, or the byte right before them, start a hex escape (see
+    /// ``isEscapeStart(_:after:)``).
+    static func holdsEscapeStart(_ text: NormalizedText, in range: Range<Int>) -> Bool {
+        var k = max(range.lowerBound, 1)
+        while k < range.upperBound {
+            if isEscapeStart(text.bytes[k], after: text.bytes[k - 1]) { return true }
+            k += 1
+        }
+        return false
+    }
+
+    /// The number of letters that come from bytes before `byte`.
+    func letterCount(before byte: Int) -> Int {
+        var letters = 0
+        for k in bytes.indices where ASCII.isAlphanumeric(bytes[k]) {
+            if origins[k] >= byte { break }
+            letters += 1
+        }
+        return letters
+    }
+
+    /// The byte after the last letter of the first secret word whose end `accepts` takes: that
+    /// byte is passed.
+    func firstSecretEnd(where accepts: (Int) -> Bool) -> Int? {
+        var ends: [Int] = []
+        for k in bytes.indices where ASCII.isAlphanumeric(bytes[k]) { ends.append(origins[k] + 1) }
+        return name.firstSecret(in: names) { accepts(ends[$0.upperBound - 1]) }.map { ends[$0.upperBound - 1] }
+    }
+
+    /// The byte after the last letter of the first secret word that `accepts` takes.
+    func secretEnd(where accepts: (Range<Int>) -> Bool) -> Int? {
+        guard let secret = name.firstSecret(in: names, where: accepts) else { return nil }
+        var letters = 0
+        for k in bytes.indices where ASCII.isAlphanumeric(bytes[k]) {
+            if letters == secret.upperBound - 1 { return origins[k] + 1 }
+            letters += 1
+        }
+        return nil
     }
 }
 

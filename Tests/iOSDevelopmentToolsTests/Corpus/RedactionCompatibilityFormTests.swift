@@ -42,8 +42,10 @@ struct RedactionCompatibilityFormTests {
         #expect(redactor.redact(body: Data("🄁status=hunter2Zq".utf8), contentType: "text/plain") == "[REDACTED]")
     }
 
-    @Test("a letter or digit whose compatibility form holds punctuation or a symbol cuts the text", arguments: [
-        "\u{1F101}", "\u{1F10A}", "\u{2488}", "\u{2474}", "\u{00BD}", "\u{215F}", "\u{33A1}",
+    // A space or an apostrophe in the compatibility form cuts the text too (`ﷺ` holds spaces,
+    // `ŉ` a modifier apostrophe).
+    @Test("a letter or digit whose compatibility form holds punctuation, a space or a symbol cuts the text", arguments: [
+        "\u{1F101}", "\u{1F10A}", "\u{2488}", "\u{2474}", "\u{00BD}", "\u{215F}", "\u{33A1}", "\u{FDFA}", "\u{0149}",
     ])
     func formsWithPunctuation(scalar: String) {
         #expect(redactor.redact("ok \(scalar) hunter2Zq") == "ok [REDACTED]")
@@ -51,7 +53,7 @@ struct RedactionCompatibilityFormTests {
 
     @Test("a letter or digit whose compatibility form is letters and digits is text", arguments: [
         "x\u{00B2} + y\u{00B2}", "\u{2460} first", "\u{FB01}le", "\u{2167} chapter", "\u{FF46}\u{FF55}\u{FF4C}\u{FF4C}", "\u{2081}\u{2082}",
-        "\u{3007} zero", "\u{017F}tatus ok", "\u{1D400}\u{1D401}", "\u{FDFA} done", "\u{0149} ok",
+        "\u{3007} zero", "\u{017F}tatus ok", "\u{1D400}\u{1D401}",
     ])
     func formsOfLetters(text: String) {
         #expect(redactor.redact(text) == text)
@@ -80,15 +82,16 @@ struct RedactionCompatibilityFormTests {
         #expect(leaks.isEmpty, "\(leaks.prefix(40))")
     }
 
-    // ASCII is in the safe alphabet. Before an allowed key, `,`, `;`, `?` and `|` end the word and
-    // `-`, `.` and `_` are folded away as separators, so the key reads as `status`; any other
+    // ASCII is in the safe alphabet. Before an allowed key, `,`, `;`, `?` and `|` end the word,
+    // `-`, `.` and `_` are folded away as separators and `&` starts a field, so the key reads as
+    // `status`; any other
     // ASCII character joins the key, is an escape, or opens a quote or bracket that does not close.
     @Test("every ASCII character before an allowed key hides the value, unless the key still reads as allowed")
     func everyASCIICharacterBeforeAnAllowedKey() {
         for value in UInt32(0x21)...0x7E {
             let character = String(Unicode.Scalar(value)!)
             let output = redactor.redact("\(character)status=hunter2Zq")
-            #expect(output.contains("hunter2Zq") == ",-.;?_|".contains(character), "\(character) -> \(output)")
+            #expect(output.contains("hunter2Zq") == ",-.;?_|&".contains(character), "\(character) -> \(output)")
         }
     }
 

@@ -8,7 +8,7 @@ import Testing
 /// takes. The names are generated from symbols (So, Sk), emoji, circled, squared and
 /// parenthesized letters, mathematical alphanumerics, full-width letters and words in other
 /// scripts, with or without a secret word in them. Plain-ASCII names without a secret word keep
-/// the value.
+/// the value in structured input, and in free text after an allowed key.
 @Suite("Redaction corpus: symbol name property tests")
 struct RedactionSymbolNamePropertyTests {
     let redactor = Redactor()
@@ -20,11 +20,6 @@ struct RedactionSymbolNamePropertyTests {
     static let alphabets: [UInt32] = [0x24D0, 0x24B6, 0x1F130, 0x1F170, 0x249C, 0x1D41A, 0x1D4B6, 0x1D68A, 0xFF41]
     static let symbols = ["★", "☂", "♠", "✓", "⚙", "™", "©", "°", "¨", "˜", "˚", "∞", "€", "🔑", "🔐", "😀", "👍🏽", "🇹🇷", "⌘", "↗"]
     static let otherScripts = ["Şifre", "Пароль", "パスワード", "密码", "비밀번호", "Größe", "статус", "Ünvan", "κωδικός", "סיסמה"]
-
-    /// The fields that hold a name in records too: beside a name of theirs written in another
-    /// script only the fields that carry a value are hidden (see ``WrittenName/recordFields``).
-    static let recordFields: Set<String> = ["name", "type", "id"]
-    static let valueFields = ["value", "input", "answer", "data"]
 
     /// A name with no plain-ASCII reading.
     static func name(using random: inout SeededRandom) -> String {
@@ -46,10 +41,7 @@ struct RedactionSymbolNamePropertyTests {
     /// JSON objects and arrays that hold name `n` beside value `v`.
     static func jsonShapes(_ n: String, _ v: String, using random: inout SeededRandom) -> [String] {
         let field = holdingFields.randomElement(using: &random)!
-        // A word in another script under `name`, `type` or `id` may be a person or a place, so
-        // only a field that carries a value is hidden beside it.
-        let isRecordName = recordFields.contains(field.lowercased()) && otherScripts.contains(n)
-        let other = (isRecordName ? valueFields : valueFields + ["x"]).randomElement(using: &random)!
+        let other = ["value", "input", "answer", "data", "x"].randomElement(using: &random)!
         return [
             #"{"\#(field)":"\#(n)","\#(other)":"\#(v)"}"#,
             #"[{"\#(other)":{"a":["\#(v)"]},"\#(field)":"\#(n)"}]"#,
@@ -96,7 +88,7 @@ struct RedactionSymbolNamePropertyTests {
         }
     }
 
-    @Test("plain-ASCII names without a secret word keep the value beside them in structured input, and in text after an allowed key")
+    @Test("plain-ASCII names without a secret word keep the value beside them")
     func plainNamesKeepValues() {
         var random = SeededRandom(seed: 0xA1_2B_0101)
         for name in ["status", "user", "display name", "region", "count", "user_id", "Content-Type", "a.b"] {
@@ -106,12 +98,11 @@ struct RedactionSymbolNamePropertyTests {
             let object = #"{"\#(field)":"\#(name)","value":"\#(value)"}"#
             #expect(redactor.redact(body: Data(object.utf8), contentType: "application/json") == object)
             // The paths that read the object as JSON keep the value; on the paths that read it as
-            // free text its members follow the rule for keys in text, which cuts the text.
+            // free text the members follow the allowlist of keys in text, which cuts the text.
             let all = outputs(of: object)
             for output in [all[0], all[6]] {
                 #expect(output.contains(value), "\(object.debugDescription) -> \(output.debugDescription)")
             }
-            #expect(Redactor(allowedTextKeys: [field, "value"]).redact("status=200 \(object) done").contains(value))
             #expect(redactor.redact(body: Data(#"[["\#(name)","\#(value)"]]"#.utf8), contentType: "application/json").contains(value))
             #expect(Redactor(allowedTextKeys: ["label"]).redact("label=\"\(name)\" \(value)").contains(value))
             #expect(!redactor.redact("label=\"\(name)\" \(value)").contains(value))

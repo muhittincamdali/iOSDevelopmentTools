@@ -34,11 +34,11 @@ struct RedactionGuideTests {
         #expect(policy.redact(text: "t\u{0366}ken\u{0366} hunter2") == "t\u{0366}ken\u{0366} [REDACTED]")
         #expect(policy.redact(text: "p\u{0131}n\u{0131} hunter2") == "p\u{0131}n[REDACTED]")
         #expect(policy.redact(text: "login password=hunter2 status=200\nnext line") == "login password=[REDACTED]")
-        #expect(policy.redact(text: "p\u{0430}ssword=hunter2") == "[REDACTED]")
-        #expect(policy.redact(text: #"saved {"status":200,"name":"ada","card":"x"}"#) == #"saved {"status":200,"name":[REDACTED]"#)
+        #expect(policy.redact(text: "p\u{0430}ssword=hunter2") == "p\u{0430}ssword=[REDACTED]")
+        #expect(policy.redact(text: #"saved {"status":200,"name":"ada","card":"x"}"#) == #"saved {"status":200,[REDACTED]"#)
         #expect(policy.redact(text: #"payload {"a": "hunter2""#) == "payload [REDACTED]")
         #expect(policy.redact(text: #"msg="unterminated hunter2"#) == "msg=[REDACTED]")
-        #expect(policy.redact(text: #"field name="password" hunter2"#) == #"field name="[REDACTED]"#)
+        #expect(policy.redact(text: #"field name="password" hunter2"#) == "field name=[REDACTED]")
         #expect(policy.redact(text: #"<input value="hunter2" name="password">"#) == "[REDACTED]")
         #expect(policy.redact(text: "<key>password</key>\n<string>k-1</string>") == "[REDACTED]")
         #expect(policy.redact(text: "<status>200</status>") == "[REDACTED]")
@@ -55,10 +55,11 @@ struct RedactionGuideTests {
             #expect(policy.redact(text: kept) == kept)
         }
         #expect(policy.redact(text: "\"x \\\"y\\\" z\"") == "\"x [REDACTED]")
-        // An escape of any form cuts the text, and a letter or digit read as punctuation does too.
-        #expect(policy.redact(text: "status=200&count=3") == "status=200[REDACTED]")
-        #expect(policy.redact(text: "saved logs\\app.txt") == "saved logs[REDACTED]")
-        #expect(policy.redact(text: "R&D team") == "R[REDACTED]")
+        // An escape of any form cuts the text at the start of its word, and a letter or digit read
+        // as punctuation cuts it too; `&` before a field name and `=` starts a field instead.
+        #expect(policy.redact(text: "status=200&count=3") == "status=200&count=3")
+        #expect(policy.redact(text: "saved logs\\app.txt") == "saved [REDACTED]")
+        #expect(policy.redact(text: "R&D team") == "[REDACTED]")
         #expect(policy.redact(text: "\u{1F101}status=hunter2") == "[REDACTED]")
         #expect(policy.redact(text: #""x":"hunter2""#) == "[REDACTED]")
         #expect(policy.redact(text: #""hunter2":"v""#) == "[REDACTED]")
@@ -109,9 +110,23 @@ struct RedactionGuideTests {
         #expect(policy.redact(url: URL(string: "https://e.com/reset/abc123")!) == "https://e.com/reset/abc123")
         #expect(policy.redact(url: URL(string: "https://e.com/reset/abc123def456ghi789")!) == "https://e.com/reset/:id")
         #expect(policy.redact(text: "see https://x.example/reset/abc123") == "see https://x.example/reset/abc123")
-        // Beside a `name` in another script, a field that does not carry a value keeps it.
+        // Digits that run into a letter are an identifier: a card number written with an exponent
+        // in text or in a JSON string is not found. As a JSON number it is read as the decimal it
+        // stands for, and hidden.
+        #expect(policy.redact(text: "paid 4111111111111111e0") == "paid 4111111111111111e0")
+        #expect(String(decoding: policy.redact(body: Data(#"{"amount":"4111111111111111e0"}"#.utf8), contentType: "application/json").body, as: UTF8.self)
+            == #"{"amount":"4111111111111111e0"}"#)
+        #expect(String(decoding: policy.redact(body: Data(#"{"amount":4111111111111111e0}"#.utf8), contentType: "application/json").body, as: UTF8.self)
+            == #"{"amount":"[REDACTED]"}"#)
+        // Beside a `name` that is not plain ASCII, every other value is hidden, on purpose.
         #expect(String(decoding: policy.redact(body: Data(#"{"name":"Şifre","x":"hunter2"}"#.utf8), contentType: "application/json").body, as: UTF8.self)
-            == #"{"name":"Şifre","x":"hunter2"}"#)
+            == #"{"name":"Şifre","x":"[REDACTED]"}"#)
+        // A label in another language without a separator, or before a dash, in a member that
+        // holds no name, is read by its words; with `:` the value beside it is hidden.
+        let json = { (body: String) in String(decoding: policy.redact(body: Data(body.utf8), contentType: "application/json").body, as: UTF8.self) }
+        #expect(json(#"{"title":"Пароль","value":"1234"}"#) == #"{"title":"Пароль","value":"1234"}"#)
+        #expect(json(#"{"title":"Пароль — ","value":"1234"}"#).hasSuffix(#""value":"1234"}"#))
+        #expect(json(#"{"title":"Пароль:","value":"1234"}"#) == #"{"title":"Пароль:","value":"[REDACTED]"}"#)
     }
 
     @Test("Bodies, URLs and headers")
@@ -132,9 +147,9 @@ struct RedactionGuideTests {
         #expect(policy.redact(url: try #require(URL(string: "https://api.example.com/t%CD%A6ken/4831"))) == "https://api.example.com/t%CD%A6ken/:id")
         #expect(policy.redact(url: try #require(URL(string: "https://api.example.com/%C5%9Eifre/4831"))) == "https://api.example.com/%C5%9Eifre/:id")
         #expect(policy.redact(url: try #require(URL(string: "https://api.example.com/a+b/c"))) == "https://api.example.com/a+b/:id")
-        // A host that names a secret is recorded as the scheme and host only.
-        #expect(policy.redact(url: try #require(URL(string: "myapp://pin/4831"))) == "myapp://pin")
-        #expect(policy.redact(url: try #require(URL(string: "https://auth.example.com/x/4831"))) == "https://auth.example.com")
+        // A host that names a secret is hidden with everything after it.
+        #expect(policy.redact(url: try #require(URL(string: "myapp://pin/4831"))) == "myapp://[REDACTED]")
+        #expect(policy.redact(url: try #require(URL(string: "https://auth.example.com/x/4831"))) == "https://[REDACTED]")
         #expect(policy.redact(url: try #require(URL(string: "myapp://callback/x"))) == "myapp://callback/x")
         let headers = RedactionPolicy(allowedHeaders: RedactionPolicy.defaultAllowedHeaders + ["X-Request-ID"]).redact(headers: [
             HTTPHeader(name: "Content-Type", value: "application/json; charset=utf-8"), HTTPHeader(name: "X-Request-ID", value: "42"),

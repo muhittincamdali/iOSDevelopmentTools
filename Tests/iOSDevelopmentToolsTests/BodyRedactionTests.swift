@@ -55,14 +55,14 @@ struct BodyRedactionTests {
         #expect(outcome == .redacted)
         let object = try json(data)
         #expect(object["query"] as? String == "{ me }")
-        // A bracket that does not close is a trigger in text.
-        #expect(object["note"] as? String == redacted)
-        // A JSON string is free text: JSON in it is cut at the value of its first member that is
-        // not on the allowed text keys.
-        #expect(object["variables"] as? String == #"{"input":"# + redacted)
+        // A bracket that does not close is a trigger in text: the text is cut after it.
+        #expect(object["note"] as? String == "[" + redacted)
+        // A JSON string is free text: JSON in it is cut at the opening quote of its first member
+        // name that is not on the allowed text keys.
+        #expect(object["variables"] as? String == "{" + redacted)
         let allowing = RedactionPolicy(allowedTextKeys: ["input", "name"])
         let variables = try #require((try json(allowing.redact(body: body, contentType: "application/json").body)["variables"] as? String))
-        #expect(variables == #"{"input":{"password":"# + redacted)
+        #expect(variables == #"{"input":{"# + redacted)
     }
 
     @Test("Bodies that do not parse, were cut off, are too large or nested too deeply are omitted", arguments: [
@@ -123,7 +123,7 @@ struct BodyRedactionTests {
         let body = Data("user=ada&pass%77ord=s3cret&remember=1&q=a+b%21&data=%7B%22password%22%3A%22hunter2%22%7D".utf8)
         let (data, outcome) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded; charset=utf-8")
         #expect(outcome == .redacted)
-        #expect(text(data) == "user=ada&pass%77ord=\(redacted)&remember=1&q=a+b%21&data=%7B%22password%22%3A\(redacted)")
+        #expect(text(data) == "user=ada&pass%77ord=\(redacted)&remember=1&q=a+b%21&data=%7B\(redacted)")
     }
 
     @Test("A form value that holds pairs or JSON goes through the value rule; a `;` makes the form unreadable")
@@ -132,9 +132,10 @@ struct BodyRedactionTests {
         let (data, outcome) = policy.redact(body: body, contentType: "application/x-www-form-urlencoded")
         #expect(outcome == .redacted)
         #expect(text(data) == "b=x+token%3D\(redacted)&c=1")
-        // `&` before a letter is an escape in the value: the value is cut there.
+        // `&` before the name of a field in the value starts a field that the key rule reads:
+        // `token` is a secret name.
         let joined = policy.redact(body: Data("b=x%26token%3Dhunter2&c=1".utf8), contentType: "application/x-www-form-urlencoded")
-        #expect(text(joined.body) == "b=x\(redacted)&c=1")
+        #expect(text(joined.body) == "b=x%26token%3D\(redacted)&c=1")
         // Some servers also split a form at `;`, so a form with one is omitted.
         let split = Data("a=1;password=hunter2&token;x=hunter2".utf8)
         #expect(policy.redact(body: split, contentType: "application/x-www-form-urlencoded").outcome == .omitted)

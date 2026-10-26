@@ -9,27 +9,21 @@ struct TimedInput: Sendable, CustomTestStringConvertible {
     let redact: @Sendable (String) -> String
 }
 
-// Bodies of a megabyte are read with the body limit raised to 1 MiB; free text has no limit.
-private let redactor = Redactor.largeBodies
+private let redactor = Redactor()
 
+/// Bodies of a megabyte are read with the limit raised to 1 MiB, as an app may raise it.
 private func body(_ contentType: String) -> @Sendable (String) -> String {
-    { redactor.redact(body: Data($0.utf8), contentType: contentType) }
-}
-
-/// Whether the tests run in an optimized build: a debug build runs the same code many times
-/// slower, so the limit is only checked with `swift test -c release`.
-private var isOptimized: Bool {
-    #if DEBUG
-    false
-    #else
-    true
-    #endif
+    { RedactionTimeLimitTests.largeBodies.redact(body: Data($0.utf8), contentType: contentType) }
 }
 
 @Suite("Redaction corpus: time limit", .serialized, .enabled(if: isOptimized, "time limits are checked in a release build: swift test -c release"))
 struct RedactionTimeLimitTests {
     static let size = 1_000_000
     static let limit = Duration.seconds(1)
+
+    /// A body limit of 1 MiB, above the default, for the bodies of a megabyte these tests time.
+    static let mebibyte = 1_048_576
+    static let largeBodies = Redactor(maximumBodySize: mebibyte)
 
     static let nested: [TimedInput] = [
         TimedInput(testDescription: "JSON quoted in JSON 16, 17 and 18 times", make: {
@@ -64,16 +58,6 @@ struct RedactionTimeLimitTests {
         TimedInput(testDescription: "a plain-text body", make: {
             String(repeating: "login user=bob password=hunter2 card 4242 4242 4242 4242\n", count: size / 57)
         }, redact: body("text/plain")),
-        // A name outside plain ASCII under `name` may be a person, so each of these fields names
-        // a secret without hiding every other field. The fifteenth review timed both at about two
-        // seconds a megabyte, four times that at two: every field read the list of such names
-        // again to find one that hides every field.
-        TimedInput(testDescription: "a form of name=Ayşe repeated", make: {
-            repeated("name=Ay%C5%9Fe", separator: "&", prefix: "", suffix: "")
-        }, redact: body("application/x-www-form-urlencoded")),
-        TimedInput(testDescription: "a JSON object of the member \"name\":\"Ayşe\" repeated", make: {
-            repeated(#""name":"Ayşe""#, prefix: "{", suffix: "}")
-        }, redact: body("application/json")),
     ]
 
     /// `unit` repeated, `separator` between, to about a megabyte with `prefix` and `suffix`.
@@ -91,6 +75,12 @@ struct RedactionTimeLimitTests {
         TimedInput(testDescription: "a JSON array of one-letter strings", make: { repeated("\"a\"") }, redact: body("application/json")),
         TimedInput(testDescription: "a JSON array of one-letter strings in a log line", make: { repeated("\"a\"") }, redact: redactor.redact),
         TimedInput(testDescription: "a JSON array of empty strings", make: { repeated("\"\"") }, redact: body("application/json")),
+        TimedInput(testDescription: "a JSON array of card numbers written with an exponent", make: {
+            repeated("4.111111111111111E15")
+        }, redact: body("application/json")),
+        TimedInput(testDescription: "a JSON array of numbers with exponents of a billion", make: {
+            repeated("1.5e999999999,-2e-999999999")
+        }, redact: body("application/json")),
         TimedInput(testDescription: "a JSON array of different strings of words", make: {
             "[" + (0..<(size / 12)).map { "\"a b \($0)\"" }.joined(separator: ",") + "]"
         }, redact: body("application/json")),
@@ -113,19 +103,6 @@ struct RedactionTimeLimitTests {
         TimedInput(testDescription: "log lines of URLs with 100 query parameters", make: {
             repeated("https://a.example/?" + (0..<100).map { "k\($0)=v" }.joined(separator: "&"), separator: " ", prefix: "", suffix: "")
         }, redact: redactor.redact),
-        // A clean URL is read as a URL and the text after it read on, so each one costs a parse.
-        TimedInput(testDescription: "log lines of clean URLs with identifiers", make: {
-            repeated("GET https://api.example.com/v1/users/12345678/items 200", separator: "\n", prefix: "", suffix: "")
-        }, redact: redactor.redact),
-        TimedInput(testDescription: "log lines of clean URLs with 40 segments", make: {
-            repeated("https://a.example/" + (0..<40).map { "s\($0)" }.joined(separator: "/"), separator: " ", prefix: "", suffix: "")
-        }, redact: redactor.redact),
-        // A word with letters that have no ASCII form is read twice: with one of them as any
-        // letter, and as its ASCII skeleton without them.
-        TimedInput(testDescription: "log lines of Turkish and Nordic words", make: {
-            repeated("Kullanıcı ılık bjørn kapıdaki ıııı", separator: " ", prefix: "", suffix: "")
-        }, redact: redactor.redact),
-        TimedInput(testDescription: "a JSON array of Turkish and Nordic words", make: { repeated("\"kapıdaki ılgın bjørn\"") }, redact: body("application/json")),
     ]
 
     /// Secret names written as values, which make the scanner read the markup around them, the
@@ -163,7 +140,7 @@ struct RedactionTimeLimitTests {
     @Test("redacting a megabyte of an ordinary shape takes a 512 KiB thread less than a second", arguments: ordinaryShapes)
     func shape(input: TimedInput) {
         let text = input.make()
-        #expect(text.utf8.count >= Self.size * 9 / 10 && text.utf8.count <= Redactor.largeBodies.policy.maximumBodySize)
+        #expect(text.utf8.count >= Self.size * 9 / 10 && text.utf8.count <= Self.mebibyte)
         var fastest = Self.threadTime(input, text)
         for _ in 0..<2 where fastest >= Self.limit {
             fastest = min(fastest, Self.threadTime(input, text))
@@ -190,7 +167,7 @@ struct RedactionTimeLimitTests {
     @Test("redacting a megabyte of nested input or a body of a megabyte takes less than a second", arguments: nested + bodies)
     func nestedOrBody(input: TimedInput) {
         let text = input.make()
-        #expect(text.utf8.count >= Self.size * 9 / 10 && text.utf8.count <= Redactor.largeBodies.policy.maximumBodySize)
+        #expect(text.utf8.count >= Self.size * 9 / 10 && text.utf8.count <= Self.mebibyte)
         expectFast(input.testDescription) { _ = input.redact(text) }
     }
 

@@ -6,28 +6,35 @@ extension RedactionPolicy {
     /// whose folded name contains `token`, `secret`, `key`, `auth`, `session` or `signature`, a
     /// header with a secret name and a header whose name is not an ASCII token of letters, digits,
     /// `-`, `_` and `.` are hidden even when listed. So is a kept value that starts with an
-    /// authentication scheme and credentials (`Bearer …`, `Basic …`, `Token …`, as 2.0.0 hid
-    /// them). Other kept values go through the free-text rule (``redact(text:)``), which reads on
-    /// after the keys on ``allowedTextKeys`` and after the parameters that the default headers
-    /// are written with (see ``headerParameterNames``): `text/html; charset=utf-8`,
-    /// `en-US,en;q=0.9` and `max-age=3600` are kept, while any other parameter hides the rest of
-    /// the value (`text/plain; x=…`).
+    /// authentication scheme and credentials (`Bearer …`, `Basic …`, `Token …`). Other kept
+    /// values go through the free-text rule (``redact(text:)``), which reads on after the keys on
+    /// ``allowedTextKeys`` and after the parameters that the default headers are written with
+    /// (see ``headerParameterNames``): `text/html; charset=utf-8`, `en-US,en;q=0.9` and
+    /// `max-age=3600` are kept, while any other parameter hides the rest of the value
+    /// (`text/plain; x=…`).
     public func redact(headers: [HTTPHeader]) -> [HTTPHeader] {
         guard isEnabled else { return headers }
-        // One table of readings serves every header of the list.
-        let compatibility = CompatibilityText(length: headers.reduce(0) { $0 + $1.value.utf8.count })
+        // One table of readings and one reader of values serve every header of the list.
+        let compatibility = readings(length: headers.reduce(0) { $0 + $1.value.utf8.count })
+        let reader = headerValueReader
         return headers.map { header in
-            HTTPHeader(name: header.name, value: redactedHeaderValue(name: header.name, value: header.value, compatibility: compatibility))
+            HTTPHeader(name: header.name, value: reader.redactedHeaderValue(name: header.name, value: header.value, compatibility: compatibility))
         }
     }
 
-    /// One header value as ``redact(headers:)`` stores it.
+    /// One header value as ``redact(headers:)`` stores it, read by ``headerValueReader``.
     func redactedHeaderValue(name: String, value: String, compatibility: CompatibilityText) -> String {
         guard !hidesHeader(named: name), !Self.startsWithAuthenticationScheme(value) else { return Self.replacement }
         let scalars = Array(value.unicodeScalars)
-        let spans = textSpans(in: scalars, compatibility: compatibility, nesting: .text(length: scalars.count), allowedKeys: headerValueKeys)
+        let spans = textSpans(in: scalars, compatibility: compatibility, nesting: .text(length: scalars.count))
         return spans.isEmpty ? value : Self.replacing(spans, in: scalars)
     }
+
+    /// This policy, reading free text on after ``allowedTextKeys`` and the parameters of
+    /// ``headerParameterNames``, for header values.
+    var headerValueReader: RedactionPolicy { RedactionPolicy(self, textKeys: allowedTextKeys.union(Self.headerParameterFolds)) }
+
+    private static let headerParameterFolds = allowableFolds(headerParameterNames)
 
     /// The parameters that the values of the default ``allowedHeaders`` are written with, which
     /// a kept header value reads on after, besides ``allowedTextKeys``: `charset` and `boundary`
@@ -40,15 +47,19 @@ extension RedactionPolicy {
     private static let alwaysHiddenHeaders: Set<String> = ["authorization", "proxyauthorization", "cookie", "setcookie", "xapikey"]
     private static let hiddenHeaderNameParts = ["token", "secret", "key", "auth", "session", "signature"]
 
-    /// Whether a header's value is hidden whatever it holds.
+    /// Whether a header's value is hidden: it is not on ``allowedHeaders``, or it is always hidden.
     func hidesHeader(named name: String) -> Bool {
+        guard !alwaysHidesHeader(named: name), let fold = FieldName.allowableFold(name.unicodeScalars, names: secretNameTable) else { return true }
+        return !allowedHeaders.contains(fold)
+    }
+
+    /// Whether a header's value is hidden whatever it holds and whatever ``allowedHeaders`` lists.
+    func alwaysHidesHeader(named name: String) -> Bool {
         let scalars = name.unicodeScalars
-        guard !scalars.isEmpty, scalars.allSatisfy(HeaderValueReader.isTokenCharacter), let plain = PlainName(scalars),
-              !plain.namesSecret(in: secretNameTable)
+        guard !scalars.isEmpty, scalars.allSatisfy(HeaderValueReader.isTokenCharacter), !hidesValue(ofKey: scalars),
+              let folded = FieldName.allowableFold(scalars, names: secretNameTable)
         else { return true }
-        let folded = plain.folded
-        if Self.alwaysHiddenHeaders.contains(folded) || Self.hiddenHeaderNameParts.contains(where: folded.contains) { return true }
-        return !allowedHeaders.contains(folded)
+        return Self.alwaysHiddenHeaders.contains(folded) || Self.hiddenHeaderNameParts.contains(where: folded.contains)
     }
 
     /// The schemes of the IANA HTTP Authentication Scheme Registry and widespread vendor schemes:

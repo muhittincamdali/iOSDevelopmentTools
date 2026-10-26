@@ -44,7 +44,7 @@ struct RedactionHeldNameTests {
     func symbolNameInAnyMember() {
         // `ParameterKey` ends in the secret word `key`, so its own value is hidden too.
         #expect(json(#"{"ParameterKey":"ⓣⓞⓚⓔⓝ","ParameterValue":"S3CR3Tq"}"#) == #"{"ParameterKey":"[REDACTED]","ParameterValue":"[REDACTED]"}"#)
-        // A circled letter is a symbol, so the string that holds the name is cut as free text too.
+        // The name itself is free text in symbols outside the safe alphabet, so it goes too.
         #expect(json(#"{"Parameter":"ⓣⓞⓚⓔⓝ","ParameterValue":"S3CR3Tq"}"#) == #"{"Parameter":"[REDACTED]","ParameterValue":"[REDACTED]"}"#)
         #expect(json(#"{"title":"ⓟⓘⓝ:","x":"S3CR3Tq"}"#) == #"{"title":"[REDACTED]","x":"[REDACTED]"}"#)
         #expect(WrittenName.isName(Array("ⓟⓘⓝ".unicodeScalars), compatibility: CompatibilityText()))
@@ -62,21 +62,17 @@ struct RedactionHeldNameTests {
 
     @Test("a field whose own name is not plain ASCII is read as one that holds a name")
     func disguisedHoldingField() {
-        #expect(json(#"{"lab\u200Bel":"x","value":"kept"}"#) == #"{"lab\u200Bel":"[REDACTED]","value":"kept"}"#)
-        #expect(json(#"{"lab\u200Bel":"Пароль","value":"S3CR3Tq"}"#) == #"{"lab\u200Bel":"[REDACTED]","value":"[REDACTED]"}"#)
+        // The name is cut at its format character, which is outside the safe alphabet.
+        #expect(json(#"{"lab\u200Bel":"x","value":"kept"}"#) == #"{"lab[REDACTED]":"[REDACTED]","value":"kept"}"#)
+        #expect(json(#"{"lab\u200Bel":"Пароль","value":"S3CR3Tq"}"#) == #"{"lab[REDACTED]":"[REDACTED]","value":"[REDACTED]"}"#)
     }
 
     /// The cost of the default, named in the documentation: a name in another script hides the
-    /// value beside it, and under a field that only pairs use, every member beside it. Under
-    /// `name`, `id` and `type` it may be a person, a place, a product or a media type, so the rest
-    /// of the record stays.
-    @Test("a held name in another script hides the value beside it; under name, id and type the rest of a record stays")
-    func nonASCIINamesHideValues() {
-        #expect(json(#"{"id":1,"name":"Ayşe","role":"admin"}"#) == #"{"id":1,"name":"Ayşe","role":"admin"}"#)
-        #expect(json(#"{"name":"Ayşe","value":"x","role":"admin"}"#) == #"{"name":"Ayşe","value":"[REDACTED]","role":"admin"}"#)
+    /// members beside it whatever they hold.
+    @Test("a held name in another script hides the members beside it")
+    func nonASCIINamesHideOthers() {
+        #expect(json(#"{"id":1,"name":"Ayşe","role":"admin"}"#) == #"{"id":"[REDACTED]","name":"Ayşe","role":"[REDACTED]"}"#)
         #expect(json(#"{"type":"image/png","data":"AAAA"}"#) == #"{"type":"image/png","data":"[REDACTED]"}"#)
-        #expect(json(#"{"label":"Ayşe","role":"admin"}"#) == #"{"label":"Ayşe","role":"[REDACTED]"}"#)
-        #expect(json(#"{"name":"ⓢⓣⓐⓣⓤⓢ","role":"admin"}"#) == #"{"name":"[REDACTED]","role":"[REDACTED]"}"#)
     }
 
     @Test("forms, URL queries and multipart bodies follow the same rule")
@@ -142,19 +138,17 @@ struct RedactionHeldNameTests {
     func guideExamples() {
         let fields = #"[{"label":"Şifre","value":"hunter2"},{"label":"ⓟⓘⓝ","value":"1234"},{"label":"status","value":"ok"}]"#
         #expect(json(fields) == #"[{"label":"Şifre","value":"[REDACTED]"},{"label":"[REDACTED]","value":"[REDACTED]"},{"label":"status","value":"ok"}]"#)
-        #expect(json(#"{"name":"Ayşe","role":"admin"}"#) == #"{"name":"Ayşe","role":"admin"}"#)
-        #expect(json(#"{"name":"Şifre","value":"hunter2"}"#) == #"{"name":"Şifre","value":"[REDACTED]"}"#)
+        #expect(json(#"{"name":"Ayşe","role":"admin"}"#) == #"{"name":"Ayşe","role":"[REDACTED]"}"#)
         #expect(redactor.redact("<string name=\"password\" />\nhunter2") == "[REDACTED]")
     }
 
-    @Test("an allowed key that holds a name is read for the name, and a route under path stays")
-    func keysThatHoldNames() {
-        let allowing = Redactor(allowedTextKeys: ["type", "name"])
+    @Test("an allowed key that holds a name is read too, and a route under path stays")
+    func allowedKeys() {
+        let allowing = Redactor(allowedTextKeys: ["type"])
         #expect(allowing.redact("type=Пароль S3CR3Tq") == "type=[REDACTED]")
         #expect(allowing.redact("type=status kept") == "type=status kept")
         #expect(redactor.redact("method=GET path=/v1/users/me status=200") == "method=GET path=/v1/users/me status=200")
-        #expect(allowing.redact(#"name="status" kept"#) == #"name="status" kept"#)
-        #expect(redactor.redact("type=status kept") == "type=[REDACTED]")
-        #expect(redactor.redact(#"name="status" kept"#) == #"name="[REDACTED]"#)
+        #expect(redactor.redact(#"name="status" kept"#) == "name=[REDACTED]")
+        #expect(Redactor(allowedTextKeys: ["name"]).redact(#"name="status" kept"#) == #"name="status" kept"#)
     }
 }

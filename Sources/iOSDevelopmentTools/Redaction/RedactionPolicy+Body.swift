@@ -70,16 +70,22 @@ extension RedactionPolicy {
         let nesting = mediaType?.isPlainText == true ? Nesting.text(length: length) : .document(length: length)
         // One table of readings serves the whole body, with every field and part in it.
         guard isComplete, body.count <= maximumBodySize, let mediaType,
-              let (checked, changed) = redact(body: body, as: mediaType, nesting: nesting, compatibility: CompatibilityText(length: length))
+              let (checked, changed) = redact(body: body, as: mediaType, nesting: nesting, compatibility: readings(length: length))
         else {
-            return (Data(Self.omissionNote(byteCount: byteCount, mediaType: mediaType).utf8), .omitted)
+            return (Data(Self.omissionNote(byteCount: byteCount, contentType: contentType).utf8), .omitted)
         }
         return (checked, changed ? .redacted : .unchanged)
     }
 
-    /// The note stored in place of an omitted body.
-    static func omissionNote(byteCount: Int, mediaType: MediaType?) -> String {
-        "[body omitted: \(byteCount) bytes, \(mediaType?.essence ?? "no known content type")]"
+    /// The note stored in place of an omitted body: its size and its content type, `no content
+    /// type` or `unreadable content type`.
+    static func omissionNote(byteCount: Int, contentType: String?) -> String {
+        omitted(byteCount, contentType == nil ? "no content type" : MediaType(contentType)?.essence ?? "unreadable content type")
+    }
+
+    /// The note for `count` bytes of `type`.
+    static func omitted(_ count: Int, _ type: String) -> String {
+        "[body omitted: \(count) \(count == 1 ? "byte" : "bytes"), \(type)]"
     }
 
     /// The number of scalars in UTF-8 bytes: the bytes that do not continue a scalar. Bytes that
@@ -93,18 +99,25 @@ extension RedactionPolicy {
     /// ``Nesting/document(length:)``, a multipart part one level deeper. `compatibility` is the
     /// one table of readings of the body a part is in, or of the body.
     func redact(body: Data, as type: MediaType, nesting: Nesting, compatibility: CompatibilityText) -> (Data, Bool)? {
-        if type.isMultipartFormData { return redact(multipart: body, type, nesting: nesting, compatibility: compatibility) }
+        if type.isMultipartFormData {
+            // The body is written again part by part; it is unchanged when it was written as the
+            // parser writes it and nothing in it was hidden.
+            return redactedMultipart(body, type, nesting: nesting, compatibility: compatibility).map { text in
+                let written = Data(text.utf8)
+                return (written, written != body)
+            }
+        }
         if type.isJSON {
             return type.isUnicode ? redact(jsonBody: body, charset: type.charset, nesting: nesting, compatibility: compatibility) : nil
         }
-        guard type.isUTF8, let text = String(data: body, encoding: .utf8) else { return nil }
+        guard type.isUTF8, let text = BodyText.utf8(body, dropsByteOrderMark: true) else { return nil }
         if type.isForm {
             guard let redacted = redact(form: text, nesting: nesting, compatibility: compatibility) else { return nil }
-            return (Data(redacted.utf8), redacted != text)
+            return redacted == text ? (body, false) : (Data(redacted.utf8), true)
         }
         guard type.isPlainText else { return nil }
         let redacted = redact(text, nesting: nesting, compatibility: compatibility)
-        return (Data(redacted.utf8), redacted != text)
+        return redacted == text ? (body, false) : (Data(redacted.utf8), true)
     }
 
     // MARK: JSON
@@ -112,13 +125,16 @@ extension RedactionPolicy {
     /// A JSON body in UTF-8, UTF-16 or UTF-32, told apart by its first bytes as
     /// `JSONSerialization` tells them. A body in UTF-16 or UTF-32 is stored as UTF-8. A body whose
     /// bytes are in another encoding than its `charset` names is omitted: a server that decodes it
-    /// by the charset reads other text.
+    /// by the charset reads other text. A byte order mark at the start is left out on every OS
+    /// version (see ``BodyText``), and any other one is not JSON.
     private func redact(jsonBody body: Data, charset: String?, nesting: Nesting, compatibility: CompatibilityText) -> (Data, Bool)? {
         let encoding = Self.jsonEncoding(Array(body.prefix(4)))
-        guard Self.charset(charset, allows: encoding), let text = String(data: body, encoding: encoding) else { return nil }
+        guard Self.charset(charset, allows: encoding), let text = BodyText.json(body, in: encoding) else { return nil }
         let isUTF8 = encoding == .utf8
         let scalars = Array(text.unicodeScalars)
-        guard let document = try? JSONDocument(scalars, allowsFragments: true, nesting: nesting) else { return nil }
+        // The UTF-8 of the text is the body after its byte order mark.
+        let utf8 = isUTF8 ? body.suffix(text.utf8.count) : nil
+        guard let document = try? JSONDocument(scalars, utf8: utf8, allowsFragments: true, nesting: nesting) else { return nil }
         let spans = Self.merged(document.secretSpans(using: self, compatibility: compatibility))
         guard !spans.isEmpty || !isUTF8 else { return (body, false) }
         return (Data(Self.replacing(spans, in: scalars).utf8), true)
@@ -165,19 +181,14 @@ extension RedactionPolicy {
     /// memory than its text.
     func redact(form text: String, nesting: Nesting, compatibility: CompatibilityText) -> String? {
         guard Self.isStrictForm(text) else { return nil }
-        let raws = text.unicodeScalars.split(separator: "&", omittingEmptySubsequences: false)
-        var decodes = true
-        let naming = NamingFields(raws.lazy.map { raw -> NamingFields.Field in
-            guard let field = FormField(raw) else {
-                decodes = false
-                return ([], .other)
-            }
-            return Self.namingField(name: field.name, value: field.value)
-        }, policy: self, compatibility: compatibility)
-        guard decodes else { return nil }
+        var naming = NamingFields()
+        for raw in FormFields(text) {
+            guard let field = FormField(raw) else { return nil }
+            naming.read(Self.namingField(name: field.name, value: field.value), compatibility: compatibility)
+        }
         var output = ""
         output.reserveCapacity(text.utf8.count)
-        for (index, raw) in raws.enumerated() {
+        for (index, raw) in FormFields(text).enumerated() {
             guard let field = FormField(raw) else { return nil }
             if index > 0 { output += "&" }
             let hidesValue = naming.hidesValue(at: index, of: Self.namingField(name: field.name, value: field.value))
@@ -189,6 +200,24 @@ extension RedactionPolicy {
     /// A field of a form or a URL query as ``NamingFields`` reads it.
     static func namingField(name: String, value: String?) -> NamingFields.Field {
         (Array(name.unicodeScalars), value.map { .string(Array($0.unicodeScalars)) } ?? .other)
+    }
+
+    /// The fields of a form, split at every `&`, one after another.
+    private struct FormFields: Sequence, IteratorProtocol {
+        private let scalars: String.UnicodeScalarView
+        private var start: String.UnicodeScalarView.Index?
+
+        init(_ text: String) {
+            scalars = text.unicodeScalars
+            start = scalars.startIndex
+        }
+
+        mutating func next() -> Substring.UnicodeScalarView? {
+            guard let fieldStart = start else { return nil }
+            let end = scalars[fieldStart...].firstIndex(of: "&") ?? scalars.endIndex
+            start = end == scalars.endIndex ? nil : scalars.index(after: end)
+            return scalars[fieldStart..<end]
+        }
     }
 
     /// A form field, as sent and decoded: `+` is a space, then percent-decoding as UTF-8.

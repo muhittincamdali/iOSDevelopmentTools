@@ -134,9 +134,8 @@ struct RedactionCutRuleTests {
         ("login </token SECRET", "login [REDACTED]"),
         ("</pass\u{200B}word> SECRET", "[REDACTED]"),
         ("msg: name%3Dpassword\nSECRET", "msg: [REDACTED]"),
-        // An escape is a trigger where it starts.
-        ("name%3Dpassword\nSECRET", "name[REDACTED]"),
-        ("Content-Disposition%3A form-data%3B name%3D%22pin%22\n\nSECRET", "Content-Disposition[REDACTED]"),
+        ("name%3Dpassword\nSECRET", "[REDACTED]"),
+        ("Content-Disposition%3A form-data%3B name%3D%22pin%22\n\nSECRET", "[REDACTED]"),
     ])
     func twelfthReviewRepros(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)

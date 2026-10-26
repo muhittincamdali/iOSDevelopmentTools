@@ -2,17 +2,16 @@ import Foundation
 import Testing
 @testable import iOSDevelopmentTools
 
-@Suite("Redaction corpus: redactor")
-struct SensitiveDataRedactorTests {
+@Suite("Redaction corpus: ")
+struct RedactorTests {
     let redactor = Redactor()
 
     @Test("redacts the documentation examples")
     func documentationExamples() {
-        let input = #"POST /login {"user":"alice@example.com","password":"hunter2"}"#
-        #expect(redactor.redact(input) == #"POST /login {"user":[REDACTED]"#)
+        let body = #"{"user":"alice@example.com","password":"hunter2"}"#
+        #expect(redactor.redact(body: Data(body.utf8), contentType: "application/json") == #"{"user":"[REDACTED]","password":"[REDACTED]"}"#)
         #expect(redactor.redact("login failed user=alice status=401") == "login failed user=[REDACTED]")
-        #expect(Redactor(allowedTextKeys: ["user"]).redact("login failed user=alice status=401") == "login failed user=alice status=401")
-        #expect(redactor.redact("login failed password=hunter2 status=401") == "login failed password=[REDACTED]")
+        #expect(redactor.redact("sent receipt to alice@example.com") == "sent receipt to [REDACTED]")
         #expect(redactor.redact("GET /orders status=200 duration_ms=41") == "GET /orders status=200 duration_ms=41")
     }
 
@@ -26,6 +25,7 @@ struct SensitiveDataRedactorTests {
         // A word with an invisible character in it cannot be read with certainty: it goes whole.
         ("zero width 4242\u{200B}4242\u{200B}4242\u{200B}4242", "zero width [REDACTED]"),
         ("combining 4\u{301}242424242424242", "combining [REDACTED]"),
+        // A space outside ASCII cuts the text there, and the card number is hidden whole with it.
         ("nbsp 4242\u{A0}4242\u{A0}4242\u{A0}4242", "nbsp [REDACTED]"),
     ])
     func cards(input: String, expected: String) {
@@ -42,7 +42,11 @@ struct SensitiveDataRedactorTests {
 
     @Test("finds email addresses", arguments: [
         ("contact alice@example.com.", "contact [REDACTED]."),
-        ("mail <bob.smith+news@mail.example.org>", "mail [REDACTED]"),
+        ("(bob.smith+news@mail.example.org)", "([REDACTED])"),
+        // Before a letter, `<` starts markup, which cuts free text: the address goes with it.
+        ("<bob.smith+news@mail.example.org>", "[REDACTED]"),
+        ("fullwidth ａｌｉｃｅ@ｅｘａｍｐｌｅ.ｃｏｍ", "fullwidth [REDACTED]"),
+        // `＠` is punctuation outside ASCII, which cuts the text: the address is hidden whole.
         ("fullwidth ａｌｉｃｅ＠ｅｘａｍｐｌｅ．ｃｏｍ", "fullwidth [REDACTED]"),
         ("hidden al\u{200D}ice@example.com", "hidden [REDACTED]"),
     ])
@@ -75,33 +79,46 @@ struct SensitiveDataRedactorTests {
         #expect(redactor.redact("Authorization: Bearer abc.DEF-123_456") == "Authorization: [REDACTED]")
     }
 
-    @Test("findings are replaced where they are in the original text")
-    func matches() {
-        #expect(redactor.redact("mail bob@example.com, paid=4242424242424242 ok") == "mail [REDACTED], paid=[REDACTED]")
-        #expect(redactor.redact("mail bob@example.com, card 4242424242424242 ok") == "mail [REDACTED], card [REDACTED]")
-        #expect(redactor.redact("mail bob@example.com, ref 4242424242424242 ok") == "mail [REDACTED], ref [REDACTED] ok")
-        #expect(redactor.redact("a\u{2028}b") == "a[REDACTED]")
-        #expect(redactor.redact("a\nb") == "a\nb")
+    @Test("each detector finds only its own kind")
+    func kinds() {
+        let emailsOnly = DetectorRedactor(kinds: .emailAddresses)
+        #expect(emailsOnly.redact("alice@example.com password=x 4242424242424242") == "[REDACTED] password=x 4242424242424242")
     }
 
-    @Test("leaves text without sensitive data unchanged, including emoji and other scripts")
+    @Test("matches report kind and range in the original text")
+    func matches() {
+        let text = "mail bob@example.com, paid=4242424242424242 ok"
+        let found = redactor.matches(in: text)
+        #expect(found.map(\.kind) == [.emailAddresses, .secretFields])
+        #expect(found.map { String(text[$0.range]) } == ["bob@example.com", "4242424242424242 ok"])
+        #expect(redactor.matches(in: "a b").isEmpty)
+        // A line separator outside ASCII cuts the text: the cut is a match of its own.
+        let separated = "a\u{2028}b"
+        #expect(redactor.matches(in: separated).map { String(separated[$0.range]) } == ["\u{2028}b"])
+    }
+
+    @Test("leaves text in other scripts unchanged; an emoji, a dash or a symbol outside ASCII cuts it")
     func unchangedText() {
-        let text = "Merhaba dünya, заказ 42 отправлен; 東京 3:00, iPhoneで決済しました"
+        let text = "Merhaba dünya, заказ 42 отправлен; 東京 3:00 iPhoneで決済しました"
         #expect(redactor.redact(text) == text)
         // `№` is a symbol, though compatibility normalization reads it as `No`.
         #expect(redactor.redact("заказ №42 отправлен") == "заказ [REDACTED]")
         // An emoji or a dash outside ASCII is outside the safe alphabet and hides what follows it.
         #expect(redactor.redact("Merhaba dünya 👋🏽 — заказ") == "Merhaba dünya [REDACTED]")
         #expect(redactor.redact("") == "")
+        #expect(redactor.redact("Merhaba dünya 👋🏽 bye") == "Merhaba dünya [REDACTED]")
+        #expect(redactor.redact("заказ — №42") == "заказ [REDACTED]")
+        #expect(redactor.redact("заказ №42") == "заказ [REDACTED]")
     }
 
     @Test("the allowlists are folded, and secret or non-ASCII names cannot be added")
     func allowlists() {
-        let custom = Redactor(allowedQueryParameters: ["Page", "token"], allowedTextKeys: ["Request-ID", "api_key", "p\u{430}ss"])
-        #expect(custom.policy.allowedQueryParameters == ["page"])
-        #expect(custom.policy.allowedTextKeys == ["status", "method", "path", "durationms", "count", "requestid"])
+        let custom = Redactor(allowedTextKeys: ["Request-ID", "api_key", "ｓｔａｔｅ"], allowedQueryParameters: ["Page", "token"])
+        #expect(custom.allowedTextKeys == ["status", "method", "path", "durationms", "count", "requestid"])
+        #expect(!custom.allowedTextKeys.contains("apikey"))
+        #expect(custom.allowedTextKeys.allSatisfy { $0.unicodeScalars.allSatisfy(\.isASCII) })
+        #expect(custom.allowedQueryParameters == ["page"])
         #expect(custom.redact("request_id=42 api_key=k1") == "request_id=42 api_key=[REDACTED]")
-        #expect(Redactor().policy.allowedQueryParameters.isEmpty)
-        #expect(Redactor().policy.allowedTextKeys == Set(RedactionPolicy.defaultAllowedTextKeys.map { $0.replacingOccurrences(of: "_", with: "") }))
+        #expect(Redactor().allowedQueryParameters.isEmpty)
     }
 }

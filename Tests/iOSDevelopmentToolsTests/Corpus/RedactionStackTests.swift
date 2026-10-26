@@ -94,7 +94,7 @@ struct RedactionStackTests {
     static let deepInputs: [DeepInput] = [
         DeepInput(testDescription: "a megabyte of [ in text") { Redactor().redact(String(repeating: "[", count: 1_000_000)) },
         DeepInput(testDescription: "a megabyte of [ as a JSON body") {
-            Redactor.largeBodies.redact(body: Data(String(repeating: "[", count: 1_000_000).utf8), contentType: "application/json")
+            RedactionTimeLimitTests.largeBodies.redact(body: Data(String(repeating: "[", count: 1_000_000).utf8), contentType: "application/json")
         },
         DeepInput(testDescription: "{\"a\": 200,000 times in text") { Redactor().redact(String(repeating: "{\"a\":", count: 200_000)) },
         DeepInput(testDescription: "a URL in the query value of a URL, 20,000 times, with the value allowed") {
@@ -109,17 +109,17 @@ struct RedactionStackTests {
         },
         DeepInput(testDescription: "quoted JSON in a form field") {
             let value = quotedSecret(levels: 10, brackets: 255).addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
-            return Redactor.largeBodies.redact(body: Data(("note=" + value).utf8), contentType: "application/x-www-form-urlencoded")
+            return Redactor().redact(body: Data(("note=" + value).utf8), contentType: "application/x-www-form-urlencoded")
         },
         DeepInput(testDescription: "quoted JSON in a plain-text and a JSON multipart part") {
             let content = quotedSecret(levels: 10, brackets: 255)
             let body = "--B\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\n\(content)\r\n"
                 + "--B\r\nContent-Disposition: form-data; name=\"b\"\r\nContent-Type: application/json\r\n\r\n\(content)\r\n--B--"
-            return Redactor.largeBodies.redact(body: Data(body.utf8), contentType: "multipart/form-data; boundary=B")
+            return Redactor().redact(body: Data(body.utf8), contentType: "multipart/form-data; boundary=B")
         },
         DeepInput(testDescription: "quoted JSON under a name of a JSON body") {
             let body = "{\"note\":\"" + escaped(quotedSecret(levels: 10, brackets: 255)) + "\"}"
-            return Redactor.largeBodies.redact(body: Data(body.utf8), contentType: "application/json")
+            return Redactor().redact(body: Data(body.utf8), contentType: "application/json")
         },
     ]
 

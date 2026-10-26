@@ -46,7 +46,7 @@ struct RedactionOneWildcardTests {
     // a field name is, so the segment after it is a value.
     @Test("a path segment that is not plain ASCII once decoded makes the next one :id", arguments: [
         ("/caf%C3%A9/menu", "/caf%C3%A9/:id"), ("/%C5%9Eifre/1234", "/%C5%9Eifre/:id"), ("/p%D0%B0ssword/x", "/:id/:id"),
-        ("/%F0%9F%94%91/x", "/%F0%9F%94%91/:id"), ("/a+b/c", "/a+b/:id"), ("/@me/posts", "/@me/:id"), ("/-/x", "/-/:id"),
+        ("/%F0%9F%94%91/x", "/:id/:id"), ("/a+b/c", "/a+b/:id"), ("/@me/posts", "/@me/:id"), ("/-/x", "/-/:id"),
         ("/v1/t%CD%A6ken/x/y", "/v1/t%CD%A6ken/:id/y"),
     ])
     func notPlainSegment(path: String, expected: String) throws {

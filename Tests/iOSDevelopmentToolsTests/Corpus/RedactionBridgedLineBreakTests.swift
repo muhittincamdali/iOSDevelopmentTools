@@ -87,14 +87,15 @@ struct RedactionBridgedLineBreakTests {
         #expect(Redactor().redact("paid 4111 1111 1111\n1111 ok") == "paid 4111 1111 1111\n1111 ok")
         #expect(Redactor().redact("paid 4111 1111 1111\r1111 ok") == "paid 4111 1111 1111\r1111 ok")
         #expect(Redactor().redact("mail alice.smith\n@example.com") == "mail alice.smith\n@example.com")
-        #expect(Redactor().redact("paid 411111111111 1111 ok") == "paid 411111111111 1111 ok")
+        // Twelve digits and four more pass the Luhn check as a card number, in any grouping.
+        #expect(Redactor().redact("paid 411111111111 1111 ok") == "paid [REDACTED] ok")
         for separator in Self.separators {
-            #expect(Redactor().redact("paid 411111111111\(separator)1111 ok") == "paid 411111111111[REDACTED]")
+            #expect(Redactor().redact("paid 411111111111\(separator)1111 ok") == "paid [REDACTED]")
             #expect(Redactor().redact("order 1234\(separator)shipped") == "order 1234[REDACTED]")
             #expect(Redactor().redact("status=200\(separator)ok") == "status=200[REDACTED]")
             let afterCard = Redactor().redact("paid 4111 1111 1111 1111\(separator)ok")
             #expect(afterCard.hasPrefix("paid [REDACTED]") && Self.digitCount(afterCard) == 0, "\(afterCard.debugDescription)")
-            #expect(Redactor().redact("done\(separator)") == "done\(separator)")
+            #expect(Redactor().redact("done\(separator)") == "done[REDACTED]")
         }
     }
 
@@ -123,6 +124,20 @@ struct RedactionBridgedLineBreakPropertyTests {
     static let blanks = [" ", "-", "\t", " \u{2028}", "\u{2029} "]
 
     /// A number of `length` digits whose last digit makes the Luhn check pass.
+    /// Whether digits pass the Luhn check, for the generator below.
+    static func passesLuhn(_ digits: [UInt8]) -> Bool {
+        var sum = 0
+        for (position, digit) in digits.reversed().enumerated() {
+            var value = Int(digit)
+            if position % 2 == 1 {
+                value *= 2
+                if value > 9 { value -= 9 }
+            }
+            sum += value
+        }
+        return sum % 10 == 0
+    }
+
     static func cardNumber(length: Int, using random: inout SeededRandom) -> [UInt8] {
         var digits = (0..<(length - 1)).map { _ in UInt8.random(in: 0...9, using: &random) }
         digits[0] = UInt8.random(in: 2...6, using: &random)
@@ -159,7 +174,7 @@ struct RedactionBridgedLineBreakPropertyTests {
         var random = SeededRandom(seed: 0x2028_0085)
         for _ in 0..<160 {
             let digits = Self.cardNumber(length: Int.random(in: 13...19, using: &random), using: &random)
-            #expect(NormalizedText.passesLuhn(digits))
+            #expect(Self.passesLuhn(digits))
             let characters = digits.map { String($0) }
             let separators = RedactionBridgedLineBreakTests.separators
             let value = Self.written(characters, groupSizes: { Int.random(in: 1...6, using: &random) }) { isLineBreak in

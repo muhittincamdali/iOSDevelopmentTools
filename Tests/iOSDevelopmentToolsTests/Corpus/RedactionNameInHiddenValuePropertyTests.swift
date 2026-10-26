@@ -5,7 +5,8 @@ import Testing
 /// Generated secret names written as values inside the hidden value of another key — a part
 /// header of a multipart body written to a log, a header line, a YAML block, a quoted message —
 /// disguised the ways ``DisguisedName`` disguises them: the secret that follows never shows, on
-/// any path that reads free text. Plain names that hold no secret word keep what follows them.
+/// any path that reads free text: the key before the name already cuts the text. Plain names
+/// that hold no secret word keep what follows them after allowed keys.
 @Suite("Redaction corpus: names inside hidden values property tests")
 struct RedactionNameInHiddenValuePropertyTests {
     let redactor = Redactor()
@@ -73,15 +74,14 @@ struct RedactionNameInHiddenValuePropertyTests {
         var random = SeededRandom(seed: 0xA1_2B_0122)
         var checked = 0
         for _ in 0..<4_000 {
-            let name = RedactionCutPropertyTests.name(using: &random)
-            guard let plain = PlainName(name.unicodeScalars), !plain.namesSecret(in: .standard),
-                  !FreeTextScanner.mentionsSecret(Array(name.unicodeScalars), policy: .default, compatibility: CompatibilityText())
+            let name = RedactionAllowlistPropertyTests.key(using: &random)
+            guard let plain = PlainName(name.unicodeScalars), !plain.namesSecret(),
+                  !FreeTextScanner.mentionsSecret(Array(name.unicodeScalars), compatibility: CompatibilityText())
             else { continue }
             // Without vowels, `s`, `p`, `c`, `k`, `v` and `w` the text spells no secret word.
             let text = String((0..<12).map { _ in "BDFGHJLMNRTXYZ23456789".randomElement(using: &random)! })
             let line = "note: a name=\"\(name)\"\n\(text)"
             #expect(allowing.redact(line) == line, "\(name.debugDescription)")
-            // By default the key before the name already cuts the text.
             for output in outputs("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(text)") + outputs(line) {
                 #expect(!output.contains(text), "\(name.debugDescription) -> \(output.debugDescription)")
             }

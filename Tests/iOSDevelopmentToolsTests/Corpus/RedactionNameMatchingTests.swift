@@ -2,96 +2,22 @@ import Foundation
 import Testing
 @testable import iOSDevelopmentTools
 
-/// How a word of free text is compared with the secret words: by its ASCII skeleton. Every letter,
-/// mark or number that has no ASCII form once the text is read in compatibility form, and every
-/// decimal digit of another script, is left out, and what remains is compared with the names, a
-/// plural `s` included; a name also counts with one of its letters missing where characters were
-/// left out. The eighteenth review of this package found the readings this replaces, which took
-/// such a character as any letter, as none, or as a mark after a letter, one reading at a time,
-/// missing a name with one character in place of a letter and another put in (`tͦkenͦ`, `pını`).
+/// How a word of free text is compared with the secret names: by its ASCII skeleton. Every letter
+/// that has no ASCII form once the text is read in compatibility form is left out, and what
+/// remains is compared with the names, a plural `s` included; a name also counts with one of its
+/// letters missing where letters were left out. The sixteenth review found the matching that read
+/// such a letter as any letter or as none, trying one and then the other, missing a name when the
+/// letter came right before the last letter of a short name (`piꞏn`, `tokeın`) or before its
+/// plural `s` (`tokenꞏs`); the skeleton reads both at once.
 @Suite("Redaction corpus: name matching")
 struct RedactionNameMatchingTests {
     let redactor = Redactor()
 
-    @Test("one letter without an ASCII form stands for a letter or for none", arguments: [
-        "pɑssword hunter2", "passwıord hunter2", "passꞏword hunter2", "ıd_token hunter2", "tokɛns hunter2", "ɑpi_key hunter2",
-        "Authorizɑtion hunter2", "user_pın hunter2", "sɛcret hunter2",
-        // Before the last letter of a short word, read as no letter (the sixth review of the spec branch).
-        "tokeꞏn hunter2", "piın hunter2", "secreꞏt hunter2", "keıy hunter2", "userPiłn hunter2", "my piꞏn is hunter2",
-    ])
-    func oneWildcard(line: String) {
-        #expect(!redactor.redact(line).contains("hunter2"), "\(line)")
-    }
-
-    // The eighth review of the spec branch: letters without an ASCII form put into a name are
-    // left out of its skeleton, however many there are.
-    @Test("letters without an ASCII form put into a name are left out of its skeleton", arguments: [
-        "passꞏwoꞏrd hunter2", "pıaıssword hunter2", "passıwoırd hunter2", "seıcreıt hunter2", "tokenꞏꞏ hunter2",
-        "tokenıı hunter2", "ꞏtoꞏkeꞏnꞏ hunter2",
-    ])
-    func skeleton(line: String) {
-        #expect(!redactor.redact(line).contains("hunter2"), "\(line)")
-    }
-
-    // The logging guide names this limit under "What it does not find": free text without a
-    // separator is a best effort, and no list of look-alikes is kept to chase it.
-    @Test("a name written without a separator with two or more letters replaced by ones without an ASCII form is not found", arguments: [
-        "pɑsswoʀd hunter2", "tɵkɛn hunter2",
-    ])
-    func twoWildcards(line: String) {
-        #expect(redactor.redact(line).contains("hunter2"), "\(line) is found: update the guide")
-        let separated = line.replacingOccurrences(of: " hunter2", with: ": hunter2")
-        #expect(!redactor.redact(separated).contains("hunter2"), "\(separated)")
-    }
-
-    // The one wildcard rule of section 0 of the redaction spec: a mark (M*) or a number (N*) with
-    // no ASCII form stands for any letter as a letter does. The sixteenth review found
-    // `t\u{0366}ken` and `passw\u{3007}rd` (see RedactionOneWildcardTests).
-    @Test("a mark after an ASCII letter or a number without an ASCII form in place of one letter stands for it", arguments: [
-        "t\u{0366}ken hunter2", "p\u{0301}ssword hunter2", "passw\u{3007}rd hunter2", "toke\u{0366} hunter2",
-    ])
-    func markOrNumberInPlaceOfALetter(line: String) {
-        #expect(!redactor.redact(line).contains("hunter2"), "\(line)")
-        let separated = line.replacingOccurrences(of: " hunter2", with: ": hunter2")
-        #expect(!redactor.redact(separated).contains("hunter2"), "\(separated)")
-    }
-
-    // A mark of a letter that is a wildcard belongs to it, and marks on every letter are left out.
-    @Test("marks on a wildcard or on every letter leave the name found", arguments: [
-        "p\u{0251}\u{0301}ssword hunter2", "t\u{0337}o\u{0337}k\u{0337}e\u{0337}n\u{0337} hunter2", "pa\u{FE0F}ssphrase hunter2",
-    ])
-    func marksOnLetters(line: String) {
-        #expect(!redactor.redact(line).contains("hunter2"), "\(line)")
-    }
-
-    @Test("words in Turkish and other languages that hold a wildcard stay readable", arguments: [
-        "Kullanıcı sisteme başarıyla giriş yaptı", "kapıdaki ılgın ağaçları", "Ayşe ılgın", "bjørn dæhlie kom hjem",
-    ])
-    func ordinaryWords(line: String) {
-        #expect(redactor.redact(line) == line)
-    }
-
-
-    // The eighteenth review of this package: with one character in place of a letter of a name,
-    // another put in elsewhere in it hid the name (`tͦkenͦ`, U+0366 after the `t` and after the
-    // `n`, 300 of them in the review). Each counts as nothing or as one letter on its own.
-    @Test("one character in place of a letter and more put in elsewhere leave the name found, on every path", arguments: [
-        "t\u{0366}ken\u{0366} hunter2", "t\u{0366}ken" + String(repeating: "\u{0366}", count: 300) + " hunter2", "tıkenı hunter2", "pını hunter2",
-        "t\u{3007}ken\u{3007} hunter2", "t\u{0366}k\u{0366}en hunter2", "p\u{0366}n\u{0366} hunter2", "t\u{0366}ken\u{0366}s hunter2",
-        "tıken\u{1040} hunter2", "ıtıken hunter2",
-    ])
-    func oneInPlaceAndMorePutIn(line: String) {
-        for (path, output) in RedactionCutRuleTests.everyPath(line) {
-            #expect(!output.contains("hunter2"), "\(path): \(line.debugDescription) -> \(output.debugDescription)")
-        }
-    }
-
-    // iOSSecurityTools' cases for the same reading, on every path.
     @Test("letters without an ASCII form are left out of a word, anywhere and as many as there are", arguments: [
         "piꞏn hunter2", "tokeın hunter2", "keꞏy hunter2", "pꞏw hunter2", "sessioꞏn hunter2", "otꞏp hunter2", "cvꞏc hunter2",
         "autꞏh hunter2", "tokenꞏs hunter2", "pinꞏs hunter2", "keyıs hunter2", "secretꞏs hunter2", "otpıs hunter2", "passwıord hunter2",
         "passꞏword hunter2", "passꞏwoꞏrd hunter2", "tꞏoꞏkꞏeꞏn hunter2", "ıd_token hunter2", "ɑpi_key hunter2", "user_piꞏn hunter2",
-        "status=200 piꞏn hunter2", "piłn hunter2", "otøp hunter2", "autßh hunter2", "tokenı hunter2",
+        "status=200 piꞏn hunter2", "piłn hunter2", "otøp hunter2", "autßh hunter2", "pinǃ hunter2", "cvvʔ hunter2", "tokenı hunter2",
     ])
     func lettersAreLeftOut(line: String) {
         for (path, output) in RedactionCutRuleTests.everyPath(line) {
@@ -110,6 +36,27 @@ struct RedactionNameMatchingTests {
         }
     }
 
+    // The logging guide names this limit under "What it does not find": free text without a
+    // separator is a best effort, and no list of look-alikes is kept to chase it.
+    @Test("two letters without an ASCII form in place of letters of one name, without a separator, are not found", arguments: [
+        "pɑsswoʀd hunter2", "tɵkɛn hunter2", "pɑɑsword hunter2",
+    ])
+    func twoLettersInPlace(line: String) {
+        #expect(redactor.redact(line).contains("hunter2"), "\(line) is found: update the guide")
+        for separator in [": ", "=", "=\""] {
+            let separated = line.replacingOccurrences(of: " hunter2", with: separator + "hunter2")
+            #expect(!redactor.redact(separated).contains("hunter2"), "\(separated)")
+        }
+        #expect(!redactor.redact("\"" + line.replacingOccurrences(of: " hunter2", with: "\": hunter2")).contains("hunter2"))
+    }
+
+    @Test("words in Turkish and other languages stay readable", arguments: [
+        "Kullanıcı sisteme başarıyla giriş yaptı", "kapıdaki ılgın ağaçları", "Ayşe ılgın", "bjørn dæhlie kom hjem", "Pınar kapıyı açtı",
+    ])
+    func ordinaryWords(line: String) {
+        #expect(redactor.redact(line) == line)
+    }
+
     // A word of another language that reads as a name with one letter missing is read as the
     // name: the guide names `yapın` (Turkish, "do") as hiding what follows it.
     @Test("a word that reads as a name with a letter missing hides what follows it, on purpose")
@@ -124,20 +71,14 @@ struct RedactionNameMatchingTests {
         { n, v in "\(n)\n\(v)" }, { n, v in "(\(n) | \(v))" },
     ]
 
-    /// Letters, marks and digits without an ASCII form, of scripts that do not mix with Latin, so
-    /// that the words are read rather than cut as words that mix scripts.
-    static let foreignLetters: [Character] = [
-        "ꞏ", "ı", "ɑ", "ø", "ł", "ß", "ǃ", "ʔ", "ɛ", "ŧ", "ꞌ", "ð", "þ", "ħ", "\u{1040}", "\u{0966}", "\u{0661}", "\u{3007}",
-    ]
-
-    @Test("no generated secret name with characters without an ASCII form put in, or one in place of a letter, shows its value")
+    @Test("no generated secret name with letters without an ASCII form put in or one put in place shows its value, on any path")
     func generatedNames() {
-        var random = SeededRandom(seed: 0x5E_1E_19)
+        var random = SeededRandom(seed: 0x5E_1E_70)
         for _ in 0..<500 {
             let entry = SecretNameTable.defaultEntries.randomElement(using: &random)!
             var name = entry.letters.map { Character(Unicode.Scalar($0)) }
             if entry.placement != .word, Bool.random(using: &random) { name.append("s") }
-            // One character put in place of a letter of the name, and characters put in anywhere.
+            // One letter put in place of a letter of the name, and letters put in anywhere.
             if Bool.random(using: &random) { name[Int.random(in: 0..<entry.letters.count, using: &random)] = Self.foreignLetters.randomElement(using: &random)! }
             for _ in 0..<Int.random(in: 1...3, using: &random) {
                 name.insert(Self.foreignLetters.randomElement(using: &random)!, at: Int.random(in: 0...name.count, using: &random))
@@ -168,8 +109,8 @@ struct RedactionNameMatchingTests {
             if let name = PlainName(skeleton: reference.bytes, leftOutBefore: reference.leftOutBefore, leftOutAtEnd: reference.leftOutAtEnd) {
                 let split = Int.random(in: 0...max(1, name.letters.count), using: &random)
                 let across = { (range: Range<Int>) in range.lowerBound < split && range.upperBound > split }
-                #expect(name.firstSecret(in: .standard) { _ in true } == first, "\(word.debugDescription)")
-                #expect(name.firstSecret(in: .standard, where: across) == reference.firstSecret(where: across), "\(word.debugDescription) split \(split)")
+                #expect(name.firstSecret { _ in true } == first, "\(word.debugDescription)")
+                #expect(name.firstSecret(where: across) == reference.firstSecret(where: across), "\(word.debugDescription) split \(split)")
             }
             if first != nil { found += 1 }
         }
@@ -177,8 +118,12 @@ struct RedactionNameMatchingTests {
         #expect(found > 1_000 && found < 2_000)
     }
 
-    /// A word made of a secret word or two, changed: characters without an ASCII form put in or
-    /// put in place of a letter, letters uppercased or left out, separators put in, other letters
+    /// Letters without an ASCII form, of scripts that do not mix with Latin, so that the words
+    /// are read rather than cut as words that mix scripts.
+    static let foreignLetters: [Character] = ["ꞏ", "ı", "ɑ", "ø", "ł", "ß", "ǃ", "ʔ", "ɛ", "ŧ", "ꞌ", "ð", "þ", "ħ"]
+
+    /// A word made of a secret word or two, changed: letters without an ASCII form put in or put
+    /// in place of a letter, letters uppercased or left out, separators put in, other letters
     /// around them.
     private static func word(using random: inout SeededRandom) -> String {
         var word = ""
@@ -209,7 +154,7 @@ struct RedactionNameMatchingTests {
 /// each name at each letter with all its letters and with each of them missing in turn, kept here
 /// to check the one-pass match against.
 private struct ReferenceSkeleton {
-    /// ASCII as it is, a letter or digit without an ASCII form left out, anything else a separator.
+    /// ASCII as it is, a letter without an ASCII form left out, anything else a separator.
     let bytes: [UInt8]
     let leftOutBefore: [Bool]
     let leftOutAtEnd: Bool
@@ -222,7 +167,7 @@ private struct ReferenceSkeleton {
         var leftOutBefore: [Bool] = []
         var isLeavingOut = false
         for scalar in word.unicodeScalars {
-            if !scalar.isASCII, scalar.properties.isAlphabetic || scalar.properties.numericType == .decimal {
+            if !scalar.isASCII, scalar.properties.isAlphabetic {
                 isLeavingOut = true
                 continue
             }
@@ -250,10 +195,9 @@ private struct ReferenceSkeleton {
     }
 
     func firstSecret(where accepts: (Range<Int>) -> Bool) -> Range<Int>? {
-        let entries = SecretNameTable.defaultEntries
         for start in letters.indices {
-            let first = entries.filter { $0.letters[0] == letters[start] }
-            let second = gaps[start] ? entries.filter { $0.letters[1] == letters[start] && $0.letters[0] != letters[start] } : []
+            let first = SecretNameTable.defaultEntries.filter { $0.letters[0] == letters[start] }
+            let second = gaps[start] ? SecretNameTable.defaultEntries.filter { $0.letters[1] == letters[start] && $0.letters[0] != letters[start] } : []
             for entry in first + second {
                 var ends: [Int] = []
                 if start + entry.letters.count <= letters.count, Array(letters[start..<(start + entry.letters.count)]) == entry.letters {

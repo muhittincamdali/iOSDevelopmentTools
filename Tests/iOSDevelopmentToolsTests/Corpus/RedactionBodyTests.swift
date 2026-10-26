@@ -26,11 +26,14 @@ struct RedactionBodyTests {
         #expect(redact(#"{"pаssword":"hunter2"}"#, "application/problem+json") == #"{"pаssword":"[REDACTED]"}"#)
     }
 
+    // A JSON string is free text, so JSON in it follows the allowlist of keys in text: the string
+    // is cut at the first member that is not allowed, and the body stays JSON.
     @Test("reads JSON inside a JSON string")
     func jsonInString() {
         let body = #"{"query":"mutation","variables":"{\"password\":\"hunter2\",\"user\":\"bob\"}"}"#
-        // The string is free text: the JSON in it is cut at its first member that is not allowed.
-        #expect(redact(body, "application/json") == #"{"query":"mutation","variables":"{\"password\":[REDACTED]"}"#)
+        #expect(redact(body, "application/json") == #"{"query":"mutation","variables":"{[REDACTED]"}"#)
+        let allowed = #"{"query":"mutation","variables":"{\"status\":200,\"count\":3}"}"#
+        #expect(redact(allowed, "application/json") == allowed)
     }
 
     @Test("omits JSON that does not parse completely", arguments: [
@@ -68,9 +71,8 @@ struct RedactionBodyTests {
         ("p%D0%B0ssword=hunter2", "p%D0%B0ssword=[REDACTED]"),
         ("user=bob%20smith&note=paid+4111+1111+1111+1111", "user=bob%20smith&note=paid+[REDACTED]"),
         ("note=status%3D1+user%3Dbob", "note=status%3D1+user%3D[REDACTED]"),
-        ("note=status%3D1+count%3D2", "note=status%3D1+count%3D2"),
         ("password=hunter2&password=again", "password=[REDACTED]&password=[REDACTED]"),
-        ("q=%7B%22password%22%3A%22hunter2%22%7D", "q=%7B%22password%22%3A[REDACTED]"),
+        ("q=%7B%22password%22%3A%22hunter2%22%7D", "q=%7B[REDACTED]"),
         ("flag&password=hunter2", "flag&password=[REDACTED]"),
     ])
     func form(body: String, expected: String) {
@@ -82,7 +84,8 @@ struct RedactionBodyTests {
     // the split, so `%CC%81status` is a field of its own whose name is not plain ASCII.
     @Test("reads percent-encoded marks and joiners after & and = as part of the next field", arguments: [
         ("note=hi&%CC%81status=hunter2", "note=hi&%CC%81status=[REDACTED]"),
-        ("x=1&%E2%80%8Dstatus=hunter2", "x=1&%E2%80%8Dstatus=[REDACTED]"),
+        // A joiner is outside the safe alphabet: the decoded name is cut there, and goes whole.
+        ("x=1&%E2%80%8Dstatus=hunter2", "x=1&[REDACTED]=[REDACTED]"),
         ("user=bob&%E2%83%9Dtoken=abc", "user=bob&%E2%83%9Dtoken=[REDACTED]"),
         ("status=200&%CC%81=hunter2", "status=200&%CC%81=[REDACTED]"),
         ("password=%CC%81x", "password=[REDACTED]"),
@@ -97,19 +100,37 @@ struct RedactionBodyTests {
         #expect(redact(body, "application/x-www-form-urlencoded") == "[body omitted: \(body.utf8.count) bytes, application/x-www-form-urlencoded]")
     }
 
-    @Test("omits a body without a content type, even one that parses as JSON")
+    // A body without a content type is omitted here, also when it parses as JSON: a type that is
+    // not known is not parsed (section 1 of the redaction spec).
+    @Test("omits a body without a content type")
     func noContentType() {
-        #expect(redact(#"{"password":"hunter2"}"#, nil) == "[body omitted: 22 bytes, no known content type]")
-        #expect(redact("user=bob&password=hunter2", nil) == "[body omitted: 25 bytes, no known content type]")
-        #expect(redact("password hunter2", nil) == "[body omitted: 16 bytes, no known content type]")
-        #expect(redact(#""hunter2""#, nil) == "[body omitted: 9 bytes, no known content type]")
+        #expect(redact(#"{"password":"hunter2"}"#, nil) == "[body omitted: 22 bytes, no content type]")
+        #expect(redact("user=bob&password=hunter2", nil) == "[body omitted: 25 bytes, no content type]")
+        #expect(redact("password hunter2", nil) == "[body omitted: 16 bytes, no content type]")
+        #expect(redact(#""hunter2""#, nil) == "[body omitted: 9 bytes, no content type]")
     }
 
     @Test("omits a body larger than the maximum size without parsing it")
     func oversized() {
+        #expect(RedactionPolicy.defaultMaximumBodySize == 262_144)
+        #expect(redactor.maximumBodySize == RedactionPolicy.defaultMaximumBodySize)
         let body = Data(("{\"a\":\"" + String(repeating: "x", count: RedactionPolicy.defaultMaximumBodySize) + "\"}").utf8)
         #expect(redactor.redact(body: body, contentType: "application/json") == "[body omitted: \(body.count) bytes, application/json]")
-        #expect(redactor.redact(body: body, contentType: nil) == "[body omitted: \(body.count) bytes, no known content type]")
+        #expect(redactor.redact(body: body, contentType: nil) == "[body omitted: \(body.count) bytes, no content type]")
+        let fits = Data(("{\"a\":\"" + String(repeating: "abc ", count: (RedactionPolicy.defaultMaximumBodySize - 8) / 4) + "\"}").utf8)
+        #expect(fits.count == RedactionPolicy.defaultMaximumBodySize)
+        #expect(redactor.redact(body: fits, contentType: "application/json") == String(decoding: fits, as: UTF8.self))
+    }
+
+    @Test("an app may raise or lower the body limit")
+    func customLimit() {
+        let body = Data(("{\"a\":\"" + String(repeating: "abc ", count: 75_000) + "\"}").utf8)
+        let raised = Redactor(maximumBodySize: 1_048_576)
+        #expect(raised.redact(body: body, contentType: "application/json") == String(decoding: body, as: UTF8.self))
+        #expect(redactor.redact(body: body, contentType: "application/json") == "[body omitted: \(body.count) bytes, application/json]")
+        let lowered = Redactor(maximumBodySize: 10)
+        #expect(lowered.redact(body: Data(#"{"a":"bc"}"#.utf8), contentType: "application/json") == #"{"a":"bc"}"#)
+        #expect(lowered.redact(body: Data(#"{"a":"bcd"}"#.utf8), contentType: "application/json") == "[body omitted: 11 bytes, application/json]")
     }
 
     // MARK: Multipart
@@ -136,10 +157,12 @@ struct RedactionBodyTests {
             "Content-Disposition: form-data; name=\"note\"\r\n\r\nlogin with api_key=[REDACTED]",
             "Content-Disposition: form-data; name=\"avatar\"\r\nContent-Type: image/png\r\n\r\n[body omitted: 4 bytes, image/png]",
         ])
-        // The output ends as the body does: here with the line break after the closing boundary.
-        #expect(redact(body, "multipart/form-data; boundary=XyZ") == expected)
+        // The output ends at the closing boundary, without the line break after it.
+        #expect(redact(body, "multipart/form-data; boundary=XyZ") + "\r\n" == expected)
     }
 
+    // Part headers follow the header allowlist, as request and response headers do: a name that is
+    // not on it, such as `Content-Transfer-Encoding` by default, is written as `[REDACTED]`.
     @Test("writes part headers again: the field name, the type, and other headers only when they are kept")
     func multipartHeaders() {
         let body = multipart([
@@ -149,13 +172,13 @@ struct RedactionBodyTests {
             "Content-Disposition: form-data; name=\"a=b\"\r\n\r\nok",
         ])
         let expected = multipart([
-            "Content-Disposition: form-data; name=\"note\"\r\nContent-Type: text/plain\r\n\r\n[body omitted: 1 bytes, text/plain]",
+            "Content-Disposition: form-data; name=\"note\"\r\nContent-Type: text/plain\r\n\r\n[body omitted: 1 byte, text/plain]",
             "Content-Disposition: form-data; name=\"bio\"\r\n[REDACTED]: [REDACTED]\r\nContent-Length: 2\r\n\r\nhi",
             "Content-Disposition: form-data; name=\"data\"\r\n[REDACTED]: [REDACTED]\r\n\r\n[body omitted: 12 bytes, text/plain]",
             "Content-Disposition: form-data; name=\"a=[REDACTED]\"\r\n\r\n[REDACTED]",
         ])
         let output = redact(body, "multipart/form-data; boundary=XyZ")
-        #expect(output == expected)
+        #expect(output + "\r\n" == expected)
         #expect(!output.contains("passport") && !output.contains("s3cr3t") && !output.contains("aHVudGVyMg"))
     }
 
@@ -163,7 +186,24 @@ struct RedactionBodyTests {
     func multipartHeaderColon() {
         let body = multipart(["Content-Disposition: form-data; name=\"bio\"\r\nX-Note:\u{301}s3cr3t\r\n\r\nhi"])
         let expected = multipart(["Content-Disposition: form-data; name=\"bio\"\r\n[REDACTED]: [REDACTED]\r\n\r\nhi"])
-        #expect(redact(body, "multipart/form-data; boundary=XyZ") == expected)
+        #expect(redact(body, "multipart/form-data; boundary=XyZ") + "\r\n" == expected)
+        let named = multipart(["Content-Disposition: form-data; name=\"bio\"\r\nContent-ID:\u{301}s3cr3t\r\n\r\nhi"])
+        let namedExpected = multipart(["Content-Disposition: form-data; name=\"bio\"\r\n[REDACTED]: [REDACTED]\r\n\r\nhi"])
+        #expect(redact(named, "multipart/form-data; boundary=XyZ") + "\r\n" == namedExpected)
+    }
+
+    // A part header name is a key of the part: only the names on the header allowlist are written,
+    // so a name that holds a card number, an IBAN or a token never shows.
+    @Test("writes a part header name only when it is one a part carries", arguments: [
+        "4111111111111111", "X-4111111111111111", "DE89370400440532013000",
+        "X-eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.c2lnbmF0dXJlLXZhbHVl", "X-Zk9aB8cD7eF6gH5iJ4kL3mN2oP1qR0sT9uV8wX7y",
+        "X-Api-Key", "Authorization",
+    ])
+    func multipartHeaderNames(name: String) {
+        let body = multipart(["Content-Disposition: form-data; name=\"a\"\r\n\(name): 1\r\nContent-Length: 1\r\n\r\nx"])
+        let expected = multipart(["Content-Disposition: form-data; name=\"a\"\r\n[REDACTED]: [REDACTED]\r\nContent-Length: 1\r\n\r\nx"])
+        #expect(redact(body, "multipart/form-data; boundary=XyZ") + "\r\n" == expected)
+        #expect(redact(body, "multipart/form-data; boundary=XyZ") + "\r\n" == expected)
     }
 
     @Test("omits multipart bodies that servers could split differently", arguments: [
@@ -204,22 +244,21 @@ struct RedactionBodyTests {
         #expect(redact("status=200 method=GET", "text/plain") == "status=200 method=GET")
     }
 
-    @Test("omits bodies of other types and with no known content types", arguments: [
+    @Test("omits bodies of other types and with unreadable content types", arguments: [
         ("<a><password>hunter2</password></a>", "application/xml", "application/xml"),
         ("<p>password=hunter2</p>", "text/html", "text/html"),
         ("password=hunter2", "application/octet-stream", "application/octet-stream"),
-        ("password=hunter2", "json", "no known content type"),
-        ("password=hunter2", "application/json; charset", "no known content type"),
+        ("password=hunter2", "json", "unreadable content type"),
+        ("password=hunter2", "application/json; charset", "unreadable content type"),
         ("x", "text/csv", "text/csv"),
     ])
     func otherTypes(body: String, contentType: String, described: String) {
         let count = body.utf8.count
-        #expect(redact(body, contentType) == "[body omitted: \(count) bytes, \(described)]")
+        #expect(redact(body, contentType) == "[body omitted: \(count) \(count == 1 ? "byte" : "bytes"), \(described)]")
     }
 
     @Test("an empty body stays empty")
     func emptyBody() {
         #expect(redactor.redact(body: Data(), contentType: "application/octet-stream") == "")
     }
-
 }
