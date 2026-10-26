@@ -65,10 +65,21 @@ and the cases where less is hidden are listed under Changed.
   with the default policy `User-Agent: hunter2`, `ETag: "hunter2"`, `Accept-Language: hunter2` and
   `Cache-Control: max-age=hunter2` in a part were stored with their values, and so was any part
   header an app added to `allowedHeaders`. They are now stored as `[REDACTED]: [REDACTED]`. Only
-  `Content-Length` and `Content-Transfer-Encoding` keep their value, and `Content-ID`,
-  `Content-Description`, `Content-Language`, `Content-Location` and `Content-Encoding` their name
-  (`Content-Encoding: [REDACTED]`). Such headers are rare in a part, and in 2.1.0 their values
-  still went through the free-text rule, which hid what it detects there.
+  `Content-Length` and `Content-Transfer-Encoding` keep their value, in their form only (next
+  item); `Content-ID`, `Content-Description`, `Content-Language`, `Content-Location` and
+  `Content-Encoding` keep their name (`Content-Encoding: [REDACTED]`). Such headers are rare in a
+  part, and in 2.1.0 their values still went through the free-text rule, which hid what it
+  detects there.
+- The value of `Content-Length` and `Content-Transfer-Encoding` in a multipart part is written by
+  its form and no longer read as free text, which keeps the text before a finding and all of a
+  value without one: 2.1.0 stored `Content-Length: 12 hunter2` and `Content-Length: ok hunter2`
+  as they were sent and `Content-Length: pin-4831` as `Content-Length: pin[REDACTED]`. A
+  `Content-Length` is now kept only as ASCII digits in which the value detectors find nothing (a
+  card number written as one run of digits stays hidden), and a `Content-Transfer-Encoding` only
+  as `7bit`, `8bit`, `binary`, `base64` or `quoted-printable`, in lowercase. Any other value is
+  stored as `[REDACTED]` (`Content-Length: [REDACTED]`), and the content of a part whose transfer
+  encoding is hidden is omitted; a transfer encoding with white space outside ASCII after it
+  (`8bit` and U+00A0) no longer counts as `8bit`.
 - Also hidden now, by rules taken from iOS-Networking-Architecture-Pro: a label written outside
   ASCII and ended by a separator, in a member that holds no name (`{"title":"Пароль:","value":…}`,
   `{"title":"【暗証番号】","value":…}`); a card number in a JSON number written with an exponent
@@ -86,9 +97,11 @@ and the cases where less is hidden are listed under Changed.
   `line 42:10: error` keeps `line 42:10: `, `1:2:3` and `ratio 16:9` are kept (a line and column),
   `pаssword=hunter2` with a Cyrillic `а` keeps its key, and a path segment `:id` is no label, so
   `/users/:id/x` is kept as it is.
-- A multipart part keeps its `Content-Transfer-Encoding` header (`Content-Transfer-Encoding:
-  base64`), which 2.1.0 stored as `[REDACTED]: [REDACTED]` by default, and the names `Content-ID`,
-  `Content-Description`, `Content-Language` and `Content-Location` with the value hidden.
+- A multipart part keeps its `Content-Transfer-Encoding` header when it names one of the five
+  encodings, written in lowercase (`Content-Transfer-Encoding: BASE64` is stored as
+  `Content-Transfer-Encoding: base64`), which 2.1.0 stored as `[REDACTED]: [REDACTED]` by default,
+  and the names `Content-ID`, `Content-Description`, `Content-Language` and `Content-Location` with
+  the value hidden.
 - A URL without a scheme and a host is recorded as `<unparsed URL>`: `mailto:ada@example.com` was
   recorded as `mailto::id`.
 - The note of an omitted body says `no content type` when there is none and
