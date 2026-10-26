@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@10b56acb79d2a2ada5bb9937d6a18346ec576d2d status=reviewed -->
+<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 847 testes de Swift Testing no macOS e 844 em um simulador de iOS. As requisições vão de
+- **Testado** — 853 testes de Swift Testing no macOS e 850 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -206,7 +206,10 @@ func configureNetworkLogger() {
   `.`, `/`, `\`, `;` ou `%` escapado (`%2E`, `%2F`, `%5C`, `%3B`, `%25`): só o esquema e o host
   ficam, então parâmetros de matriz nunca são lidos; um host que nomeia um segredo com tudo o que
   vem depois dele (`myapp://pin/4831` e `myapp://pin-4831` ficam como `myapp://[REDACTED]`; um host
-  como `auth.example.com` também é oculto); e partes de arquivo de corpos multipart.
+  como `auth.example.com` também é oculto); partes de arquivo de corpos multipart; e os valores dos
+  cabeçalhos de parte multipart além de `Content-Length` e `Content-Transfer-Encoding`
+  (`Content-ID` e outros quatro nomes `Content-*` mantêm o nome; qualquer outro cabeçalho de
+  parte, como `User-Agent`, é gravado como `[REDACTED]: [REDACTED]`).
 - **Chaves que não são ASCII simples** depois de decodificar escapes, aplicar NFKC e igualar
   maiúsculas e minúsculas (`pаssword` com um `а` cirílico, `pass\u200Dword`, `şifre`) têm o valor
   oculto por padrão.

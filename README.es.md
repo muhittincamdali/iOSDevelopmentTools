@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@10b56acb79d2a2ada5bb9937d6a18346ec576d2d status=reviewed -->
+<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 847 tests de Swift Testing en macOS y 844 en un simulador de iOS. Las solicitudes van
+- **Probado** — 853 tests de Swift Testing en macOS y 850 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -208,7 +208,10 @@ func configureNetworkLogger() {
   `%3B`, `%25`): solo se guardan el esquema y el host, así que los parámetros de matriz nunca se
   leen; un host que nombra un secreto con todo lo que le sigue (`myapp://pin/4831` y
   `myapp://pin-4831` se guardan como `myapp://[REDACTED]`; un host como `auth.example.com` también
-  se oculta); y las partes de archivo de los cuerpos multipart.
+  se oculta); las partes de archivo de los cuerpos multipart; y los valores de las cabeceras de parte
+  multipart distintas de `Content-Length` y `Content-Transfer-Encoding` (`Content-ID` y otros cuatro
+  nombres `Content-*` conservan su nombre; cualquier otra cabecera de parte, como `User-Agent`,
+  se guarda como `[REDACTED]: [REDACTED]`).
 - **Las claves que no son ASCII simple** una vez decodificados los escapes, aplicada NFKC e
   igualadas mayúsculas y minúsculas (`pаssword` con una `а` cirílica, `pass\u200Dword`, `şifre`)
   tienen su valor oculto por defecto.

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@10b56acb79d2a2ada5bb9937d6a18346ec576d2d status=reviewed -->
+<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 847 tests Swift Testing sur macOS et 844 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 853 tests Swift Testing sur macOS et 850 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -211,7 +211,10 @@ func configureNetworkLogger() {
   (`%2E`, `%2F`, `%5C`, `%3B`, `%25`) : seuls le schéma et l'hôte sont gardés, les paramètres
   matriciels ne sont donc jamais lus ; un hôte qui nomme un secret avec tout ce qui le suit
   (`myapp://pin/4831` et `myapp://pin-4831` sont gardés comme `myapp://[REDACTED]` ; un hôte comme
-  `auth.example.com` est aussi masqué) ; et les parties fichier des corps multipart.
+  `auth.example.com` est aussi masqué) ; les parties fichier des corps multipart ; et les valeurs des
+  en-têtes de partie multipart autres que `Content-Length` et `Content-Transfer-Encoding`
+  (`Content-ID` et quatre autres noms `Content-*` gardent leur nom ; tout autre en-tête
+  de partie, comme `User-Agent`, est enregistré comme `[REDACTED]: [REDACTED]`).
 - **Les clés qui ne sont pas en ASCII simple** une fois les échappements décodés, NFKC appliqué et
   la casse normalisée (`pаssword` avec un `а` cyrillique, `pass\u200Dword`, `şifre`) ont leur
   valeur masquée par défaut.

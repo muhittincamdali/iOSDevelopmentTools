@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@10b56acb79d2a2ada5bb9937d6a18346ec576d2d status=reviewed -->
+<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -52,7 +52,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 847 个 Swift Testing 测试，iOS 模拟器上有 844 个。请求从应用的会话
+- **经过测试** — macOS 上有 853 个 Swift Testing 测试，iOS 模拟器上有 850 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -194,7 +194,9 @@ func configureNetworkLogger() {
   `.`、`/`、`\`、`;`、`%`（`%2E`、`%2F`、`%5C`、`%3B`、`%25`）的 URL 的路径和查询（只记录 scheme
   和主机，从不解析矩阵参数）、表示秘密名称的主机及其后的全部内容（`myapp://pin/4831` 和
   `myapp://pin-4831` 记录为 `myapp://[REDACTED]`；`auth.example.com` 这样的主机也会被隐藏），以及
-  multipart 消息体中的文件部分。
+  multipart 消息体中的文件部分，以及 multipart 消息体中除 `Content-Length` 和
+  `Content-Transfer-Encoding` 之外的部分头的值（`Content-ID` 和另外四个 `Content-*` 名称只保留名称；
+  其他部分头，例如 `User-Agent`，记录为 `[REDACTED]: [REDACTED]`）。
 - **不是纯 ASCII 的键**（在解码转义、应用 NFKC 并统一大小写之后，例如含西里尔字母 `а` 的
   `pаssword`、`pass\u200Dword`、`şifre`）的值默认会被隐藏。
 - **无法解析的消息体**（未知或缺失的内容类型、格式错误的 JSON 或 multipart、在大小上限处被截断的

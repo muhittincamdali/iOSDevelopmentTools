@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@10b56acb79d2a2ada5bb9937d6a18346ec576d2d status=reviewed -->
+<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 847, iOS simülatöründe 844 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 853, iOS simülatöründe 850 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -208,7 +208,10 @@ func configureNetworkLogger() {
   `%2E`, `%2F`, `%5C`, `%3B`, `%25`) içeren bir URL'nin yolu ve sorgusu (yalnız şema ve host
   kalır; matris parametreleri hiç ayrıştırılmaz), gizli bir ad olan host ve ondan sonraki her şey
   (`myapp://pin/4831` ve `myapp://pin-4831`, `myapp://[REDACTED]` olarak kaydedilir;
-  `auth.example.com` gibi bir host da gizlenir) ve multipart gövdelerindeki dosya parçaları.
+  `auth.example.com` gibi bir host da gizlenir), multipart gövdelerindeki dosya parçaları ve
+  `Content-Length` ile `Content-Transfer-Encoding` dışındaki parça başlıklarının değerleri
+  (`Content-ID` ve dört `Content-*` adı daha adıyla tutulur; `User-Agent` gibi diğer her parça başlığı
+  `[REDACTED]: [REDACTED]` olarak kaydedilir).
 - **Düz ASCII olmayan anahtarların** değerleri varsayılan olarak gizlenir: kaçış dizileri
   çözüldükten, NFKC uygulandıktan ve harfler katlandıktan sonra ASCII dışı karakter içeren
   anahtarlar (Kiril `а` içeren `pаssword`, `pass\u200Dword`, `şifre`).
