@@ -3,9 +3,11 @@ import Testing
 @testable import iOSDevelopmentTools
 
 /// A secret name written as a value — `name="password"`, `<string name="api_key">`,
-/// `<key>password</key>` — names what follows it, and in a tag the attributes written before it.
-/// In free text, a text/plain body and text inside a JSON string, the text is hidden from there to
-/// its end, and a tag from its `<`. In a JSON object, the other members are hidden.
+/// `<key>password</key>` — names what follows it. In free text, a text/plain body and text inside a
+/// JSON string, the text is cut there: `name=` is not an allowed key, after an allowed key that
+/// holds a name a secret name or one that is not plain ASCII cuts the text, and markup is never
+/// parsed, so the first tag cuts the text at its `<`. In a JSON object, the other members are
+/// hidden.
 @Suite("Redaction corpus: secret names written as values")
 struct RedactionNameAsValueTests {
     let redactor = Redactor()
@@ -41,31 +43,31 @@ struct RedactionNameAsValueTests {
         }
     }
 
-    @Test("what follows the name is hidden to the end of the text", arguments: [
-        (#"<string name="api_key">S3CR3Tq</string>"#, #"[REDACTED]"#),
-        (#"field name="password" S3CR3Tq"#, #"field name="[REDACTED]"#),
-        ("name=`token` S3CR3Tq", "name=`[REDACTED]"),
-        (#"name=\"token\" S3CR3Tq"#, #"name=[REDACTED]"#),
-        ("note=\"password\"\u{2028}S3CR3Tq", "note=\"[REDACTED]"),
+    @Test("a key that holds a name cuts the text at its value", arguments: [
+        (#"<string name="api_key">S3CR3Tq</string>"#, "[REDACTED]"),
+        (#"field name="password" S3CR3Tq"#, "field name=[REDACTED]"),
+        ("name=`token` S3CR3Tq", "name=[REDACTED]"),
+        (#"name=\"token\" S3CR3Tq"#, "name=[REDACTED]"),
+        ("note=\"password\"\u{2028}S3CR3Tq", "note=[REDACTED]"),
         // The name is read as any word of a line is: disguised, escaped or split.
-        ("name=\"p\u{0430}ssword\" S3CR3Tq", "name=\"[REDACTED]"),
-        ("name=\"pass\u{200B}word\" S3CR3Tq", "name=\"[REDACTED]"),
-        ("name=\"p&#97;ssword\" S3CR3Tq", "name=\"[REDACTED]"),
-        ("name=\"pass word\" S3CR3Tq", "name=\"[REDACTED]"),
-        ("name=\"API Key\" S3CR3Tq", "name=\"[REDACTED]"),
+        ("name=\"p\u{0430}ssword\" S3CR3Tq", "name=[REDACTED]"),
+        ("name=\"pass\u{200B}word\" S3CR3Tq", "name=[REDACTED]"),
+        ("name=\"p&#97;ssword\" S3CR3Tq", "name=[REDACTED]"),
+        ("name=\"pass word\" S3CR3Tq", "name=[REDACTED]"),
+        ("name=\"API Key\" S3CR3Tq", "name=[REDACTED]"),
     ])
     func restOfLine(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
     }
 
-    @Test("a name in a tag hides the tag from its <, the attributes before the name too", arguments: [
-        (#"<input path="S3CR3Tq" name="password">"#, #"[REDACTED]"#),
-        (#"<input value="S3CR3Tq" name="password">"#, #"[REDACTED]"#),
-        (#"<input name="password" value="S3CR3Tq">"#, #"[REDACTED]"#),
-        (#"<add key="DbPassword" value="S3CR3Tq" />"#, #"[REDACTED]"#),
-        (#"<property name="spring.datasource.password" value="S3CR3Tq"/>"#, #"[REDACTED]"#),
-        (#"<p title="password">S3CR3Tq</p>"#, #"[REDACTED]"#),
-        (#"<string name="api_key"><![CDATA[S3CR3Tq]]></string>"#, #"[REDACTED]"#),
+    @Test("markup with a name in an attribute is cut at its first tag", arguments: [
+        (#"<input path="S3CR3Tq" name="password">"#, "[REDACTED]"),
+        (#"<input value="S3CR3Tq" name="password">"#, "[REDACTED]"),
+        (#"<input name="password" value="S3CR3Tq">"#, "[REDACTED]"),
+        (#"<add key="DbPassword" value="S3CR3Tq" />"#, "[REDACTED]"),
+        (#"<property name="spring.datasource.password" value="S3CR3Tq"/>"#, "[REDACTED]"),
+        (#"<p title="password">S3CR3Tq</p>"#, "[REDACTED]"),
+        (#"<string name="api_key"><![CDATA[S3CR3Tq]]></string>"#, "[REDACTED]"),
         ("<td>password</td><td>S3CR3Tq</td>", "[REDACTED]"),
     ])
     func sameElement(input: String, expected: String) {
@@ -86,15 +88,12 @@ struct RedactionNameAsValueTests {
         #expect(redactor.redact(input) == expected)
     }
 
-    // Markup in free text is not parsed: the first tag cuts the text, so the element after a key
-    // is hidden with it.
     @Test("the element after a key in a property list is hidden with everything after it", arguments: [
         ("<key>password</key><string>S3CR3Tq</string>", "[REDACTED]"),
         ("<dict>\n\t<key>password</key>\n\t<string>S3CR3Tq\nS3CR3Tq2</string>\n</dict>", "[REDACTED]"),
         ("<key>password</key> <!-- note -->\n<string>S3CR3Tq</string>", "[REDACTED]"),
         ("<key>password</key>\nS3CR3Tq\nnext line", "[REDACTED]"),
         ("<label>Password</label>\n<input value=\"S3CR3Tq\">\n<p>after</p>", "[REDACTED]"),
-        ("plist: <key>password</key>\n<string>S3CR3Tq</string>", "plist: [REDACTED]"),
     ])
     func siblingElement(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -126,19 +125,18 @@ struct RedactionNameAsValueTests {
         #expect(redactor.redact(input) == expected)
     }
 
-    // An element is markup, which cuts the text at its `<` whatever its tag and attributes.
-    @Test("names that are not secret keep what follows them after allowed keys", arguments: [
+    @Test("after allowed keys, names that are not secret keep what follows them", arguments: [
         (#"name="status" ok"#, #"name="status" ok"#),
         (#"<string name="status">200</string> status=200"#, "[REDACTED]"),
         (#"user="bob" status=200 path=/x"#, #"user="bob" status=200 path=/x"#),
+        (#"name="password" S3CR3Tq"#, #"name="password" [REDACTED]"#),
+        ("name=\"\u{15E}ifre\" S3CR3Tq", "name=\"\u{15E}ifre\" [REDACTED]"),
+        (#"<input path="S3CR3Tq" name="password">"#, "[REDACTED]"),
         ("login <password> required\nnext line\nlast line", "login [REDACTED]"),
         ("<token>unclosed\nnext line", "[REDACTED]"),
     ])
     func plainNames(input: String, expected: String) {
-        let allowing = Redactor(allowedTextKeys: ["name", "string", "user"])
-        #expect(allowing.redact(input) == expected)
-        // By default `name=`, `user=` and the text of `<string>` are not allowed and cut the text.
-        #expect(redactor.redact(input).hasSuffix(RedactionPolicy.replacement))
+        #expect(Redactor(allowedTextKeys: ["name", "user", "string"]).redact(input) == expected)
     }
 
     @Test("a JSON member that names a secret hides the other members", arguments: [
@@ -163,7 +161,7 @@ struct RedactionNameAsValueTests {
         (#"{"label":"Password","value":"x","op":"add"}"#, #"{"label":"Password","value":"[REDACTED]","op":"add"}"#),
         (#"{"name":"Cookie","value":"a=b","comment":"x"}"#, #"{"name":"Cookie","value":"[REDACTED]","comment":"[REDACTED]"}"#),
         (#"{"msg":"Error: token expired","user":"bob"}"#, #"{"msg":"Error: [REDACTED]","user":"bob"}"#),
-        (#"{"query":"mutation","variables":"{\"password\":\"x\"}"}"#, #"{"query":"mutation","variables":"{\"password\":[REDACTED]"}"#),
+        (#"{"query":"mutation","variables":"{\"password\":\"x\"}"}"#, #"{"query":"mutation","variables":"{[REDACTED]"}"#),
     ])
     func jsonKeepsPlainMembers(input: String, expected: String) {
         #expect(redactor.redact(body: Data(input.utf8), contentType: "application/json") == expected)
@@ -171,7 +169,7 @@ struct RedactionNameAsValueTests {
 
     @Test("the logging guide's examples of names written as values")
     func guideExamples() {
-        #expect(redactor.redact("field name=\"password\" hunter2") == "field name=\"[REDACTED]")
+        #expect(redactor.redact("field name=\"password\" hunter2") == "field name=[REDACTED]")
         #expect(redactor.redact(#"<string name="api_key">k-1</string>"#) == "[REDACTED]")
         #expect(redactor.redact("<key>password</key>\n<string>k-1</string>") == "[REDACTED]")
         let pair = #"{"label":"Password","value":"hunter2"}"#

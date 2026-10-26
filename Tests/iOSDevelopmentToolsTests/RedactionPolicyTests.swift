@@ -142,9 +142,9 @@ struct RedactionPolicyTests {
     func allowedQueryParameters() throws {
         let allowing = RedactionPolicy(allowedQueryParameters: ["q", "page", "token"])
         let url = try #require(URL(string: "https://e.com/s?q=a%20b&page=1%26password%3Dx&token=t&sort=asc"))
-        // "token" stays hidden: a secret name cannot be allowed.
-        // `&` before a letter is an escape in the value, so the value is cut there.
-        #expect(allowing.redact(url: url) == "https://e.com/s?q=a%20b&page=1\(redacted)&token=\(redacted)&sort=\(redacted)")
+        // "token" stays hidden: a secret name cannot be allowed. In the allowed value of `page`,
+        // `&password=` starts a field whose key the key rule hides.
+        #expect(allowing.redact(url: url) == "https://e.com/s?q=a%20b&page=1%26password%3D\(redacted)&token=\(redacted)&sort=\(redacted)")
         // A query that servers could split differently (`;`, a name spelled two ways) is hidden whole.
         for query in ["q=a&page=1;password=x", "q=a&Q=z", "page=1&pa%67e=3"] {
             #expect(allowing.redact(url: try #require(URL(string: "https://e.com/s?\(query)"))) == "https://e.com/s?\(redacted)")
@@ -182,7 +182,8 @@ struct RedactionPolicyTests {
         #expect(policy.redact(url: try #require(URL(string: "https://e.com/?page"))) == "https://e.com/?\(redacted)")
         #expect(RedactionPolicy(allowedQueryParameters: ["page"]).redact(url: try #require(URL(string: "https://e.com/?page"))) == "https://e.com/?page")
         #expect(policy.redact(url: try #require(URL(string: "https://e.com/?&&token=&"))) == "https://e.com/?&&token=&")
-        #expect(policy.redact(url: try #require(URL(string: "mailto:ada@example.com"))) == "mailto::id")
+        // A URL without a host is not written at all.
+        #expect(policy.redact(url: try #require(URL(string: "mailto:ada@example.com"))) == RedactionPolicy.unparsedURL)
     }
 
     @Test("A query or path over the limits records only the scheme, host and port")

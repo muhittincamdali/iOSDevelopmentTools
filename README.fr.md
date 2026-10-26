@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 631 tests Swift Testing sur macOS et 628 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 857 tests Swift Testing sur macOS et 854 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -76,7 +76,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Collez-la dans le champ de recherche en haut à droite de la fenêtre. Laissez **Dependency Rule** sur
-**Up to Next Major Version** à partir de `2.1.0`, puis cliquez sur **Add Package**. Dans la fenêtre
+**Up to Next Major Version** à partir de `2.1.1`, puis cliquez sur **Add Package**. Dans la fenêtre
 suivante, choisissez le target de votre app à côté de **iOSDevelopmentTools** et cliquez de nouveau sur
 **Add Package**.
 
@@ -135,7 +135,7 @@ Ou ajoutez-le aux `dependencies` de votre `Package.swift` :
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -207,10 +207,18 @@ func configureNetworkLogger() {
   secrets comme `password`, `token` ou `api_key`, les segments de chemin qui ressemblent à des
   identifiants (affichés `:id`) et le segment qui suit un segment qui nomme un secret ou qui
   n'est pas en ASCII simple (`/caf%C3%A9/menu` est gardé comme `/caf%C3%A9/:id`), le chemin et la query d'une URL dont le chemin a un segment point
-  (`/pin/./4831`, `..`, `%2E`) ou un `;` (`/cart;jsessionid=…`, `%3B`) : seuls le schéma et l'hôte
-  sont gardés, les paramètres matriciels ne sont donc jamais lus ; le chemin et la query après
-  un hôte qui nomme un secret (`myapp://pin/4831` est gardé comme `myapp://pin` ; un hôte comme
-  `auth.example.com` masque aussi son chemin) ; et les parties fichier des corps multipart.
+  (`/pin/./4831`, `..`, `/cart;jsessionid=…`), un `;` ou un `.`, `/`, `\`, `;` ou `%` échappé
+  (`%2E`, `%2F`, `%5C`, `%3B`, `%25`) : seuls le schéma et l'hôte sont gardés, les paramètres
+  matriciels ne sont donc jamais lus ; un hôte qui nomme un secret avec tout ce qui le suit
+  (`myapp://pin/4831` et `myapp://pin-4831` sont gardés comme `myapp://[REDACTED]` ; un hôte comme
+  `auth.example.com` est aussi masqué) ; les parties fichier des corps multipart ; et les valeurs des
+  en-têtes de partie multipart autres que `Content-Length` et `Content-Transfer-Encoding`
+  (`Content-ID` et quatre autres noms `Content-*` gardent leur nom ; tout autre en-tête
+  de partie, comme `User-Agent`, est enregistré comme `[REDACTED]: [REDACTED]`), et toute valeur
+  de ces deux-là hors de leur forme : un `Content-Length` qui n'est pas fait de chiffres ASCII et
+  un `Content-Transfer-Encoding` autre que `7bit`, `8bit`, `binary`, `base64` ou
+  `quoted-printable` (gardé en minuscules) sont enregistrés comme `[REDACTED]`
+  (`Content-Length: pin-4831` comme `Content-Length: [REDACTED]`).
 - **Les clés qui ne sont pas en ASCII simple** une fois les échappements décodés, NFKC appliqué et
   la casse normalisée (`pаssword` avec un `а` cyrillique, `pass\u200Dword`, `şifre`) ont leur
   valeur masquée par défaut.
@@ -220,10 +228,12 @@ func configureNetworkLogger() {
 - **Les messages de journal** sont conservés jusqu'à leur premier déclencheur : un nom secret, une
   clé absente de la liste autorisée (`status`, `method`, `path`, `duration_ms` et `count` par
   défaut ; ajoutez les vôtres avec `allowedTextKeys`), un caractère hors ASCII qui n'est ni une
-  lettre, ni un signe diacritique, ni un chiffre, ni une espace (`꞉`, `…`, un emoji, ou une lettre que la
-  normalisation de compatibilité lit comme une ponctuation, comme `🄁`, lu `0,`), une séquence
-  d'échappement de toute forme (une barre oblique inverse devant tout sauf un blanc, `%3D`, un `&`
-  devant une lettre ou `#` : `R&D`, `&amp`), une clé entre guillemets qui n'est pas autorisée (coupée à son
+  lettre, ni un signe diacritique, ni un chiffre (`꞉`, `…`, un emoji, une espace comme U+00A0, ou
+  une lettre que la normalisation de compatibilité lit comme une ponctuation, comme `🄁`, lu `0,`),
+  un mot qui mêle des écritures (`tоken` avec un `о` cyrillique), une séquence d'échappement de
+  toute forme, coupée au début de son mot (une barre oblique inverse devant tout sauf un blanc,
+  `%3D`, un `&` devant une lettre ou `#` : `R&D`, `&amp` ; un `&` qui commence un champ, comme
+  dans `status=200&count=3`, n'en est pas une), une clé entre guillemets qui n'est pas autorisée (coupée à son
   guillemet ouvrant : `"x":"hunter2"` est stocké sous la forme `[REDACTED]`), du balisage (un
   `<` qui n'est pas une comparaison : `<b>`, `</x>`, `<!--` ; aucune balise ne garde son texte),
   un guillemet qui ne se ferme pas sur sa ligne, des guillemets qui se chevauchent

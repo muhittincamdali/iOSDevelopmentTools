@@ -112,12 +112,12 @@ extension ReviewProbeSet {
         p("https://x.example/a?q;password={S}", .url)
         p("https://x.example/a?%71={S}", .url)
         cat("text-allowing")
-        p("user=bob password {S}", .text)
-        p("user=pa\u{200B}ssword {S}", .text)
-        p("user={\"password\":\"{S}\"}", .text)
-        p("user=\"x\" token={S}", .text)
-        p("password={S}", .text)
-        p("user_password={S}", .text)
+        p("user=bob password {S}", .textAllowing(["user"]))
+        p("user=pa\u{200B}ssword {S}", .textAllowing(["user"]))
+        p("user={\"password\":\"{S}\"}", .textAllowing(["user"]))
+        p("user=\"x\" token={S}", .textAllowing(["user"]))
+        p("password={S}", .textAllowing(["password"]))
+        p("user_password={S}", .textAllowing(["user_password"]))
     }
 
     /// P. Probes added during the review

@@ -19,7 +19,7 @@ struct Nesting {
     /// The most documents one inside another: a JSON body is one, JSON in one of its strings two.
     static let maximumLevel = 4
 
-    /// Free text that is not inside any document, as ``RedactionPolicy/redact(_:)`` reads
+    /// Free text that is not inside any document, as ``RedactionPolicy/redact(text:)`` reads
     /// it, `length` scalars long.
     static func text(length: Int) -> Nesting {
         Nesting(depth: 0, level: 0, inputLevel: 0, budget: ReadingBudget(inputLength: length))

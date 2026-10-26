@@ -278,11 +278,13 @@ struct RedactionRegressionTests {
         #expect(headers.first?.value.contains(Self.secret) == false)
     }
 
-    @Test("A look-alike separator with nothing after it, and a connector between words, hide nothing", arguments: [
-        "note\u{A789}", "status=200 done\u{A789}", "done \u{1F44D}",
+    // A character outside the safe alphabet cuts the text where it stands, also at the end of it
+    // (spec §6 C11); 2.1.0 kept such a character when nothing came after it.
+    @Test("A look-alike separator or an emoji at the end of the text is hidden with nothing after it", arguments: [
+        ("note\u{A789}", "note"), ("status=200 done\u{A789}", "status=200 done"), ("done \u{1F44D}", "done "),
     ])
-    func lookAlikeSeparatorWithoutValue(text: String) {
-        #expect(policy.redact(text: text) == text)
+    func lookAlikeSeparatorWithoutValue(text: String, kept: String) {
+        #expect(policy.redact(text: text) == kept + RedactionPolicy.replacement)
     }
 
     @Test("A key the app allows is read on wherever free text is stored", arguments: [
@@ -300,14 +302,15 @@ struct RedactionRegressionTests {
         #expect(headers.first?.value == text)
     }
 
-    @Test("A long message of combining marks is redacted and cut off quickly")
+    // A word longer than 256 scalars cuts free text at its start (spec §6 C2), so the letter and
+    // its million marks are hidden with everything after them.
+    @Test("A long message of combining marks is redacted quickly")
     func combiningMarkMessage() {
         let store = LogStore(configuration: .init(systemLogSubsystem: nil))
         // CPU time of this thread, so that other tests running at the same time do not count.
         let start = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
         store.info("a" + String(repeating: "\u{301}", count: 1_000_000) + " password=hunter2", category: "c" + String(repeating: "\u{301}", count: 500_000))
         #expect(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - start < 10_000_000_000)
-        #expect(store.entries.first?.message.contains(Self.secret) == false)
-        #expect(store.entries.first?.isTruncated == true)
+        #expect(store.entries.first?.message == RedactionPolicy.replacement)
     }
 }

@@ -8,51 +8,72 @@ extension FreeTextScanner {
         return !isInNumber(colon: i)
     }
 
-    /// Whether the `:` at byte `i` is part of a time, a date and time or an address and its port
-    /// (`12:30:45`, `2026-10-19T12:30:45Z`, `10.0.0.1:8080`). Both sides have to be a whole
-    /// number. Before it: an IPv4 address, or a word that ends in one or two digits after its last
-    /// `.`, `-` or `T`, holds no letter other than the `T` between the date and the time, and does
-    /// not follow a letter, a digit or `_`. After it: a port of at most five digits after an
-    /// address; otherwise two digits of minutes, then optionally `:` and two digits of seconds, a
-    /// fraction of the seconds, and `Z` or an offset (`+03:00`). Then the text ends, or white space
-    /// follows, after closing punctuation or none (`(12:30)`, `[12:30:45] started`, `12:30,`).
-    /// Any other `:` is a separator: a key that ends in digits (`user1:2345`) and a number used as
-    /// a key (`42:2345678901`, `12:34hunter2`, `10.0.0.1:8080secret`) cut the text at the value.
+    /// Whether the `:` at byte `i` is part of a time, a date and time, an address and its port or
+    /// a line and column (`12:30:45`, `2026-10-19T12:30:45Z`, `10.0.0.1:8080`, `42:10`): both
+    /// sides have the whole shape of a number, so no key and value can be read in it.
+    ///
+    /// The word before it is a number (see ``numberStart(beforeColon:)``). What follows it is
+    /// one to four digits — five after an IPv4 address, a port — then, but not after an address,
+    /// more such groups after `:`, a fraction of up to nine digits after `.`, and `Z` or an offset
+    /// (`+03:00`, `-0500`), and then the word ends (see ``endsNumber(at:)``). Anything else makes
+    /// the `:` a separator: a letter (`12:3hunter2`, `7:9abc`, `1.2.3.4:5abc`), five or more
+    /// digits in a row after it (`1:482913`), and a word that goes on past
+    /// ``longestNumber`` bytes. A key that ends in digits (`user1:2345`) is a key too.
     func isInNumber(colon i: Int) -> Bool {
-        guard i > 0, i + 1 < text.count, text.isDigit(i - 1), text.isDigit(i + 1),
-              let start = numberStart(beforeColon: i)
-        else { return false }
-        let end: Int?
-        if isAddress(start..<i) {
-            end = digitsEnd(from: i + 1, atMost: Self.longestPort)
-        } else if trailingDigitCount(before: i) <= 2 {
-            end = timeEnd(afterColon: i, readsSeconds: start > 0 && text.bytes[start - 1] == UInt8(ascii: ":"))
-        } else {
-            return false
-        }
-        guard let end else { return false }
-        return endsNumber(at: end)
+        guard i > 0, i + 1 < text.count, text.isDigit(i - 1), text.isDigit(i + 1) else { return false }
+        guard let start = numberStart(beforeColon: i) else { return false }
+        let isAddress = isIPv4Address(start..<i)
+        guard var k = digitsEnd(from: i + 1, most: isAddress ? 5 : 4) else { return false }
+        if isAddress { return endsNumber(at: k) }
+        let limit = min(text.count, i + 1 + Self.longestNumber)
+        while k < limit, text.bytes[k] == UInt8(ascii: ":"), let end = digitsEnd(from: k + 1, most: 4) { k = end }
+        if k < limit, text.bytes[k] == UInt8(ascii: "."), let end = digitsEnd(from: k + 1, most: 9) { k = end }
+        if k < limit { k = zoneEnd(from: k) }
+        return k <= limit && endsNumber(at: k)
     }
 
-    /// The longest number, date and time that a `:` is read in, in bytes.
-    static let longestNumber = 64
-
-    /// The most digits of a port after an address.
-    static let longestPort = 5
-
-    /// The most digits of a fraction of a second (nanoseconds).
-    private static let longestFraction = 9
-
-    private static let numberMarks = ByteSet(".-")
-    private static let closingMarks = ByteSet(",;.!?)]}>\"'")
-    private static let offsetSigns = ByteSet("+-")
-    private static let fractionMarks = ByteSet(".,")
-
-    /// Where the number before the `:` at byte `i` starts; nil when a letter, a digit or `_` comes
-    /// before it, or when it is longer than ``longestNumber`` (then it is read as a key).
+    /// Where the number that ends right before the `:` at byte `i` starts, or nil when the word
+    /// there is not a number of one of the shapes a `:` follows: one or two digits (an hour, a
+    /// line), an IPv4 address (a port follows it), a date and the hour of its time
+    /// (`2026-10-19T12`), or two digits, `-` and two digits (the seconds of a time and the hours
+    /// of its offset, `45-05:00`, or the end of a range, `10:00-11:00`). It does not follow a
+    /// letter, a digit or `_`. Any other word before the `:` (`1.234`, `1-1-1`) is a key.
     private func numberStart(beforeColon i: Int) -> Int? {
-        let wordLimit = max(0, i - Self.longestNumber)
+        guard let start = numberWordStart(beforeColon: i) else { return nil }
+        let word = start..<i
+        let isNumber = word.count <= 2 && word.allSatisfy(text.isDigit)
+        guard isNumber || isIPv4Address(word) || isDateAndHour(word) || isOffsetOrRange(word) else { return nil }
+        return start
+    }
+
+    /// Whether the bytes `range` are two digits, `-` and two digits.
+    private func isOffsetOrRange(_ range: Range<Int>) -> Bool {
+        range.count == 5 && text.bytes[range.lowerBound + 2] == UInt8(ascii: "-")
+            && [0, 1, 3, 4].allSatisfy { text.isDigit(range.lowerBound + $0) }
+    }
+
+    /// Whether the bytes `range` are a date and the hour of a time: four digits, `-`, one or two
+    /// digits, `-`, one or two digits, `T` and one or two digits.
+    private func isDateAndHour(_ range: Range<Int>) -> Bool {
+        var k = range.lowerBound
+        for (most, mark) in [(4, UInt8(ascii: "-")), (2, UInt8(ascii: "-")), (2, UInt8(ascii: "T")), (2, nil)] as [(Int, UInt8?)] {
+            guard let end = digitsEnd(from: k, most: most), end <= range.upperBound, most != 4 || end - k == 4 else { return false }
+            guard let mark else { return end == range.upperBound }
+            guard end < range.upperBound, text.bytes[end] == mark else { return false }
+            k = end + 1
+        }
+        return false
+    }
+
+    /// Where the word of digits, `.`, `-` and the `T` of a date and time that ends right before
+    /// the `:` at byte `i` starts, or nil when it is no such word. It has one or two digits after
+    /// its last `.`, `-` or `T` (three after a `.`, as in an address).
+    private func numberWordStart(beforeColon i: Int) -> Int? {
         var k = i
+        while k > 0, text.isDigit(k - 1), i - k <= 3 { k -= 1 }
+        let digits = i - k
+        guard digits <= 2 || (digits == 3 && k > 0 && text.bytes[k - 1] == UInt8(ascii: ".")) else { return nil }
+        let wordLimit = max(0, i - Self.longestNumber)
         while k > wordLimit {
             let previous = text.bytes[k - 1]
             if text.isDigit(k - 1) || Self.numberMarks.contains(previous) {
@@ -64,83 +85,76 @@ extension FreeTextScanner {
             }
         }
         guard k > 0 else { return 0 }
+        // A number longer than ``longestNumber`` is read as a key: the text is cut.
         guard k > wordLimit, !text.isAnyAlphanumeric(k - 1), text.bytes[k - 1] != UInt8(ascii: "_") else { return nil }
         return k
     }
 
-    /// Whether `range` is an IPv4 address: four groups of one to three digits between `.`.
-    private func isAddress(_ range: Range<Int>) -> Bool {
-        var dots = 0
-        var digits = 0
-        for k in range {
-            if text.isDigit(k) {
-                digits += 1
-                guard digits <= 3 else { return false }
-                continue
-            }
-            guard text.bytes[k] == UInt8(ascii: "."), digits > 0 else { return false }
-            dots += 1
-            digits = 0
+    /// Whether the bytes `range` are four groups of one to three digits joined by `.`.
+    private func isIPv4Address(_ range: Range<Int>) -> Bool {
+        var groups = 0
+        var k = range.lowerBound
+        while k < range.upperBound {
+            guard let end = digitsEnd(from: k, most: 3), end <= range.upperBound else { return false }
+            groups += 1
+            guard end < range.upperBound else { break }
+            guard text.bytes[end] == UInt8(ascii: ".") else { return false }
+            k = end + 1
         }
-        return dots == 3 && digits > 0
+        return groups == 4
     }
 
-    /// The digits right before byte `i`, counted up to three.
-    private func trailingDigitCount(before i: Int) -> Int {
-        var count = 0
-        while count < 3, i - count > 0, text.isDigit(i - count - 1) { count += 1 }
-        return count
-    }
-
-    /// Where the minutes after the `:` at byte `colon` end, with the seconds, their fraction and a
-    /// `Z` or an offset after them: `30`, `30:45`, `30:45.123Z`, `30:45-05:00`. When the number
-    /// before the `:` follows another `:` (`12:30:45`), the digits after it are the seconds.
-    private func timeEnd(afterColon colon: Int, readsSeconds: Bool) -> Int? {
-        guard var k = twoDigitsEnd(from: colon + 1) else { return nil }
-        var hasSeconds = readsSeconds
-        if !hasSeconds, isByte(k, ":"), let seconds = twoDigitsEnd(from: k + 1) {
-            k = seconds
-            hasSeconds = true
+    /// The byte after a run of one to `most` digits from `k`; nil when there is none, or a longer
+    /// one.
+    private func digitsEnd(from k: Int, most: Int) -> Int? {
+        var end = k
+        while end < text.count, text.isDigit(end) {
+            end += 1
+            if end - k > most { return nil }
         }
-        if hasSeconds, k < text.count, Self.fractionMarks.contains(text.bytes[k]),
-           let fraction = digitsEnd(from: k + 1, atMost: Self.longestFraction) {
-            k = fraction
+        return end > k ? end : nil
+    }
+
+    /// The byte after `Z`, or after an offset at `k`: `+` or `-` and two digits, then optionally
+    /// two more, after a `:` or not (`+03`, `+03:00`, `-0500`); `k` when neither is there.
+    private func zoneEnd(from k: Int) -> Int {
+        let byte = text.bytes[k]
+        if byte == UInt8(ascii: "Z") { return k + 1 }
+        guard byte == UInt8(ascii: "+") || byte == UInt8(ascii: "-") else { return k }
+        let hours = digitsEnd(from: k + 1, most: 4)
+        if hours == k + 5 { return k + 5 }
+        guard hours == k + 3 else { return k }
+        guard k + 3 < text.count, text.bytes[k + 3] == UInt8(ascii: ":"), digitsEnd(from: k + 4, most: 2) == k + 6 else { return k + 3 }
+        return k + 6
+    }
+
+    /// Whether a number ends right before byte `k`, so that a word ends there: the text ends,
+    /// white space, a line break or a closing bracket or quote comes next (`(12:30)`), punctuation
+    /// that ends a clause and no letter after it (`12:30, 3 changes`, `12:30:45,123`, `1:2|3`), or
+    /// a `.` or `:` that ends a sentence or a label (`at 12:30.`, `line 42:10: error`). A letter
+    /// right after the punctuation (`12:30,hunter2`) goes on with the word, so the `:` is a
+    /// separator.
+    private func endsNumber(at k: Int) -> Bool {
+        guard k < text.count else { return true }
+        let byte = text.bytes[k]
+        if isBlank(k) || Self.closingAfterNumber.contains(byte) { return true }
+        if byte == UInt8(ascii: ".") || byte == UInt8(ascii: ":") {
+            guard k + 1 < text.count else { return true }
+            let next = text.bytes[k + 1]
+            return isBlank(k + 1) || Self.closingAfterNumber.contains(next) || Self.clausePunctuation.contains(next)
         }
-        if isByte(k, "Z") { return k + 1 }
-        return offsetEnd(from: k) ?? k
+        guard Self.clausePunctuation.contains(byte) else { return false }
+        return k + 1 == text.count || !text.isAnyLetter(k + 1)
     }
 
-    /// Where an offset from UTC that starts at byte `k` ends (`+03:00`, `-0500`, `+03`); nil when
-    /// none starts there.
-    private func offsetEnd(from k: Int) -> Int? {
-        guard k < text.count, Self.offsetSigns.contains(text.bytes[k]), let end = digitsEnd(from: k + 1, atMost: 4) else { return nil }
-        switch end - k - 1 {
-        case 4: return end
-        case 2: return isByte(end, ":") ? twoDigitsEnd(from: end + 1) ?? end : end
-        default: return nil
-        }
-    }
+    private func isBlank(_ k: Int) -> Bool { text.isSpace(k) || text.isLineTerminator(k) }
 
-    /// The end of exactly two digits from byte `i`.
-    private func twoDigitsEnd(from i: Int) -> Int? { digitsEnd(from: i, atMost: 2).flatMap { $0 == i + 2 ? $0 : nil } }
+    /// The longest number, date and time that a `:` is read in, in bytes, on each side.
+    static let longestNumber = 64
 
-    /// The end of the run of digits from byte `i`; nil when it is empty or longer than `limit`.
-    private func digitsEnd(from i: Int, atMost limit: Int) -> Int? {
-        var k = i
-        while k < text.count, text.isDigit(k) {
-            k += 1
-            if k - i > limit { return nil }
-        }
-        return k > i ? k : nil
-    }
-
-    /// Whether a number may end at byte `end`: closing punctuation or none, then white space, a
-    /// line break or the end of the text.
-    private func endsNumber(at end: Int) -> Bool {
-        var k = end
-        while k < text.count, Self.closingMarks.contains(text.bytes[k]) { k += 1 }
-        return k == text.count || text.isSpace(k) || text.isLineTerminator(k)
-    }
-
-    private func isByte(_ k: Int, _ character: Unicode.Scalar) -> Bool { k < text.count && text.bytes[k] == UInt8(ascii: character) }
+    private static let numberMarks = ByteSet(".-")
+    /// Brackets and quotes that close right after a number.
+    private static let closingAfterNumber = ByteSet(")]}>\"'`")
+    /// Punctuation that ends a clause after a number unless a letter follows it.
+    private static let clausePunctuation = ByteSet(",;|!?&")
 }

@@ -21,16 +21,35 @@ struct JSONDocument {
         case overBudget
     }
 
+    /// A value and where it is, in 16 bytes. A body of arrays 63 deep holds a node for nearly every
+    /// two bytes of it, each in an array of its own: with `Range<Int>` offsets and every value
+    /// boxed, as an `indirect enum` boxes it, they took 15.6 MiB of a body of 256 KiB.
     struct Node {
-        /// The whole value in the text, quotes and brackets included.
-        let range: Range<Int>
+        private let start: UInt32
+        private let end: UInt32
         let value: Value
+
+        /// `range` is within a text of at most ``maximumLength`` scalars.
+        init(range: Range<Int>, value: Value) {
+            start = UInt32(truncatingIfNeeded: range.lowerBound)
+            end = UInt32(truncatingIfNeeded: range.upperBound)
+            self.value = value
+        }
+
+        /// The whole value in the text, quotes and brackets included.
+        var range: Range<Int> { Int(start)..<Int(end) }
     }
 
-    indirect enum Value {
-        case object([Member])
-        case array([Node])
-        case string(StringToken)
+    /// The longest text that is read, so that the offsets of a ``Node`` fit in 32 bits.
+    static let maximumLength = Int(UInt32.max)
+
+    /// One word, with no box for an object or array: only a string is boxed. The arrays are
+    /// `ContiguousArray`s, since an enum of an `Array`, which may bridge to an `NSArray`, and a box
+    /// needs a ninth byte for its case, and a node seven more to align it.
+    enum Value {
+        case object(ContiguousArray<Member>)
+        case array(ContiguousArray<Node>)
+        indirect case string(StringToken)
         case number
         case boolean
         case null
@@ -59,14 +78,15 @@ struct JSONDocument {
     ///   - allowsFragments: Whether the text may be a single string, number or literal instead of
     ///     an object or array.
     ///   - nesting: The nesting of the document itself.
-    init(_ scalars: [Unicode.Scalar], allowsFragments: Bool, nesting: Nesting) throws(ReadError) {
+    ///   - utf8: The UTF-8 of `scalars`, when the caller holds it: a body is not encoded again
+    ///     for `JSONSerialization`, which took two more copies of it while its tree was built.
+    init(_ scalars: [Unicode.Scalar], utf8: Data? = nil, allowsFragments: Bool, nesting: Nesting) throws(ReadError) {
+        guard scalars.count <= Self.maximumLength else { throw .invalid }
         var reader = Reader(scalars: scalars, depthLimit: nesting.depthLeft)
         guard let root = reader.document() else { throw reader.failure }
         guard allowsFragments || root.isContainer else { throw .invalid }
-        let data = Self.utf8(scalars[...])
-        guard let parsed = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
-              Self.agrees(root, with: parsed, in: scalars)
-        else { throw .invalid }
+        let data = utf8 ?? Data(String(String.UnicodeScalarView(scalars)).utf8)
+        guard Self.serializationAgrees(root, with: data, options: .fragmentsAllowed, in: scalars) else { throw .invalid }
         self.scalars = scalars
         self.root = root
         self.nesting = nesting
@@ -77,16 +97,26 @@ struct JSONDocument {
     /// - Parameter lengthLimit: The most scalars the object or array may take; one that goes on
     ///   past them is not read (``ReadError/overBudget``).
     init(_ scalars: [Unicode.Scalar], at start: Int, nesting: Nesting, lengthLimit: Int = .max) throws(ReadError) {
+        guard scalars.count <= Self.maximumLength else { throw .invalid }
         let (limit, overflow) = start.addingReportingOverflow(lengthLimit)
         let end = overflow ? scalars.count : min(scalars.count, limit)
         var reader = Reader(scalars: scalars, position: start, end: end, depthLimit: nesting.depthLeft)
         guard let root = reader.value() else { throw reader.failure }
         guard root.isContainer else { throw .invalid }
-        let data = Self.utf8(scalars[root.range])
-        guard let parsed = try? JSONSerialization.jsonObject(with: data), Self.agrees(root, with: parsed, in: scalars) else { throw .invalid }
+        let data = Data(String(String.UnicodeScalarView(scalars[root.range])).utf8)
+        guard Self.serializationAgrees(root, with: data, options: [], in: scalars) else { throw .invalid }
         self.scalars = scalars
         self.root = root
         self.nesting = nesting
+    }
+
+    /// Whether `scalars` are one JSON object or array, as the reader reads them. It tells a JSON
+    /// document written into a string from a name (see
+    /// ``WrittenName/writtenName(in:compatibility:)``); nothing is redacted on what it reads, so
+    /// `JSONSerialization` is not asked.
+    static func isContainer(_ scalars: [Unicode.Scalar]) -> Bool {
+        var reader = Reader(scalars: scalars, depthLimit: Nesting.maximumDepth)
+        return reader.document()?.isContainer == true
     }
 
     /// The text of a string, with its escapes decoded.
@@ -95,6 +125,28 @@ struct JSONDocument {
     }
 
     // MARK: Agreement with JSONSerialization
+
+    /// Whether `JSONSerialization` parses `data` into the structure the reader found. The objects
+    /// it makes are autoreleased, and a thread drains them only when it returns to its run loop or
+    /// ends: a megabyte of log lines of short JSON kept every tree until the end of the
+    /// redaction, 10 MB more than the text. They are released here, before the next JSON is read.
+    private static func serializationAgrees(
+        _ root: Node, with data: Data, options: JSONSerialization.ReadingOptions, in scalars: [Unicode.Scalar]
+    ) -> Bool {
+        releasingAutoreleased {
+            guard let parsed = try? JSONSerialization.jsonObject(with: data, options: options) else { return false }
+            return agrees(root, with: parsed, in: scalars)
+        }
+    }
+
+    /// Runs `body` in an autorelease pool of its own where Objective-C objects are autoreleased.
+    private static func releasingAutoreleased<Result>(_ body: () -> Result) -> Result {
+        #if canImport(ObjectiveC)
+        autoreleasepool(invoking: body)
+        #else
+        body()
+        #endif
+    }
 
     private static func agrees(_ node: Node, with parsed: Any, in scalars: [Unicode.Scalar]) -> Bool {
         switch node.value {
@@ -106,8 +158,7 @@ struct JSONDocument {
             return zip(elements, array).allSatisfy { agrees($0, with: $1, in: scalars) }
         case .string(let token):
             guard let string = parsed as? NSString else { return false }
-            let text = token.decoded.map { $0[...] } ?? scalars[token.content]
-            return (string as String).utf16.elementsEqual(text.lazy.flatMap(\.utf16))
+            return Array((string as String).utf16) == utf16(token, in: scalars)
         case .number, .boolean:
             return parsed is NSNumber
         case .null:
@@ -117,7 +168,7 @@ struct JSONDocument {
 
     /// Names are compared as UTF-16, as `NSString` compares them: Swift's `String` equality would
     /// treat canonically equivalent names (`é` and `e` with a combining accent) as one.
-    private static func agrees(_ members: [Member], with dictionary: NSDictionary, in scalars: [Unicode.Scalar]) -> Bool {
+    private static func agrees(_ members: ContiguousArray<Member>, with dictionary: NSDictionary, in scalars: [Unicode.Scalar]) -> Bool {
         var counts: [[UInt16]: Int] = [:]
         for member in members { counts[utf16(member.name, in: scalars), default: 0] += 1 }
         guard counts.count == dictionary.count else { return false }
@@ -136,26 +187,8 @@ struct JSONDocument {
     }
 
     private static func utf16(_ token: StringToken, in scalars: [Unicode.Scalar]) -> [UInt16] {
-        let text = token.decoded.map { $0[...] } ?? scalars[token.content]
-        var units: [UInt16] = []
-        units.reserveCapacity(text.count)
-        for scalar in text { units.append(contentsOf: scalar.utf16) }
-        return units
-    }
-
-    /// The scalars as UTF-8, encoded in one pass: building a `String` from them first appends them
-    /// one at a time, which took a third of the time of a JSON array of quoted documents.
-    private static func utf8(_ scalars: ArraySlice<Unicode.Scalar>) -> Data {
-        var bytes: [UInt8] = []
-        bytes.reserveCapacity(scalars.count)
-        for scalar in scalars {
-            if scalar.isASCII {
-                bytes.append(UInt8(scalar.value))
-            } else {
-                bytes.append(contentsOf: UTF8.encode(scalar)!)
-            }
-        }
-        return Data(bytes)
+        let text = token.decoded ?? Array(scalars[token.content])
+        return Array(String(String.UnicodeScalarView(text)).utf16)
     }
 }
 
@@ -232,7 +265,7 @@ extension JSONDocument {
         private mutating func object(depth: Int) -> Value? {
             position += 1
             skipWhitespace()
-            var members: [Member] = []
+            var members: ContiguousArray<Member> = []
             if consume("}") { return .object(members) }
             repeat {
                 skipWhitespace()
@@ -250,7 +283,7 @@ extension JSONDocument {
         private mutating func array(depth: Int) -> Value? {
             position += 1
             skipWhitespace()
-            var elements: [Node] = []
+            var elements: ContiguousArray<Node> = []
             if consume("]") { return .array(elements) }
             repeat {
                 skipWhitespace()

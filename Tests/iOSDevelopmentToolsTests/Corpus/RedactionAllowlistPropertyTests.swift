@@ -78,7 +78,69 @@ struct RedactionAllowlistPropertyTests {
         #expect(configured.redact("login user=bob region=eu-west-1 build_number=512") == "login user=bob region=eu-west-1 build_number=512")
         // A key that names a secret or is not plain ASCII is never allowed.
         #expect(configured.redact("password=hunter2") == "password=[REDACTED]")
-        // A word of two scripts is itself a trigger, so the text is cut where the key starts.
-        #expect(configured.redact("p\u{430}ss=hunter2") == "[REDACTED]")
+        #expect(configured.redact("p\u{430}ss=hunter2") == "p\u{430}ss=[REDACTED]")
+    }
+
+    /// Plain ASCII names that hold no secret word as a word.
+    static let keptNames = [
+        "user", "username", "name", "id", "user_id", "requestId", "X-Request-Id", "Content-Type", "status", "region", "lang", "page",
+        "limit", "city", "order-id", "retry_after", "keynote", "authority", "bypass", "compass", "passport",
+        "keyboard", "spinner", "author", "description", "app.version", "first name",
+    ]
+    static let keptValues = ["bob", "42", "eu-west-1", "ok", "Istanbul", "v2"]
+
+    @Test("plain ASCII names that hold no secret word keep their value in structured input", arguments: keptNames)
+    func keptInStructuredInput(name: String) {
+        let encoded = name.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? name
+        // In free text the members of JSON follow the allowlist of keys in text.
+        let allowing = Redactor(allowedTextKeys: [name, "list"])
+        for value in Self.keptValues {
+            let json = "{\"\(name)\":\"\(value)\",\"list\":[{\"\(name)\":\"\(value)\"}]}"
+            #expect(redactor.redact(body: Data(json.utf8), contentType: "application/json") == json)
+            // A key with a space is never allowed in free text, where a space ends a word.
+            #expect(allowing.redact("log \(json)") == "log \(json)" || name.contains(" "))
+            #expect(redactor.redact("log \(json)") == "log {[REDACTED]" || Self.allowedFolds.contains(name.lowercased()))
+            let form = "a=1&\(encoded)=\(value)"
+            #expect(redactor.redact(body: Data(form.utf8), contentType: "application/x-www-form-urlencoded") == form)
+        }
+    }
+
+    /// Words that hold no secret word, for names made of several of them.
+    static let plainWords = ["user", "name", "order", "id", "city", "status", "page", "item", "count", "region", "build", "app", "version", "request", "color", "first", "last"]
+
+    @Test("generated plain ASCII names keep their value in structured input, and in text when allowed")
+    func generatedPlainNamesKeepTheirValue() {
+        var random = SeededRandom(seed: 0x9A1D_5E)
+        for _ in 0..<600 {
+            let words = (0..<Int.random(in: 1...3, using: &random)).map { _ in
+                let word = Self.plainWords.randomElement(using: &random)!
+                return Bool.random(using: &random) ? word.capitalized : word
+            }
+            let name = words.joined(separator: ["_", "-", ".", ""].randomElement(using: &random)!)
+            let spaced = words.joined(separator: " ")
+            let value = Self.keptValues.randomElement(using: &random)!
+            for json in ["{\"\(name)\":\"\(value)\"}", "{\"\(spaced)\":[\"\(value)\"]}"] {
+                #expect(redactor.redact(body: Data(json.utf8), contentType: "application/json") == json)
+            }
+            let form = "a=1&\(name)=\(value)"
+            #expect(redactor.redact(body: Data(form.utf8), contentType: "application/x-www-form-urlencoded") == form)
+            let allowing = Redactor(allowedTextKeys: [name])
+            let allowedByDefault = Self.allowedFolds.contains(words.joined().lowercased())
+            for input in ["\(name)=\(value)", "log \(name): \(value) done"] {
+                #expect(allowing.redact(input) == input)
+                #expect((redactor.redact(input) == input) == allowedByDefault)
+            }
+        }
+    }
+
+    // A plain name that holds a secret word as a word hides its value even when it only
+    // describes the secret: telling the two apart would take a list of exceptions.
+    @Test("names that hold a secret word as a word hide their value in structured input", arguments: [
+        "passwordHint", "token_type", "pin_length", "pass_count", "password_policy", "keyPath", "card_type", "auth_method",
+        "otp_enabled", "cookie_policy", "secret_name", "signature_version",
+    ])
+    func describingNamesHideTheirValue(name: String) {
+        #expect(redactor.redact(body: Data("{\"\(name)\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(name)\":\"[REDACTED]\"}")
+        #expect(redactor.redact(body: Data("\(name)=bob".utf8), contentType: "application/x-www-form-urlencoded") == "\(name)=[REDACTED]")
     }
 }

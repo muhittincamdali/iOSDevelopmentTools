@@ -106,9 +106,15 @@ struct LogStoreTests {
 
     @Test("Combining marks cannot stretch a message or category past the limit")
     func combiningMarks() throws {
-        // One Character of a letter and a million combining marks is 2 MB of UTF-8.
-        let logs = store(.init(maximumMessageLength: 16, systemLogSubsystem: nil))
-        logs.info("a" + String(repeating: "\u{301}", count: 1_000_000), category: "c" + String(repeating: "\u{301}", count: 500_000))
+        // One Character of a letter and a million combining marks is 2 MB of UTF-8. Redaction
+        // hides a word that long whole, so the limit is checked without it.
+        let message = "a" + String(repeating: "\u{301}", count: 1_000_000)
+        let category = "c" + String(repeating: "\u{301}", count: 500_000)
+        let redacting = store(.init(maximumMessageLength: 16, systemLogSubsystem: nil))
+        redacting.info(message, category: category)
+        #expect(redacting.entries.first?.message == RedactionPolicy.replacement)
+        let logs = store(.init(maximumMessageLength: 16, systemLogSubsystem: nil, redaction: .disabled))
+        logs.info(message, category: category)
         let entry = try #require(logs.entries.first)
         #expect(entry.isTruncated)
         #expect(entry.message.unicodeScalars.count == 16 + 1)

@@ -1,104 +1,69 @@
-/// The safe alphabet of free text: the characters that are read as text. Every other character
-/// is a trigger, without a list of the ones that look like separators.
+/// The characters free text may hold before it is cut, and the escapes and words that cut it.
+///
+/// Free text is read only as far as it is written in a safe alphabet: letters, marks and digits of
+/// any script (the general categories L*, M* and N*), the ASCII space, tab, line feed and carriage
+/// return, and the printable ASCII punctuation. The first character outside it cuts the text:
+/// punctuation, a symbol or a space outside ASCII (`꞉`, `≔`, `→`, `·`, `＝`, an emoji, U+00A0), a
+/// control character, a format character and any default-ignorable code point. So does a letter or
+/// number whose compatibility form, which the scanner reads, is not written in the alphabet (`🄁`
+/// is `0,`, `⑴` is `(1)`). No list of look-alike separators is kept; a character is judged by its
+/// Unicode category and its compatibility form alone (see ``SafeAlphabet/class(of:)``). A modifier
+/// letter (`ː`, `ー`) belongs to the safe alphabet only after a letter or digit outside ASCII, as in
+/// Japanese or Thai: after ASCII it can stand for a colon.
+///
+/// An escape is never decoded in free text: it cuts the text at the start of the word it is in, as
+/// what the escape stands for cannot be read, nor what the value detectors would find through it
+/// (`alice%40example.com`). A backslash is an escape whatever follows it, unless an ASCII space,
+/// tab or line break or the end of the text does, so no list of the forms of backslash escapes is
+/// kept. A word longer than ``FreeTextScanner/longestWord`` cuts the text too: it cannot be read
+/// as a name, and so no word is copied for reading at more than that length.
 extension FreeTextScanner {
-    /// Whether the character of byte `i` is outside the safe alphabet: letters, marks and digits
-    /// of any script, the ASCII space, tab, LF and CR, the rest of printable ASCII, and a space
-    /// that compatibility normalization reads as an ASCII space (U+00A0, U+3000). Any other
-    /// character is judged by its own general category, so every punctuation mark and symbol
-    /// outside ASCII is outside, even when compatibility normalization reads it as ASCII: `꞉`,
-    /// `≔`, `→`, `·`, `’`, `€`, `、`, and also `＝`, `…`, `‥`, `︰`, `™`, `ⓟ` and `¨`. So is an
-    /// emoji, a skin tone, a private-use or unassigned code point, a dash outside ASCII (`—`,
-    /// `゠`), the blank Braille pattern and U+1680, a line break other than LF and CR (VT, FF,
-    /// U+0085, U+2028, U+2029), and a modifier letter (`ʻ`, `ː`), which is written as a separator
-    /// as often as a letter, apart from those of East Asian text (`ー`) that are not glued to
-    /// ASCII.
-    ///
-    /// A letter or digit is judged by the text the scan reads as well: the scanning copy holds its
-    /// compatibility form, so one whose form holds ASCII punctuation or a character outside the
-    /// alphabet is outside it (`🄁`, read as `0,`, `⒈`, `⑴`, `½`; see
-    /// ``CompatibilityText/formLeavesSafeAlphabet(_:)``). The `,` of `🄁status=` would otherwise
-    /// end a key in front of an allowed one.
-    func isOutsideSafeAlphabet(_ i: Int) -> Bool {
-        let scalar = source[text.offsets[i]]
-        // Of the line breaks, only LF and CR are text: VT, FF, U+0085, U+2028 and U+2029 end a line
-        // too, but they are control characters and separators outside ASCII.
-        if scalar.isASCII { return scalar.value == 0x0B || scalar.value == 0x0C }
-        if text.isLineTerminator(i) { return true }
-        if text.bytes[i] == UInt8(ascii: " ") {
-            // A spacing accent (`¨`, `´`, `‾`) is read as a space and a mark, but it is a symbol.
-            return ScalarTable.category(scalar) != .spaceSeparator || !compatibility.foldsToASCII(scalar)
+    /// The longest word of free text that is read, in scalars: a longer one cuts the text at its
+    /// start.
+    static let longestWord = 256
+
+    /// The offset of the first scalar of the text outside the safe alphabet, or nil. The scanning
+    /// copy finds the same offset while it is made (``NormalizedText/firstUnsafeOffset``), which
+    /// the scan uses.
+    static func firstUnsafeOffset(in scalars: [Unicode.Scalar]) -> Int? {
+        var alphabet = SafeAlphabetReader()
+        for (offset, scalar) in scalars.enumerated() {
+            if scalar.isASCII {
+                alphabet.read(ascii: UInt8(scalar.value), at: offset)
+            } else {
+                alphabet.read(SafeAlphabet.class(of: scalar), at: offset)
+            }
+            if let unsafe = alphabet.firstUnsafe { return unsafe }
         }
-        switch ScalarTable.category(scalar) {
-        case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .otherLetter, .nonspacingMark, .spacingMark, .enclosingMark,
-             .decimalNumber, .letterNumber, .otherNumber:
-            return compatibility.formLeavesSafeAlphabet(scalar)
-        case .modifierLetter:
-            // `ー` and the other modifier letters of kana belong to the East Asian text around them.
-            if compatibility.formLeavesSafeAlphabet(scalar) { return true }
-            return !Self.isEastAsian(scalar) || (i > 0 && text.bytes[i - 1] != CompatibilityText.unreadable && !text.isSpace(i - 1))
-        default:
-            return true
-        }
+        return nil
     }
 
-    /// CJK symbols and punctuation, kana and the full-width and half-width forms.
-    private static func isEastAsian(_ scalar: Unicode.Scalar) -> Bool {
-        (0x3000...0x30FF).contains(scalar.value) || (0xFF00...0xFFEF).contains(scalar.value)
-    }
-
-    /// The first byte of the word `range` whose character is outside the safe alphabet and has text
-    /// after it: more of the word, or any text after the word, on its line or below. One with
-    /// nothing after it hides nothing.
-    func firstUnsafeCharacter(in range: Range<Int>) -> Int? {
-        range.first { k in
-            guard isOutsideSafeAlphabet(k) else { return false }
-            return scalarEnd(k) < range.upperBound || firstText(from: range.upperBound) != nil
-        }
-    }
-
-    /// The byte after the bytes that the scalar of byte `i` became.
-    func scalarEnd(_ i: Int) -> Int {
-        var k = i + 1
-        while k < text.count, text.offsets[k] == text.offsets[i] { k += 1 }
-        return k
-    }
-
-    /// The offset of a control character that the scanning copy left out right before byte `i`,
-    /// after the byte before it: a control character is outside the safe alphabet wherever it
-    /// is. One inside a word makes the word one that cannot be read (see ``isAmbiguous(_:)``).
-    func hiddenControl(before i: Int) -> Int? {
-        let previousEnd = i > 0 ? text.offsets[i - 1] + 1 : 0
-        let start = text.offsets[i]
-        guard start > previousEnd else { return nil }
-        return (previousEnd..<start).first { ScalarTable.category(source[$0]) == .control }
-    }
-
-    // MARK: Escapes
-
-    /// The first byte of the word `range` that starts an escape (see ``startsEscape(_:)``).
-    func firstEscape(in range: Range<Int>) -> Int? {
-        range.first(where: startsEscape)
-    }
-
-    /// Whether an escape starts at byte `i`. No list of escape forms is kept, so a form that is
-    /// not known counts as well:
+    /// Whether an escape starts at byte `i`: an escape that can stand for any character, which free
+    /// text never decodes.
     ///
-    /// - a backslash before anything but an ASCII space, a tab, a line break or the end of the
-    ///   text (see ``backslashEscapes(at:)``): `\x41`, `\u{41}`, `\N{…}`, `\p{L}`, `\8`, `\cJ`,
-    ///   `\"`, `\\`, `\/`, a Windows path (`dir\data`) and a literal `\n` all count;
-    /// - `%` and two hex digits (`%3D`, `%41`), or `%u` and four (`%u003D`);
-    /// - `&` before a letter or `#` (`&amp`, `&lt;`, `&#61;`, `&#x;`, `&#q`, `R&D`), with or
-    ///   without a `;`.
-    ///
-    /// In free text an escape is a trigger and is never decoded: what it stands for cannot be told
-    /// without guessing the format. Over-hiding a Windows path or `R&D` is by design.
-    func startsEscape(_ i: Int) -> Bool {
+    /// - `%` and two hex digits, or `%u` and four (`%3D`, `%u003D`);
+    /// - `&#`, whatever follows it (`&#61;`, `&#x3d`, `&#x;`): it starts a numeric character
+    ///   reference, and no list of their forms is kept; and `&` with a name made of letters and
+    ///   digits, as HTML5 names its references, with or without the `;` (`&colon;`, `&equals;`,
+    ///   `&amp;`) — but not the name of a field before `=` (`&count=3`), which the key rule reads
+    ///   as any key; and `&` before a letter outside ASCII (`&ж1`), which is no field name;
+    /// - `\` before anything but an ASCII space, tab or line break or the end of the text (see
+    ///   ``backslashEscapes(at:)``).
+    func isEscape(at i: Int) -> Bool {
         switch text.bytes[i] {
         case UInt8(ascii: "%"):
-            if hexDigits(from: i + 1, count: 2) { return true }
-            return i + 1 < text.count && text.bytes[i + 1] | 0x20 == UInt8(ascii: "u") && hexDigits(from: i + 2, count: 4)
+            if isHex(i + 1), isHex(i + 2) { return true }
+            return byte(i + 1) | 0x20 == UInt8(ascii: "u") && (2...5).allSatisfy { isHex(i + $0) }
         case UInt8(ascii: "&"):
-            return i + 1 < text.count && (text.bytes[i + 1] == UInt8(ascii: "#") || text.isAnyLetter(i + 1))
+            if byte(i + 1) == UInt8(ascii: "#") { return true }
+            guard ASCII.isLetter(byte(i + 1)) else {
+                // The scanning copy reads a letter outside ASCII as no letter: the original decides.
+                let next = text.offset(at: i) + 1
+                return next < source.count && !source[next].isASCII && ScalarClass.isLetter(source[next])
+            }
+            var k = i + 1
+            while k < text.count, ASCII.isNameCharacter(text.bytes[k]), text.bytes[k] != UInt8(ascii: " ") { k += 1 }
+            return byte(k) != UInt8(ascii: "=")
         case UInt8(ascii: "\\"):
             return backslashEscapes(at: i)
         default:
@@ -106,41 +71,116 @@ extension FreeTextScanner {
         }
     }
 
-    /// Whether a backslash escape starts at byte `i`: a backslash that does not end the text and
-    /// that anything but an ASCII space, a tab or a line break follows in the original text. What
-    /// follows it is not read as any form of escape. A mark or an invisible character right after
-    /// it, which the scanning copy leaves out, and a space outside ASCII count as what it escapes.
-    func startsBackslashEscape(_ i: Int) -> Bool {
-        text.bytes[i] == UInt8(ascii: "\\") && backslashEscapes(at: i)
-    }
-
-    /// Whether the backslash at byte `i` starts an escape (see ``startsBackslashEscape(_:)``).
+    /// Whether the backslash at byte `i` starts an escape: it does unless an ASCII space, tab or
+    /// line break comes right after it in the original text, or the text ends there. What follows
+    /// it is not read as any form of escape, so every form counts, known or not: `\075`, `\x3D`,
+    /// `\x{73}`, `\o{163}`, `\N{…}`, `\u{73}`, `\q`, `\\`, `\"`. A mark or an invisible character
+    /// right after it, which the scanning copy leaves out, counts as what it escapes.
     func backslashEscapes(at i: Int) -> Bool {
-        let next = text.offsets[i] + 1
-        guard next < source.count else { return false }
-        let scalar = source[next]
-        return !(scalar.isASCII && Self.blanksAfterBackslash.contains(UInt8(scalar.value)))
+        if i + 1 < text.count, !Self.blanksAfterBackslash.contains(text.bytes[i + 1]) { return true }
+        // The scanning copy left out what came right after the backslash, or read it as a space
+        // (U+3000): the original scalar decides.
+        let next = text.offset(at: i) + 1
+        return next < source.count && !(source[next].isASCII && Self.blanksAfterBackslash.contains(UInt8(source[next].value)))
     }
 
-    /// What a backslash can come before without starting an escape: an ASCII space, a tab or a
-    /// line break.
+    /// What a backslash can come before without starting an escape: an ASCII space, tab or line
+    /// break.
     private static let blanksAfterBackslash = ByteSet(" \t\n\r")
 
-    private func hexDigits(from i: Int, count: Int) -> Bool {
-        guard i + count <= text.count else { return false }
-        return (i..<(i + count)).allSatisfy { k in
-            ASCII.isDigit(text.bytes[k]) || (UInt8(ascii: "a")...UInt8(ascii: "f")).contains(text.bytes[k] | 0x20)
+    /// The byte at `i`, or 0 past the end of the text.
+    private func byte(_ i: Int) -> UInt8 {
+        i < text.count ? text.bytes[i] : 0
+    }
+
+    private func isHex(_ i: Int) -> Bool {
+        let value = byte(i)
+        return ASCII.isDigit(value) || (UInt8(ascii: "a")...UInt8(ascii: "f")).contains(value | 0x20)
+    }
+
+    /// Whether the word in the bytes `range` is longer than ``longestWord`` scalars, and so cannot
+    /// be read; never when the scanner reads long words (see ``readsLongWords``).
+    func isOpaque(_ range: Range<Int>) -> Bool {
+        !readsLongWords && text.offset(at: range.upperBound) - text.offset(at: range.lowerBound) > Self.longestWord
+    }
+}
+
+/// The safe alphabet of free text, scalar by scalar.
+enum SafeAlphabet {
+    /// What the safe alphabet makes of a scalar outside ASCII.
+    enum Class {
+        /// A letter or digit, which a modifier letter may follow.
+        case letter
+        /// A mark, which belongs to the scalar before it.
+        case mark
+        /// A modifier letter: in the alphabet only after a letter or digit outside ASCII.
+        case modifierLetter
+        /// Outside the alphabet.
+        case unsafe
+    }
+
+    /// The class of a scalar outside ASCII: by its general category, and outside the alphabet when
+    /// its compatibility form is (see ``compatibilityFormIsSafe(_:)``). This is the one place the
+    /// safe alphabet is decided: the scanning copy (``CompatibilityText/reading(_:)``) and
+    /// ``FreeTextScanner/firstUnsafeOffset(in:)`` both ask it.
+    static func `class`(of scalar: Unicode.Scalar) -> Class {
+        let category = categoryClass(of: scalar)
+        guard category != .unsafe, compatibilityFormIsSafe(scalar) else { return .unsafe }
+        return category
+    }
+
+    private static func categoryClass(of scalar: Unicode.Scalar) -> Class {
+        let properties = scalar.properties
+        guard !properties.isDefaultIgnorableCodePoint else { return .unsafe }
+        switch properties.generalCategory {
+        case .nonspacingMark, .spacingMark, .enclosingMark: return .mark
+        case .modifierLetter: return .modifierLetter
+        case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .otherLetter, .decimalNumber, .letterNumber, .otherNumber: return .letter
+        default: return .unsafe
         }
     }
 
-    // MARK: Opaque words
+    /// Whether the compatibility form (NFKD) of a scalar is written in the alphabet too: ASCII
+    /// letters and digits, and letters, marks and digits outside ASCII. The scanner reads a text in
+    /// that form, so a letter or number whose form holds punctuation, a space or a symbol (`🄁` is
+    /// `0,`, `⒈` is `1.`, `⑴` is `(1)`, `½` is `1⁄2`, U+FE70 is a space and a mark) or a modifier
+    /// letter (`ŉ` is `ʼn`) cuts the text where it stands: what the scanner would read there is not
+    /// what the text holds.
+    private static func compatibilityFormIsSafe(_ scalar: Unicode.Scalar) -> Bool {
+        for part in String(scalar).decomposedStringWithCompatibilityMapping.unicodeScalars where part != scalar {
+            if part.isASCII {
+                guard ASCII.isAlphanumeric(UInt8(part.value)) else { return false }
+                continue
+            }
+            switch categoryClass(of: part) {
+            case .letter, .mark: continue
+            case .modifierLetter, .unsafe: return false
+            }
+        }
+        return true
+    }
+}
 
-    /// The longest word that is read, in Unicode scalars: 256. A longer word is no name or value
-    /// that can be read, so it is a trigger; this also bounds the memory that reading a word takes.
-    static let longestWord = 256
+/// Reads scalars in order and keeps the offset of the first one outside the safe alphabet.
+struct SafeAlphabetReader {
+    private(set) var firstUnsafe: Int?
+    /// Whether the last scalar that is not a mark is a letter or digit outside ASCII.
+    private var followsNonASCIILetter = false
 
-    /// Whether the word `range` is longer than ``longestWord``.
-    func isOpaque(_ range: Range<Int>) -> Bool {
-        !range.isEmpty && text.offsets[range.upperBound - 1] - text.offsets[range.lowerBound] + 1 > Self.longestWord
+    /// Printable ASCII, tab, line feed and carriage return are in the alphabet.
+    mutating func read(ascii byte: UInt8, at offset: Int) {
+        guard firstUnsafe == nil else { return }
+        followsNonASCIILetter = false
+        if !(0x20...0x7E).contains(byte), byte != 0x09, byte != 0x0A, byte != 0x0D { firstUnsafe = offset }
+    }
+
+    mutating func read(_ class: SafeAlphabet.Class, at offset: Int) {
+        guard firstUnsafe == nil else { return }
+        switch `class` {
+        case .letter: followsNonASCIILetter = true
+        case .mark: break
+        case .modifierLetter: if !followsNonASCIILetter { firstUnsafe = offset }
+        case .unsafe: firstUnsafe = offset
+        }
     }
 }

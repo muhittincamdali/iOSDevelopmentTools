@@ -1,13 +1,12 @@
 import Foundation
 @testable import iOSDevelopmentTools
 
-/// The shapes of the twelfth review of the shared redaction rules that made a free text reading
-/// before the one cut keep the attribute values of a start tag once for every name in it: a
-/// megabyte of attributes followed by 17 secret names, in one start tag, in one tag after a key and
-/// in tags of 4 KB on their own lines, and the same as a text/plain body. They are read once, up
-/// to the first trigger. Prose and lines of allowed keys, which have no trigger, are read whole.
+/// The shapes of the twelfth review that made the free text of 2.1.0 before the one cut keep the
+/// attribute values of a start tag once for every name in it: a megabyte of attributes followed
+/// by 17 secret names, in one start tag, in one tag after a key and in tags of 4 KB on their own
+/// lines, and the same as a text/plain body. They are read once, up to the first trigger.
 extension RedactionTimeLimitTests {
-    private static let cutRedactor = Redactor.largeBodies
+    private static let cutRedactor = largeBodies
 
     /// `unit` repeated to about `total` bytes.
     static func repeated(_ unit: String, to total: Int) -> String {

@@ -19,26 +19,26 @@ extension FreeTextScanner {
         return k < text.count && allowed.contains(text.bytes[k])
     }
 
-    /// The longest JSON in free text that is parsed, in scalars: 64 Ki. Its tree takes memory in
-    /// proportion to it, so longer JSON cuts the text at its first bracket, as JSON that does not
-    /// parse does. A body is read with its own limit (see ``RedactionPolicy/maximumBodySize``).
+    /// The longest JSON in free text that is parsed, in scalars: 64 Ki.
     static let longestJSON = 65_536
 
     private static let objectStarts = ByteSet("\"}")
     private static let arrayStarts = ByteSet("{[\"]")
     private static let jsonWhitespace = ByteSet(" \t\n\r")
 
-    /// JSON in free text, parsed with the JSON parser and redacted by the key rule for structured
-    /// input; its strings are free text again. In text, its members follow the rule for keys in
-    /// text: the text is cut at the value of the first member whose name is not on
-    /// ``allowedKeys``, and at the second element of a two-element array whose first is a string
-    /// not on it (`{"status":200,"user":"bob"}` keeps `"status":200`, `["user","bob"]` keeps
-    /// `["user",`). JSON that holds a word that names a secret or cannot be read
-    /// (`["password"] hunter2`) cuts the text after it. JSON that does not parse is a bracket that
-    /// does not close as JSON does, so it is a trigger: the text is hidden from its first bracket,
-    /// and so is JSON longer than ``longestJSON``. In a text inside a document, JSON one level too
-    /// many, deeper than the depth left or longer than the reading budget leaves (see
-    /// ``ReadingBudget``) hides the whole text.
+    /// JSON in the text, parsed and redacted by the key rule for structured input, whose keys
+    /// follow the rule for keys in text, as a quoted key outside JSON does: the text is cut at the
+    /// opening quote of the first member name that is not on
+    /// ``RedactionPolicy/allowedTextKeys``, or of the first string of the first two-element
+    /// array that is not on it (`["user","bob"]`), or at the first value that the key rule hides,
+    /// whichever comes first (`{"status":200,"user":"bob"}` keeps `{"status":200,`), so no name
+    /// written in a line shows when it is not allowed (`{"password hunter2": 1}`).
+    /// JSON that holds a word naming a secret or one that cannot be read (`["password"]=> "…"`)
+    /// cuts the text at its end. JSON that does not parse cannot be read with certainty: the text
+    /// is cut at its first bracket, and so is JSON longer than ``longestJSON``, whose tree would
+    /// take memory in proportion to it. In a text inside a document, JSON one level too many,
+    /// deeper than the depth left or longer than the reading budget leaves (see ``ReadingBudget``)
+    /// hides the whole text.
     mutating func embeddedJSON() {
         let start = text.offsets[position]
         guard let inner = nesting.enteringDocument() else {
@@ -63,16 +63,17 @@ extension FreeTextScanner {
         // The reader stopped within what the budget leaves, so this always fits.
         _ = inner.reads(region.count)
         let found = document.secretSpans(using: policy, compatibility: compatibility)
-        let jsonStart = position
         let end = text.byteIndex(atOrAfter: region.upperBound)
-        if readsWords, let first = document.firstValue(notAllowedBy: { policy.allowsTextKey($0, in: allowedKeys) }) {
-            // What the key rule found before the cut stays: the values a detector changed.
+        let hidden = found.lazy.filter { $0.kind.contains(.secretFields) }.map(\.start).min()
+        let unallowed = role == .text ? document.firstKey(where: { !policy.allowsTextKey($0) }) : nil
+        if let first = [hidden, unallowed].compactMap({ $0 }).min() {
+            // What the key rule found before the cut stays: the findings of the value detectors.
             record(spans: found.filter { $0.start < first }, region: region)
             cut(atOffset: first)
-            return
+        } else {
+            record(spans: found, region: region)
+            if mentionsSecret(in: position..<end) { cut(atByte: valueStart(after: end)) }
         }
-        record(spans: found, region: region)
         position = end
-        if readsWords, mentionsSecret(in: jsonStart..<end) { cut(afterByte: end - 1) }
     }
 }

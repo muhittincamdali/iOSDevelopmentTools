@@ -13,14 +13,16 @@ struct RedactionURLInTextPropertyTests {
     static let hosts = ["x.example", "api.example.com", "10.0.0.1", "localhost", "a1-b2.example"]
     static let words = ["a", "v1", "items", "docs", "b-c", "e.f", "users", "x_y", "status"]
     static let secretNames = ["password", "api_key", "token", "pin", "session", "passwd", "x-api-key", "secret", "PASSWORD", "Pass-Word", "accessToken"]
-    static let escapes = ["%3D", "%3d", "%3A", "%26", "%253D", "%u003D", "&#61;", "&#x3D;", "&#58;", "&equals;", "&colon;", "&amp;", "\\075", "\\x3D", "\\u003d", "\\u{3D}", "\\072", "\\x3A"]
 
     /// What makes a URL not clean, written into it.
     static let breakers: [@Sendable (inout SeededRandom) -> String] = [
-        { random in String(RedactionSafeAlphabetTests.unsafeScalars.randomElement(using: &random)!) },
-        { random in escapes.randomElement(using: &random)! },
+        { random in String(RedactionSafeAlphabetPropertyTests.unsafeScalars.randomElement(using: &random)!) },
+        { random in RedactionSafeAlphabetPropertyTests.escapes.randomElement(using: &random)! },
         { random in ["?", "#", ";", "?#", ";/", "#!", "#)", ";#,", "?page=2", "#page=2", ";page=2", "?q=", "?page=2&q=", "#access_token="].randomElement(using: &random)! },
         { random in ["=", ":", "%3D", "%3A", "%253A", "%3A%22", "@", "\\", "%", "~", "+", "*", "$", "(", "'"].randomElement(using: &random)! },
+        // The nineteenth review: a quote, a backtick or a closing bracket ends the URL, and the URL
+        // before it is not clean, wherever it is.
+        { random in ["'", "\"", "`", ">", "<", "]", "}", ")", "'#", "\"?", "`;", ">#", ").", ".."].randomElement(using: &random)! },
     ]
 
     /// A URL that is not clean, and where in it the value goes.
@@ -58,14 +60,14 @@ struct RedactionURLInTextPropertyTests {
             let value = RedactionCorpusPropertyTests.value(using: &random)
             let url = Self.uncleanURL(using: &random, value: value)
             guard !Self.isClean(url) else { continue }
+            checked += 1
             let gap = RedactionWrittenURLTests.gaps.randomElement(using: &random)!
             let line = url + gap + value + " 200"
             for (place, output) in RedactionWrittenURLTests.places(line) {
                 #expect(!RedactionCorpusPropertyTests.leaks(value, in: output), "\(place): \(line.debugDescription) -> \(output.debugDescription)")
             }
-            checked += 1
         }
-        #expect(checked > 120)
+        #expect(checked > 140)
     }
 
     @Test("a clean URL of plain segments keeps itself and the text after it, whatever the allowed query parameters", arguments: 0..<2)
@@ -75,7 +77,7 @@ struct RedactionURLInTextPropertyTests {
         for _ in 0..<200 {
             let segments = (0..<Int.random(in: 0...4, using: &random)).map { _ in Self.words.randomElement(using: &random)! }
             let url = Self.schemes.randomElement(using: &random)! + "://" + Self.hosts.randomElement(using: &random)! + segments.map { "/" + $0 }.joined()
-            let (before, after) = [("GET ", " 200"), ("see ", ". status=200"), ("(", ") ok"), ("[docs](", ")"), ("", ", done"), ("", "\nnext")]
+            let (before, after) = [("GET ", " 200"), ("see ", ". status=200"), ("(", ") ok"), ("[docs](", ") ok"), ("", ", done"), ("", "\nnext"), ("see ", "!")]
                 .randomElement(using: &random)!
             let line = before + url + after
             for redactor in redactors {

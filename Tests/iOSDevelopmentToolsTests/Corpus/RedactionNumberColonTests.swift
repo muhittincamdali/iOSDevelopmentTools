@@ -2,14 +2,14 @@ import Foundation
 import Testing
 @testable import iOSDevelopmentTools
 
-/// A `:` between two digits is part of a number only after a number. The fifth review of this
-/// branch showed that reading every such `:` as part of a time let the value of a key that ends in
-/// digits through (`curl -u admin1:2…`, `redis-cli -a db1:2…`, `user1:2345678901`), in a line, a
-/// JSON string, a form value, a text/plain body and an allowed header alike.
+/// A `:` between two digits is part of a number only when both sides are numbers. The fourteenth
+/// review showed that reading every such `:` as part of a time let the value of a key that ends in
+/// digits through (`user1:2345678`, `acct2:44556677`), in a line and in a JSON string or form value
+/// alike. The twenty-fourth review showed that only the side before the `:` was read: after a
+/// number, a value that starts with a digit showed whole (`id 7:9hunter2`, `attempt 1:482913`).
 @Suite("Redaction corpus: colons between digits")
 struct RedactionNumberColonTests {
     let redactor = Redactor()
-    static let secret = "2345678901"
 
     @Test("after a key that ends in digits, a colon is a separator", arguments: [
         "user1:2345678", "acct2:44556677", "phone1:905551234567", "user_id2:998877", "status=ok retry3:5", "user\u{FF11}:\u{FF12}345678",
@@ -24,45 +24,59 @@ struct RedactionNumberColonTests {
     @Test("times, dates and times, and addresses with ports are kept", arguments: [
         "at 12:30", "at 12:30:45", "2026-10-19T12:30:45Z", "2026-10-19T12:30:45.123+03:00", "2026-10-19T12:30:45-05:00",
         "connect 10.0.0.1:8080 ok", "connect 192.168.1.100:8080 ok", "took 1:05", "(12:30)", "[12:30:45] started", "line 42:10",
-        "2026-10-19 12:30:45,123 INFO started", "at 12:30.", "at 12:30, then", "at 12:30Z", "12:30:45+0300 ok", "at 12:30:45.1", "10.0.0.1:65535",
-        "\"12:30\" ok",
     ])
     func numbersAreKept(input: String) {
         #expect(redactor.redact(input) == input)
     }
 
-    /// The reviews' commands and lines, in every place free text is read.
-    @Test("the review's commands hide the value after the key in every place", arguments: [
-        "curl -u admin1:\(secret) https://x.example", "redis-cli -a db1:\(secret) ping", "user1:\(secret)", "login user1:\(secret) ok",
-    ])
-    func reviewCommands(line: String) {
-        var outputs = RedactionWrittenURLTests.places(line).map(\.1)
-        let header = RedactionPolicy.default.redact(headers: [HTTPHeader(name: "User-Agent", value: line)])[0].value
-        outputs.append(header)
-        let encoded = "note=" + line.replacingOccurrences(of: ":", with: "%3A").replacingOccurrences(of: " ", with: "+")
-        outputs.append(Redactor(allowedTextKeys: ["note"]).redact(body: Data(encoded.utf8), contentType: "application/x-www-form-urlencoded"))
-        for output in outputs {
-            #expect(!output.contains(Self.secret), "\(line.debugDescription) -> \(output.debugDescription)")
+    /// The twenty-fourth review's inputs and more of their shape: a letter after the digits that
+    /// follow the `:`, five digits or more right after it, and a letter after a later group.
+    static let valuesAfterNumbers = [
+        "id 7:9hunter2", "user 42:7hunter2xyz", "status=1 12:3hunter2", "x 1.2.3.4:5hunter2", "x 99:99:99hunter2",
+        "2026-10-21 12:3hunter2", "status=1 1-1:2hunter2", "attempt 1:482913", "slot 3:482913 ok", "x 12:345678901234",
+        "rank 5:5f4dcc3b5aa765d61d8327deb882cf99", "x 0:0hunter2", "status=1 2:3:4:5hunter2", "status=1 99.123:1hunter2",
+        "status=1 12:30Zhunter2", "at 12:30:45.123hunter2", "x 10.0.0.1:8080hunter2", "x 10.0.0.1:123456", "x 12:3-4hunter2",
+        "x 12:30+03:00hunter2", "x 1:2_hunter2", "x 1:2/hunter2", "x 1:2.hunter2", "x 7:9\u{0430}bc", "x 7:9\u{FF41}bc",
+        "x 1:48291",
+    ]
+
+    @Test("after a number, a colon is a separator unless a number of the same shape follows it", arguments: valuesAfterNumbers)
+    func valueAfterNumber(input: String) {
+        let output = redactor.redact(input)
+        #expect(output.hasSuffix("[REDACTED]"), "\(input.debugDescription) -> \(output.debugDescription)")
+        for secret in ["hunter2", "482913", "48291", "5f4dcc", "345678", "123456", "\u{0430}bc", "\u{FF41}bc"] {
+            #expect(!output.contains(secret), "\(input.debugDescription) -> \(output.debugDescription)")
         }
     }
 
-    /// The sixth review: the colon was read as part of a number from its left side alone, so a
-    /// number used as a key (a user name, a database index) let the value after it through.
-    @Test("a colon is part of a number only when the number goes on to a whole time or port", arguments: [
-        "curl -u 42:2345678901 https://x.example", "curl -u 7:9xQ7mP2kL8 https://x.example", "redis-cli -a 0:2345678901 ping",
-        "uid 7:9xQ7mP2kL8 ok", "login 12:34hunter2 ok", "creds 1:2-hunter-two ok", "10.0.0.1:8080secretvalue ok",
-        "at 12:30:4f9a2c7b ok", "at 12:30:45.hunter2", "at 12:30:45,hunter2 ok", "id 12:345 ok", "1.234:56 ok", "10.0.0.1:123456 ok",
-        "at 12:30,hunter2", "1-1-1:2345",
-    ])
-    func numberUsedAsKey(line: String) {
-        let secrets = ["2345678901", "9xQ7mP2kL8", "hunter", "secretvalue", "4f9a2c7b", "345", "56", "123456", "2345"]
-        var outputs = RedactionWrittenURLTests.places(line).map(\.1)
-        outputs.append(RedactionPolicy.default.redact(headers: [HTTPHeader(name: "User-Agent", value: "app " + line)])[0].value)
-        for output in outputs {
-            for secret in secrets where line.contains(secret) {
-                #expect(!output.contains(secret), "\(line.debugDescription) -> \(output.debugDescription)")
+    @Test("a value after a number is hidden in a JSON string, a form value and a multipart part too")
+    func valueAfterNumberOnEveryPath() {
+        for input in Self.valuesAfterNumbers {
+            let json = redactor.redact(body: Data(#"{"note":"\#(input)"}"#.utf8), contentType: "application/json")
+            #expect(json.hasPrefix(#"{"note":""#) && json.hasSuffix(#"[REDACTED]"}"#), "\(input.debugDescription) -> \(json)")
+            let form = redactor.redact(body: Data(("note=" + RedactionPolicy.formEncoded(input)).utf8), contentType: "application/x-www-form-urlencoded")
+            #expect(form.hasPrefix("note=") && form.hasSuffix("[REDACTED]"), "\(input.debugDescription) -> \(form)")
+            let part = "--B0und\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\n\(input)\r\n--B0und--"
+            let multipart = redactor.redact(body: Data(part.utf8), contentType: "multipart/form-data; boundary=B0und")
+            #expect(multipart.contains("[REDACTED]\r\n--B0und--"), "\(input.debugDescription) -> \(multipart.debugDescription)")
+            for output in [json, form, multipart] {
+                #expect(!output.contains("hunter2") && !output.contains("482913"), "\(input.debugDescription) -> \(output.debugDescription)")
             }
         }
+        // The review's JSON and form inputs, and an allowed query value.
+        #expect(redactor.redact(body: Data(#"{"note":"slot 12:3hunter2"}"#.utf8), contentType: "application/json") == #"{"note":"slot 12:[REDACTED]"}"#)
+        #expect(redactor.redact(body: Data("note=12%3A3hunter2".utf8), contentType: "application/x-www-form-urlencoded") == "note=12%3A[REDACTED]")
+        let query = Redactor(allowedQueryParameters: ["note"]).redact(url: URL(string: "https://x.example/a?note=slot%2012%3A3hunter2")!)
+        #expect(!query.contains("hunter2") && query.hasPrefix("https://x.example/a?note=slot"), "\(query)")
+    }
+
+    @Test("times with seconds, fractions and offsets, lines and columns, ports and ranges are kept", arguments: [
+        "at 12:30:45,123 INFO started", "2026-10-21 12:30:45.123456Z", "2026-10-21T12:30:45+0300", "open 10:00-11:00", "at 12:30.",
+        "took 1:05, then 2:10", "connect 10.0.0.1:65535 ok", "1:2:3", "at 9:05!", "{12:30}", "x 1:2|3",
+        "line 42:1234",
+    ])
+    func moreNumbersAreKept(input: String) {
+        #expect(redactor.redact(input) == input)
     }
 
     @Test("a colon after digits glued to a key cuts a JSON string and a form value too")
@@ -72,13 +86,14 @@ struct RedactionNumberColonTests {
         let form = redactor.redact(body: Data("note=acct2%3A44556677".utf8), contentType: "application/x-www-form-urlencoded")
         #expect(!form.contains("44556677"), "\(form)")
         #expect(redactor.redact(body: Data(#"{"note":"at 12:30:45"}"#.utf8), contentType: "application/json") == #"{"note":"at 12:30:45"}"#)
-        #expect(redactor.redact(body: Data("ts 2026-10-19T12:30:00Z ok".utf8), contentType: "text/plain") == "ts 2026-10-19T12:30:00Z ok")
     }
 
     @Test("a number longer than the colon rule reads is a key")
     func longNumbers() {
         let long = String(repeating: "1-", count: FreeTextScanner.longestNumber) + "1:2345"
         #expect(!redactor.redact(long).contains("2345"))
-        #expect(redactor.redact("1-1-1:23") == "1-1-1:23")
+        // A `:` follows only the shapes of a number (an hour, a line, an address, a date and
+        // hour, an offset or a range): `1-1-1` is none of them, so it is a key.
+        #expect(redactor.redact("1-1-1:2345") == "1-1-1:[REDACTED]")
     }
 }

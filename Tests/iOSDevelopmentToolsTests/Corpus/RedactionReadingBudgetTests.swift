@@ -17,8 +17,8 @@ struct RedactionReadingBudgetTests {
         RedactionTimeLimitTests.quoted(payload, levels: levels)
     }
 
-    // Words of one letter: a word longer than 256 characters would cut the text by itself.
-    private static let payload = String(repeating: "ı ", count: 1_000)
+    /// Words of `ı`, each shorter than the longest word free text reads.
+    private static let payload = String(repeating: String(repeating: "ı", count: 99) + " ", count: 20)
 
     @Test("the input is read freely and what is found in it takes four times its length at most")
     func budget() {
@@ -54,7 +54,8 @@ struct RedactionReadingBudgetTests {
         let twice = Self.quoted(Self.payload, levels: 2)
         #expect(body(twice) == twice)
         let thrice = Self.quoted(Self.payload, levels: 3)
-        #expect(body(thrice) == Self.quoted("[REDACTED]", levels: 2))
+        // The innermost string is hidden whole, and the text that holds it is cut there.
+        #expect(body(thrice) == #"["[\"[REDACTED]"]"#)
         let secret = Self.quoted("password=hunter2 " + Self.payload, levels: 3)
         #expect(!body(secret).contains("hunter2"))
     }
@@ -63,7 +64,7 @@ struct RedactionReadingBudgetTests {
     func longTextInLine() {
         let once = "log " + Self.quoted(Self.payload, levels: 1)
         #expect(redactor.redact(once) == once)
-        #expect(redactor.redact("log " + Self.quoted(Self.payload, levels: 2)) == "log " + Self.quoted("[REDACTED]", levels: 1))
+        #expect(redactor.redact("log " + Self.quoted(Self.payload, levels: 2)) == #"log ["[REDACTED]"#)
     }
 
     @Test("many small documents side by side all fit")
@@ -79,9 +80,10 @@ struct RedactionReadingBudgetTests {
     func smallDeepDocuments() {
         let innermost = #"{"status":"ok"}"#
         let four = (0..<3).reduce(innermost) { inner, _ in #"{"note":""# + RedactionStackTests.escaped(inner) + #""}"# }
-        // `note` is allowed, so each string reads on into the JSON in it.
-        #expect(Redactor(allowedTextKeys: ["note"]).redact(body: Data(four.utf8), contentType: "application/json") == four)
-        #expect(body(four) == #"{"note":"{\"note\":[REDACTED]"}"#)
+        // `note` is allowed in text, so the text in it reads on into the document it holds.
+        let allowing = Redactor(allowedTextKeys: ["note"])
+        #expect(allowing.redact(body: Data(four.utf8), contentType: "application/json") == four)
+        #expect(body(four) == #"{"note":"{[REDACTED]"}"#)
     }
 
     /// A secret in a text nested in documents of every kind, inside or past the budget, never

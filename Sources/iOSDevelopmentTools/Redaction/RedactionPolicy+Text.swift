@@ -1,138 +1,175 @@
-/// Redaction of free text: log messages, error descriptions, kept header values, `text/plain`
-/// bodies, and the strings, values and names that structured input holds.
+/// Redaction of free text: kept header values, `text/plain` bodies, text you pass to
+/// ``RedactionPolicy/redact(text:)``, and the strings, values and names that structured input holds.
 extension RedactionPolicy {
     /// The text with its secrets replaced by ``replacement``.
     ///
-    /// Free text has no grammar, so the rule does not try to tell where a value ends. It has one
-    /// cut point: from the first trigger, everything to the end of the text is hidden, the lines
-    /// below included. Hiding more than the secret is how the rule is meant to work. The text is
-    /// read once, on a scanning copy without invisible characters (format characters, marks,
-    /// default-ignorable code points such as U+3164, control characters), in Unicode compatibility
-    /// form. The triggers are:
+    /// The text is read as free text, which has no grammar, so it follows one rule: **the first
+    /// trigger hides everything after it, to the end of the text** — not only the rest of its
+    /// line. This hides more than it has to on purpose. A text without a trigger is written as it
+    /// is, apart from the card numbers, IBANs, email addresses and tokens in it, which the value
+    /// detectors find (see ``RedactionPolicy``).
     ///
-    /// - **A key that is not allowed.** In `key=value`, `key: value`, `key = value` and
-    ///   `"key":"value"` the text is read on only after a key that is plain ASCII, names no secret
-    ///   and is on ``allowedTextKeys`` (`status`, `method`, `path`, `duration_ms` and `count` by
-    ///   default), written on the line of its separator, which is `=`, `:` or a run of them
-    ///   (`:=`, `==`, `=>`) in ASCII. Any other key cuts the text at its value: `x=hunter2` becomes
-    ///   `x=[REDACTED]` and `Error: …` becomes `Error: [REDACTED]`. A `:` between two digits is
-    ///   part of a number only after a number (`12:30`, `2026-10-19T12:30:00Z`, `10.0.0.1:8080`);
-    ///   after a key that ends in digits it is a separator (`user1:2345678901` becomes
-    ///   `user1:[REDACTED]`). JSON in the text follows the same rule member by member, and
-    ///   a two-element array by its first string (`["user","bob"]`). A key in quotes (`"x": …`,
-    ///   `'x'=…`) that is not allowed cuts the text at its opening quote, so nothing written in
-    ///   the quotes shows (`"x":"hunter2"` becomes `[REDACTED]`).
-    /// - **A secret name** (see ``secretNames``), with or without a separator, quoted or not:
-    ///   `password=hunter2`, `password hunter2`, `"token":"…"`, `export AWS_SECRET_ACCESS_KEY …`.
-    ///   The text is hidden from the value after the name. Words are read with punctuation inside
-    ///   them (`pass~word`) and a space or `|` between two of them (`pass word`) read as a
-    ///   separator, and one letter, mark or number that has no ASCII form (`ɑ`, `ı`, `〇`, or
-    ///   U+0366 after the `t` of `tͦken`) read as any letter or as none. This is a best effort:
-    ///   a name disguised with two or more such characters and written without a separator
-    ///   (`pɑsswoʀd hunter2`) is not found.
-    /// - **A secret name written as a value.** After an allowed key that holds a name (`name=`,
-    ///   `id=`, `type=`, … when the app allows them; never `path=`, the route of a request), a
-    ///   name that names a secret, is not plain ASCII or is JSON: `name="password"`,
-    ///   `label="Пароль"`, `name=["pin"]`. After a key that is not allowed, the key hides the name
-    ///   already (`Content-Disposition: form-data; name="pin"`).
-    /// - **Markup**, which is not parsed. A `<` is a comparison only before an ASCII space, a tab,
-    ///   a line break, an ASCII digit, `=` or the end of the text (`a < b`, `<3`, `1<2`). Before
-    ///   anything else it starts markup and cuts the text there: `<b>`, `</x>`, `<br/>`, `<!--`,
-    ///   `<![CDATA[`, `<?xml`, `<#`, `<-`, `List<String>`. No tag keeps its text, whatever its
-    ///   name and the allowed keys (`<status>200</status>` becomes `[REDACTED]`).
-    /// - **A key that is not plain ASCII** or has no letter or digit, or no key at all, before
-    ///   `=` or `:` (`pаssword=…` with a Cyrillic `а`, `🔑=…`, `user[name]=…`, `=…`), and the last
-    ///   words of a key that, read as one name, name a secret (`pass word=…`, `c v v: …`).
-    /// - **A character outside the safe alphabet.** Letters, marks and digits of any script (also
-    ///   `ｐ` and `²`), the ASCII space, tab, LF and CR, printable ASCII and a space such as U+00A0
-    ///   are text. Every other character with text after it is a trigger, judged by its own
-    ///   Unicode category: punctuation and symbols outside ASCII (`꞉`, `≔`, `→`, `·`, `—`, `’`,
-    ///   `、`, `€`), also those that compatibility normalization reads as ASCII (`＝`, `…`, `‥`,
-    ///   `™`, `№`, `ⓟ`), emoji, control characters, the line breaks VT, FF, U+0085, U+2028 and
-    ///   U+2029, and private-use or unassigned code points. There is no list of look-alikes to
-    ///   get around.
-    /// - **An escape**, which is never decoded: `%XX`, `%uXXXX`, `&name;` (`&amp;`, `&lt;`), `&#…;`,
-    ///   `\NNN`, `\xNN`, `\uNNNN` and `\u{…}`, and `\=`. The text is hidden from the escape on.
-    /// - **A word longer than 256 characters**, which is no name or value that can be read.
-    /// - **An ambiguous token**: a word that mixes scripts (`pаssword` with a Cyrillic `а`) or
-    ///   holds an invisible character other than a mark (a zero-width space, `pa\u{115F}ssword`,
-    ///   a control character), a bracket that does not close, and JSON that does not parse. The
-    ///   text is hidden from there.
-    /// - **A quote that does not close on its line**: a `"` or a backtick anywhere, a `'` at the
-    ///   start of a word, still open at a line break or at the end of the text. The text is hidden
-    ///   from the quote, so a value or a quoted key written over two lines never shows.
+    /// ```swift
+    /// policy.redact(text: "GET /items status=200 duration_ms=12")    // kept as it is
+    /// policy.redact(text: "login user=bob status=401\nretry 2")      // "login user=[REDACTED]"
+    /// policy.redact(text: "password hunter2")                         // "password [REDACTED]"
+    /// ```
     ///
-    /// Text with no trigger is kept as it is (`status=200 method=GET path=/api/items`), except for
-    /// what the value detectors find: JWTs, bearer tokens, long hex or Base64 strings, card
-    /// numbers, IBANs and email addresses. The detectors read across VT, FF, U+0085, U+2028 and
-    /// U+2029, so a finding written across one of these triggers is hidden from its start
-    /// (`paid 4111 1111 1111`, U+2028 and `1111` becomes `paid [REDACTED]`). JSON in the text
-    /// (`{"…`, `[{…`, `["…`, `[[…`) is parsed with a JSON parser, within the limits of
-    /// ``maximumJSONDepth`` and ``maximumNestedDocuments``, and redacted by the key rule of
-    /// structured input before its members are compared with ``allowedTextKeys``; its strings are
-    /// free text again, with this rule. A URL with a scheme and `//` has no island logic: a clean
-    /// URL — `scheme://host` with an optional path of ASCII letters, digits, `.`, `_`, `-` and `/`,
-    /// a host name or IPv4 address, no host or segment that names a secret, and white space, a
-    /// line break, the end of the text or one of `.`, `,`, `!` and `)` followed by one of those
-    /// after it — is recorded as ``redact(url:)`` records it. Any other URL hides the text from where it starts: a query,
-    /// a fragment, `;`, `%`, `=`, `:`, `@`, `\`, a port, user info, an escape, a character outside
-    /// ASCII, a quote, `>` or two marks after it make it so
-    /// (`GET https://a.example/x?page=2 done` and `see https://a.example/x), ok` are stored as
-    /// `GET [REDACTED]` and `see [REDACTED]`).
-    /// ``allowedQueryParameters`` does not apply to a URL in text.
+    /// Six rules decide where the text is cut, and no list of variants is kept for any of them:
+    ///
+    /// - **A safe alphabet.** The text is read only as far as it is written in letters, marks and
+    ///   digits of any script (the Unicode categories L, M and N), the ASCII space, tab, line feed
+    ///   and carriage return, and printable ASCII. The first character outside it cuts the text
+    ///   there: punctuation, a symbol or a space outside ASCII (`꞉`, `≔`, `→`, `·`, `＝`, `—`, `€`,
+    ///   an emoji, U+00A0, U+2028), a control or format character (a zero-width space, `DEL`) and
+    ///   every default-ignorable code point (U+3164). So does a letter or number whose
+    ///   compatibility form, which is what the text is read as, is not in the alphabet (`🄁` is
+    ///   `0,`, `⑴` is `(1)`, `½` is `1⁄2`). A modifier letter (`ː`, `ー`) is in the alphabet only
+    ///   after a letter or digit outside ASCII, as in Japanese or Thai.
+    /// - **Escapes.** An escape is never decoded: one that can stand for any character cuts the
+    ///   text at the start of the word it is in — `%3D`, `%u003D`, `&#61;`, `&colon;`, `&amp;`, and
+    ///   `&` before a letter unless it starts the name of a field before `=` (`&count=3`). In free
+    ///   text every backslash escape cuts the text: a backslash does, whatever follows it, unless
+    ///   an ASCII space, tab or line break or the end of the text does, so no list of its forms is
+    ///   kept (`\075`, `\x3D`, `\x{73}`, `\o{163}`, `\N{…}`, `\q`; `login pa\x{73}sword hunter2`
+    ///   keeps `login `). A Windows path is hidden from its first backslash on, by design.
+    /// - **Opaque words.** A word longer than 256 characters cuts the text where it starts: it
+    ///   cannot be read as a name.
+    /// - **The key rule, in every shape.** In `key=value`, `key: value`, `key = value` and
+    ///   `"key":"value"` the text is read on only after a key that is plain ASCII and on
+    ///   ``allowedTextKeys`` (`status`, `method`, `path`, `duration_ms` and `count` by default).
+    ///   Any other key cuts the text at its value, and so does a separator with no key before it
+    ///   or a key on the line before its separator. A key in quotes of any kind — `"…":`, `'…'=`
+    ///   or in backticks, a `'` opening a quote only at the start of a word — that is not allowed
+    ///   cuts the text at its opening quote, so nothing written in the quotes shows (`cache miss
+    ///   for "session Qz9Wk7rX": refetching` and `{'status': 200, 'last status': 'x'}` keep
+    ///   `cache miss for ` and `{'status': 200, `); a key with a space in it is never allowed. A
+    ///   quote glued to the word before it starts no quoted key: the text is cut where that word
+    ///   starts (`x"status": 200` keeps nothing).
+    ///   The separators are `=` and `:` and runs of
+    ///   them (`:=`, `==`, `=>`); a `:` between two digits is part of a number only when both
+    ///   sides have the whole shape of one — a time, a date and time, an address and its port or a
+    ///   line and column, as in `12:30:45`, `2026-10-19T12:30:45Z`, `10.0.0.1:8080` and `42:10`,
+    ///   and then the end of the word. A word before the `:` of another shape (`1.234:56`,
+    ///   `1-1-1:2345`), a letter after the digits (`7:9hunter2` cuts at `9hunter2`) or right after
+    ///   the punctuation that follows them (`12:30,hunter2`), five or more digits right after the
+    ///   `:` (`1:482913`) and a key that ends in digits (`user1:2345`) make it a separator. JSON in the text follows
+    ///   the same rule member by member, a member name that is not allowed cutting it at its
+    ///   opening quote, and the first string of a two-element array is a key too
+    ///   (`["user","bob"]` cuts at `"user"`).
+    /// - **Markup.** In free text the first markup tag cuts the text: markup is never parsed. A
+    ///   `<` is a comparison only before an ASCII space, tab or line break, an ASCII digit, `=` or
+    ///   the end of the text (`a < b`, `1<2`, `<3`); before anything else it cuts the text there,
+    ///   whatever follows — a letter of any script, `_`, `:`, `/`, `!`, `?`, other punctuation or
+    ///   a digit outside ASCII (`<user>`, `<_id>`, `</a>`, `<!-- … -->`, `<![CDATA[…]]>`,
+    ///   `<?xml …?>`, `<०>`, `x << 1`); no tag is allowed. `login <user>bob</user>` keeps
+    ///   `login `.
+    /// - **Secret names.** A word that holds a secret name cuts the text after the name, with or
+    ///   without a separator: `password hunter2`, `PIN 1234`, `export AWS_SECRET_ACCESS_KEY …`.
+    ///   Punctuation inside a word (`pass~word`) and a space or `|` between two words
+    ///   (`pass word`) are read as a separator. A word is compared by its ASCII skeleton, with
+    ///   one wildcard rule: a letter, mark or number outside ASCII that has no ASCII form (`ꞏ`,
+    ///   `ı`, `ɑ`, a combining mark such as U+0366, `〇`, a decimal digit of another script such as
+    ///   the Myanmar `၀`) counts as nothing or as any one letter. It is left out, and what remains
+    ///   is compared with the secret names, a plural `s` included (`piꞏn`, `tokeın`, `tokenꞏs`,
+    ///   `keyıs`); a name also counts with one of its letters missing where such a character
+    ///   stands, so one put in place of a letter is found (`pɑssword`, `user_pın`, `tͦken`,
+    ///   `passw〇rd`, `t၀ken`). A word of another language that reads as a name this way hides
+    ///   what follows it (Turkish `yapın` reads as `pin`), on purpose. A name written
+    ///   without a separator with two or more of its letters replaced so (`pɑsswoʀd hunter2`) is
+    ///   not found: that is deliberate disguise.
+    ///   After an allowed key that holds a name (`id=`, `type=`, … but not `path=`, the route of a
+    ///   request), a secret name or one that is not plain ASCII cuts the text after it, as in JSON
+    ///   (`type="Пароль"`), and so does JSON there.
+    ///
+    /// A word that mixes scripts (`pаssword` with a Cyrillic `а`) cuts the text where it starts.
+    /// A quote (`"`, a backtick, or `'` at the start of a word) that does not close on its line,
+    /// or before the first character outside the safe alphabet, cuts the text at the quote, so a
+    /// quoted key with a line break in it shows nothing (`"note\nQx31": 1`). A quote of another
+    /// kind opens inside a quote (`'a "b" c'`); when a quote closes while one opened inside it is
+    /// still open (`'x "y' z"`, `'x "y' "c` before a line break), the quotes overlap, which quote
+    /// closes cannot be told, and the text is cut at the earliest quote still open. A bracket that
+    /// does not close before the text ends leaves the end of its value unknown, so it cuts the text
+    /// after it, also after another trigger. JSON in the text (`{"…`, `[{…`, `["…`,
+    /// `[[…`) is parsed and redacted by the key rule for structured input, within the limits listed
+    /// under "Limits"; JSON that does not parse, or is longer than 64 Ki scalars, cuts the text at
+    /// its first bracket.
+    ///
+    /// **URLs.** A URL in free text is shown only when it is clean — `scheme://host` and an
+    /// optional path of ASCII letters, digits, `.`, `_`, `-` and `/` (no `?`, `#`, `;`, `%`, `=`,
+    /// `:`, `@` or `\`), whose host and segments name no secret, followed by white space, a line
+    /// break, the end of the text or one `.`, `,`, `!` or `)` before one of those — and any other
+    /// URL cuts the text where it starts, also one that a quote, a backtick, `>`, `]`, `}` or a
+    /// `?`, `#`, `;` or `:` follows (`see https://x.example/a'#token` keeps `see `);
+    /// ``allowedQueryParameters`` applies only to ``redact(url:)``. A clean URL is written as
+    /// ``redact(url:)`` writes it, so an identifier in its path becomes `:id`
+    /// (`GET https://api.example.com/users/12345678 200` keeps
+    /// `GET https://api.example.com/users/:id 200`), its last segment is read with the next word
+    /// (`…/to ken hunter2`), and one longer than 256 characters cuts the text like any long word.
+    /// `see https://x.example/a?page=2 ok` keeps `see `, with `page` allowed or not.
     public func redact(text: String) -> String {
         guard isEnabled else { return text }
         let length = text.unicodeScalars.count
-        return redact(text, nesting: .text(length: length), compatibility: CompatibilityText(length: length))
+        return redact(text, nesting: .text(length: length), compatibility: readings(length: length))
     }
 
-    /// The findings in free text, in order and without overlaps: those of the JSON and URLs and of
-    /// the value detectors, and the cut, from the first trigger to the end of the text. `nesting`
-    /// says which documents the text is in; a text inside one whose JSON or URL goes past a limit
-    /// is one finding.
-    /// `allowedKeys` are the folded keys after which the text is read on; ``allowedTextKeys`` when
-    /// nil.
-    func textSpans(
-        in scalars: [Unicode.Scalar], compatibility: CompatibilityText, role: FreeTextScanner.Role = .text, nesting: Nesting,
-        allowedKeys: Set<String>? = nil
-    ) -> [Span] {
-        guard !scalars.isEmpty, !isQuietWord(scalars) else { return [] }
-        return textSpans(
-            in: scalars, text: NormalizedText(scalars, compatibility: compatibility), compatibility: compatibility, role: role, nesting: nesting,
-            allowedKeys: allowedKeys)
+    /// The findings in free text, in order and without overlaps. `nesting` says which documents
+    /// the text is in; a text inside one whose JSON or URL goes past a limit is one finding.
+    func textSpans(in scalars: [Unicode.Scalar], compatibility: CompatibilityText, role: FreeTextScanner.Role = .text, nesting: Nesting) -> [Span] {
+        guard !scalars.isEmpty, !Self.isQuietWord(scalars, names: compatibility.secretNames) else { return [] }
+        guard scalars.count <= Self.maximumTextLength else { return [Span(start: 0, end: scalars.count, kind: .secretFields, replacement: Self.replacement)] }
+        // The free-text rule cuts the text at the first scalar outside the safe alphabet at the
+        // latest, so the copy is made only as far as the scan and the detectors read.
+        let text = NormalizedText(scalars, compatibility: compatibility, extent: .scanned)
+        return textSpans(in: scalars, text: text, compatibility: compatibility, role: role, nesting: nesting)
     }
 
     /// ``textSpans(in:compatibility:role:nesting:)`` on a scanning copy that is already made.
     /// With `detectsInRegions` the value detectors also read the JSON and URLs in the text, which
     /// a path segment needs: a URL in one keeps its host, and a token in the host must still make
     /// the segment `:id`. A text inside a document found in the input that the reading budget no
-    /// longer covers (see ``ReadingBudget``) is one finding.
+    /// longer covers (see ``ReadingBudget``) is one finding, and so is a text longer than
+    /// ``maximumTextLength``, whose offsets the scanning copy cannot hold.
+    ///
+    /// The free-text rule cuts the text at its first trigger (see ``FreeTextScanner``): what comes
+    /// before the cut keeps the findings of the JSON, URLs and value detectors in it, and the cut
+    /// hides the rest.
     func textSpans(
         in scalars: [Unicode.Scalar], text: NormalizedText, compatibility: CompatibilityText, role: FreeTextScanner.Role = .text,
-        nesting: Nesting, detectsInRegions: Bool = false, allowedKeys: Set<String>? = nil
+        nesting: Nesting, detectsInRegions: Bool = false
     ) -> [Span] {
         guard !scalars.isEmpty else { return [] }
-        let whole = [Span(start: 0, end: scalars.count, replacement: Self.replacement)]
-        guard scalars.count <= Self.maximumTextLength, nesting.reads(scalars.count) else { return whole }
-        var scanner = FreeTextScanner(
-            source: scalars, text: text, policy: self, compatibility: compatibility, role: role, nesting: nesting,
-            allowedKeys: allowedKeys ?? allowedTextKeys)
+        let whole = [Span(start: 0, end: scalars.count, kind: .secretFields, replacement: Self.replacement)]
+        guard scalars.count <= Self.maximumTextLength else { return whole }
+        guard nesting.reads(scalars.count) else { return whole }
+        var scanner = FreeTextScanner(source: scalars, text: text, policy: self, compatibility: compatibility, role: role, nesting: nesting)
         scanner.run()
         if scanner.hidesWholeText { return whole }
-        let cut = scanner.cut.flatMap { $0 < scalars.count ? [Span(start: $0, end: scalars.count, replacement: Self.replacement)] : nil } ?? []
+        let cut = scanner.cut.flatMap { $0 < scalars.count ? [Span(start: $0, end: scalars.count, kind: .secretFields, replacement: Self.replacement)] : nil } ?? []
+        // The detectors look for findings only before the cut, which hides the rest.
+        let startLimit = scanner.cut.map(text.byteIndex(atOrAfter:)) ?? text.count
         // JSON and URLs were redacted by their own rules; the detectors do not read them again.
-        // A finding that runs into the cut is merged with it.
         let regions = scanner.regions
-        var found = detectorSpans(in: text)
-        if !regions.isEmpty, !detectsInRegions {
-            let crossing = Self.crossing(found, regions)
-            found = detectorSpans(in: NormalizedText(scalars, compatibility: compatibility, masked: regions))
+        // The findings are collected in the array of the value detectors, which is the largest (a
+        // megabyte of addresses finds a hundred thousand of them), made with room for the rest.
+        var found: [Span]
+        if regions.isEmpty || detectsInRegions {
+            found = detectorSpans(in: text, startLimit: startLimit, extra: scanner.spans.count + cut.count)
+        } else {
+            let crossing = Self.crossing(detectorSpans(in: text, startLimit: startLimit), regions)
+            found = detectorSpans(in: text.masking(regions), startLimit: startLimit, extra: crossing.count + scanner.spans.count + cut.count)
             found += crossing
         }
         found += scanner.spans
         found += cut
-        return Self.merged(found)
+        // Handed over, not copied: an unoptimized build would otherwise keep `found` and copy it
+        // when the spans are sorted.
+        return Self.merged(consume found)
     }
+
+    /// The longest text that is read: one whose scalar offsets fit in the 28 bits a ``Span`` keeps
+    /// them in, 256 Mi scalars. A longer one is hidden whole, and a longer body is omitted.
+    static let maximumTextLength = (1 << 28) - 1
 
     /// The findings that run over the edge of a JSON or URL region, hidden whole. A URL ends
     /// before the punctuation that ends a sentence, so `…?q=eyJ….eyJ….` keeps the dot of an
@@ -152,13 +189,9 @@ extension RedactionPolicy {
             guard low > 0 else { return nil }
             let last = regions[low - 1]
             let crosses = last.lowerBound > span.start || (last.upperBound > span.start && span.end > last.upperBound)
-            return crosses ? Span(start: span.start, end: span.end, replacement: replacement) : nil
+            return crosses ? Span(start: span.start, end: span.end, kind: span.kind, replacement: replacement) : nil
         }
     }
-
-    /// The longest text that is read: one of more scalars than 32 bits count is hidden whole (see
-    /// ``ScalarOffsets``).
-    static let maximumTextLength = Int(UInt32.max)
 
     /// The longest text ``isQuietWord(_:)`` takes: the shortest card number has 13 digits, an
     /// IBAN 15 characters and a long token 32.
@@ -168,63 +201,60 @@ extension RedactionPolicy {
     /// secret word in it, such as most JSON strings, path segments and query names. No rule and
     /// no detector finds anything in such a word, so it is not scanned; reading every one of them
     /// took most of the time of a JSON array of short strings and of a URL of many segments.
-    func isQuietWord(_ scalars: [Unicode.Scalar]) -> Bool {
-        guard scalars.count <= Self.quietWordLength else { return false }
+    /// `names` are the secret names the word is compared with.
+    static func isQuietWord(_ scalars: [Unicode.Scalar], names: SecretNameTable) -> Bool {
+        guard scalars.count <= quietWordLength else { return false }
         var bytes: [UInt8] = []
         bytes.reserveCapacity(scalars.count)
         for scalar in scalars {
             guard scalar.isASCII, ASCII.isAlphanumeric(UInt8(scalar.value)) else { return false }
             bytes.append(UInt8(scalar.value))
         }
-        return PlainName(bytes: bytes, maximumLength: nil)?.namesSecret(in: secretNameTable) == false
+        return PlainName(bytes: bytes, maximumLength: nil)?.namesSecret(in: names) == false
     }
 
-    /// The findings of the value detectors: the password in `user:password@host`, bearer tokens,
-    /// JWTs, email addresses, card numbers, IBANs and long hex or Base64 strings.
-    func detectorSpans(in text: NormalizedText) -> [Span] {
-        // Joined one detector at a time, so that a text of many findings holds one list of them
-        // and the findings of one detector at most.
-        var spans: [Span] = []
-        for detect in Self.detectors {
-            let found = detect(text)()
-            if spans.isEmpty { spans = found } else if !found.isEmpty { spans += found }
-        }
-        return spans
+    /// The findings of the value detectors that start before byte
+    /// `startLimit`, where free text is cut (see ``NormalizedText``'s detectors), in an array with
+    /// room for `extra` more. The detectors run twice, first to count (see ``SpanSink``).
+    func detectorSpans(in text: NormalizedText, startLimit: Int = .max, extra: Int = 0) -> [Span] {
+        var counter = SpanSink()
+        runDetectors(on: text, startLimit: startLimit, into: &counter)
+        var sink = SpanSink(capacity: counter.count + extra)
+        if counter.count > 0 { runDetectors(on: text, startLimit: startLimit, into: &sink) }
+        return sink.spans
     }
 
-    private static let detectors: [@Sendable (NormalizedText) -> () -> [Span]] = [
-        NormalizedText.userInfoPasswordSpans, NormalizedText.bearerSpans, NormalizedText.jsonWebTokenSpans, NormalizedText.emailSpans,
-        NormalizedText.cardSpans, NormalizedText.ibanSpans, NormalizedText.longTokenSpans,
-    ]
+    private func runDetectors(on text: NormalizedText, startLimit: Int, into sink: inout SpanSink) {
+        text.userInfoPasswordSpans(startLimit: startLimit, into: &sink)
+        text.bearerSpans(startLimit: startLimit, into: &sink)
+        text.jsonWebTokenSpans(startLimit: startLimit, into: &sink)
+        text.emailSpans(startLimit: startLimit, into: &sink)
+        text.cardSpans(startLimit: startLimit, into: &sink)
+        text.ibanSpans(startLimit: startLimit, into: &sink)
+        text.longTokenSpans(startLimit: startLimit, into: &sink)
+    }
 
-    /// The text redacted as free text; nil when nothing changed.
+    /// The text redacted as free text, and what was found in it; nil when nothing was.
     func redactedText(
         _ scalars: [Unicode.Scalar], compatibility: CompatibilityText, role: FreeTextScanner.Role = .text, nesting: Nesting
-    ) -> String? {
+    ) -> (text: String, kind: Kinds)? {
         let spans = textSpans(in: scalars, compatibility: compatibility, role: role, nesting: nesting)
         guard !spans.isEmpty else { return nil }
-        return Self.replacing(spans, in: scalars)
+        let kind = spans.reduce(into: Kinds()) { $0.formUnion($1.kind) }
+        return (Self.replacing(spans, in: scalars), kind)
     }
 
-    /// A text inside a document (a form value, a query value, a plain-text part) or passed in on
-    /// its own, redacted as free text with the given nesting. `compatibility` is the one table of
-    /// readings of the whole input.
+    /// A text inside a document (a form value, a query value, a multipart header), redacted as
+    /// free text with the document's nesting and the document's readings table.
     func redact(_ text: String, nesting: Nesting, compatibility: CompatibilityText) -> String {
         let scalars = Array(text.unicodeScalars)
         let spans = textSpans(in: scalars, compatibility: compatibility, nesting: nesting)
         return spans.isEmpty ? text : Self.replacing(spans, in: scalars)
     }
 
-    /// Whether free text is read on after the key `name`: it is plain ASCII, names no secret and
-    /// is on `keys` once folded.
-    func allowsTextKey(_ name: some Collection<Unicode.Scalar>, in keys: Set<String>) -> Bool {
-        guard let fold = allowableFold(name) else { return false }
-        return keys.contains(fold)
-    }
-
     /// A key that is written out (a form or multipart field name, a query parameter name) read as
     /// free text in the ``FreeTextScanner/Role/name`` role.
     func redactedName(_ name: String, nesting: Nesting, compatibility: CompatibilityText) -> String {
-        redactedText(Array(name.unicodeScalars), compatibility: compatibility, role: .name, nesting: nesting) ?? name
+        redactedText(Array(name.unicodeScalars), compatibility: compatibility, role: .name, nesting: nesting)?.text ?? name
     }
 }

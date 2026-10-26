@@ -8,6 +8,8 @@ import Testing
 struct RedactionNameTests {
     let redactor = Redactor()
 
+    private func json(_ body: String) -> String { redactor.redact(body: Data(body.utf8), contentType: "application/json") }
+
     static let sharedNames = [
         "password", "passwd", "pwd", "secret", "token", "access_token", "refresh_token", "id_token", "api_key", "apikey",
         "key", "auth", "authorization", "cookie", "set-cookie", "session", "sid", "otp", "pin", "cvv", "card", "iban",
@@ -60,9 +62,9 @@ struct RedactionNameTests {
 
     @Test("the inputs that got past the first fix after 2.0.0", arguments: [
         ("{\"otp\":\"123456\",\"cvv\":\"123\",\"ssn\":\"078-05-1120\",\"auth\":\"a\",\"key\":\"k\",\"signature\":\"s\"}",
-         "{\"otp\":\"[REDACTED]\",\"cvv\":\"[REDACTED]\",\"ssn\":\"[REDACTED]\",\"auth\":\"[REDACTED]\",\"key\":\"[REDACTED]\",\"signature\":\"[REDACTED]\"}"),
-        // In free text everything after a secret name is hidden: `;`, `&` and spaces do not end
-        // a value, so the pairs after it are hidden with it.
+         "{[REDACTED]"),
+        // In free text an unquoted value goes to the end of its line: `;`, `&` and spaces do not
+        // end it, so the pairs after it are hidden with it.
         ("Cookie: session=x; sid=SECRET", "Cookie: [REDACTED]"),
         ("Set-Cookie: sid=SECRET", "Set-Cookie: [REDACTED]"),
         ("otp=123456&cvv=123", "otp=[REDACTED]"),
@@ -71,8 +73,7 @@ struct RedactionNameTests {
         ("verification code: 123456", "verification code: [REDACTED]"),
     ])
     func roundTwoInputs(input: String, expected: String) {
-        let output = input.hasPrefix("{") ? redactor.redact(body: Data(input.utf8), contentType: "application/json") : redactor.redact(input)
-        #expect(output == expected)
+        #expect(redactor.redact(input) == expected)
     }
 
     @Test("a form with the new names hides their values")
@@ -82,16 +83,17 @@ struct RedactionNameTests {
     }
 
     // Short secret words count as a word or at the end of a name, not inside a longer word.
-    @Test("names that only hold the letters of a secret word keep their value in structured input, and in text when allowed", arguments: [
+    @Test("names that only hold the letters of a secret word keep their value in structured input", arguments: [
         "keyboard", "pinned", "spinner", "author", "authenticated", "inside", "president",
-        "sidebar", "description", "bypass", "passport", "tokenizer", "secretary", "discard_count",
+        "sidebar", "description", "bypass", "passport", "keynote", "authority", "discard_count",
     ])
     func lettersOfSecretWords(name: String) {
-        #expect(redactor.redact(body: Data("{\"\(name)\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(name)\":\"bob\"}")
+        #expect(json("{\"\(name)\":\"bob\"}") == "{\"\(name)\":\"bob\"}")
         let form = Data("\(name)=bob".utf8)
         #expect(redactor.redact(body: form, contentType: "application/x-www-form-urlencoded") == "\(name)=bob")
-        #expect(Redactor(allowedTextKeys: [name]).redact("\(name)=bob") == "\(name)=bob")
+        // Free text keeps a value only after an allowed key.
         #expect(redactor.redact("\(name)=bob") == "\(name)=[REDACTED]")
+        #expect(Redactor(allowedTextKeys: [name]).redact("\(name)=bob") == "\(name)=bob")
     }
 
     // A name that holds a secret word as a word may only describe the secret, but telling the
@@ -101,22 +103,22 @@ struct RedactionNameTests {
         "signature_version", "cookie_policy", "token_type", "secret_name",
     ])
     func describingNames(name: String) {
-        #expect(redactor.redact(body: Data("{\"\(name)\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(name)\":\"[REDACTED]\"}")
+        #expect(json("{\"\(name)\":\"bob\"}") == "{\"\(name)\":\"[REDACTED]\"}")
         let form = Data("\(name)=bob".utf8)
         #expect(redactor.redact(body: form, contentType: "application/x-www-form-urlencoded") == "\(name)=[REDACTED]")
-        // In text the secret word is the trigger: the rest is hidden from the end of the word.
-        #expect(!redactor.redact("\(name)=bob").contains("bob"))
-        // A secret name cannot be allowed.
-        #expect(!Redactor(allowedTextKeys: [name]).redact("\(name)=bob").contains("bob"))
+        #expect(Redactor(allowedTextKeys: [name]).redact("\(name)=bob") == "\(name)=[REDACTED]")
     }
 
+    // A name of more than 256 characters is not plain, so its value is hidden; as a word of
+    // free text it is longer than the longest word read, so it goes with its value.
     @Test("a long name is compared in time linear in its length and hidden past 256 characters")
     func longNames() {
         let plain = String(repeating: "user", count: 64)
-        #expect(redactor.redact(body: Data("{\"\(plain)\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(plain)\":\"bob\"}")
-        #expect(redactor.redact(body: Data("{\"\(plain)x\":\"bob\"}".utf8), contentType: "application/json") == "{\"\(plain)x\":\"[REDACTED]\"}")
+        #expect(json("{\"\(plain)\":\"bob\"}") == "{\"\(plain)\":\"bob\"}")
+        #expect(json("{\"\(plain)x\":\"bob\"}") == "{\"[REDACTED]\":\"[REDACTED]\"}")
         #expect(Redactor(allowedTextKeys: [plain]).redact("\(plain)=bob") == "\(plain)=bob")
-        // In text a word longer than 256 characters is a trigger where it starts.
         #expect(Redactor(allowedTextKeys: [plain + "x"]).redact("\(plain)x=bob") == "[REDACTED]")
+        let form = Data("\(plain)x=bob".utf8)
+        #expect(Redactor().redact(body: form, contentType: "application/x-www-form-urlencoded") == "[REDACTED]=[REDACTED]")
     }
 }

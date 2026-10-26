@@ -4,19 +4,20 @@ import Testing
 @Suite("Redaction corpus: review probes")
 struct RedactionReviewProbeTests {
     /// The probes whose secret still shows, each one a limitation that the documentation names
-    /// ("What is not found" in RedactingSensitiveData), by probe number.
+    /// ("What is not found" in KeepingSecretsOutOfLogs), by probe number.
     static let documentedLimitations: [Int: String] = {
         var limitations: [Int: String] = [:]
         let byReason: [(String, [Int])] = [
             ("a name wholly in another script that only looks Latin, with no = or :", [17, 18, 19, 20, 21, 22, 169, 236, 257]),
             ("a name in letters without an ASCII form throughout, with no = or :", [23, 24]),
             ("a name spelled with ASCII digits and symbols, with no = or :", [30, 31, 32]),
-            ("the value of `status`, which free text reads on by default", [134]),
-            ("the value of an allowed query parameter, also repeated or in another case", [379, 381]),
+            ("the value of an allowed key", [134, 379, 381]),
             ("a name and its value in two JSON objects", [177]),
             ("a name that is not on the list", [181]),
             ("a value before its name or glued to a flag", [311, 329]),
-            ("a card number grouped by . or _, glued to letters or written as a JSON float", [354, 355, 356, 411]),
+            // #411, a card number written as a JSON number with an exponent, is read as the
+            // decimal it stands for and hidden.
+            ("a card number grouped by . or _ or glued to letters", [354, 355, 356]),
         ]
         for (reason, ids) in byReason {
             for id in ids { limitations[id] = reason }

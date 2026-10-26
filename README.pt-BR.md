@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 631 testes de Swift Testing no macOS e 628 em um simulador de iOS. As requisições vão de
+- **Testado** — 857 testes de Swift Testing no macOS e 854 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -74,7 +74,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Cole no campo de busca no canto superior direito da janela. Deixe **Dependency Rule** em
-**Up to Next Major Version** a partir de `2.1.0` e clique em **Add Package**. Na janela seguinte,
+**Up to Next Major Version** a partir de `2.1.1` e clique em **Add Package**. Na janela seguinte,
 escolha o target do seu app ao lado de **iOSDevelopmentTools** e clique em **Add Package** novamente.
 
 **2. Importe o módulo**
@@ -131,7 +131,7 @@ Ou adicione-o às `dependencies` do seu `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -202,10 +202,18 @@ func configureNetworkLogger() {
   mesmo que estejam na lista), valores sob nomes secretos como `password`, `token` ou `api_key`,
   segmentos de caminho que parecem identificadores (mostrados como `:id`) e o segmento depois de
   um que nomeia um segredo ou não é ASCII simples (`/caf%C3%A9/menu` fica `/caf%C3%A9/:id`), o caminho e a query de uma URL
-  cujo caminho tem um segmento de ponto (`/pin/./4831`, `..`, `%2E`) ou um `;` (`/cart;jsessionid=…`,
-  `%3B`): só o esquema e o host ficam, então parâmetros de matriz nunca são lidos; o caminho e a
-  query depois de um host que nomeia um segredo (`myapp://pin/4831` fica como `myapp://pin`; um
-  host como `auth.example.com` também oculta seu caminho); e partes de arquivo de corpos multipart.
+  cujo caminho tem um segmento de ponto (`/pin/./4831`, `..`), um `;` (`/cart;jsessionid=…`) ou um
+  `.`, `/`, `\`, `;` ou `%` escapado (`%2E`, `%2F`, `%5C`, `%3B`, `%25`): só o esquema e o host
+  ficam, então parâmetros de matriz nunca são lidos; um host que nomeia um segredo com tudo o que
+  vem depois dele (`myapp://pin/4831` e `myapp://pin-4831` ficam como `myapp://[REDACTED]`; um host
+  como `auth.example.com` também é oculto); partes de arquivo de corpos multipart; e os valores dos
+  cabeçalhos de parte multipart além de `Content-Length` e `Content-Transfer-Encoding`
+  (`Content-ID` e outros quatro nomes `Content-*` mantêm o nome; qualquer outro cabeçalho de
+  parte, como `User-Agent`, é gravado como `[REDACTED]: [REDACTED]`), e qualquer valor desses
+  dois fora da sua forma: um `Content-Length` que não seja só dígitos ASCII e um
+  `Content-Transfer-Encoding` diferente de `7bit`, `8bit`, `binary`, `base64` ou
+  `quoted-printable` (mantido em minúsculas) são gravados como `[REDACTED]`
+  (`Content-Length: pin-4831` como `Content-Length: [REDACTED]`).
 - **Chaves que não são ASCII simples** depois de decodificar escapes, aplicar NFKC e igualar
   maiúsculas e minúsculas (`pаssword` com um `а` cirílico, `pass\u200Dword`, `şifre`) têm o valor
   oculto por padrão.
@@ -214,11 +222,13 @@ func configureNetworkLogger() {
   `[body omitted: 512 bytes, application/xml]`.
 - **Mensagens de log** são guardadas até o primeiro gatilho: um nome secreto, uma chave que não
   está na lista permitida (`status`, `method`, `path`, `duration_ms` e `count` por padrão;
-  adicione as suas com `allowedTextKeys`), um caractere fora do ASCII que não é letra, marca,
-  dígito nem espaço (`꞉`, `…`, um emoji, ou uma letra que a normalização de compatibilidade lê
-  como pontuação, como `🄁`, lido como `0,`), uma sequência de escape de qualquer forma (uma barra
-  invertida antes de qualquer coisa exceto espaço em branco, `%3D`, um `&` antes de uma letra ou
-  `#`: `R&D`, `&amp`), uma chave entre aspas
+  adicione as suas com `allowedTextKeys`), um caractere fora do ASCII que não é letra, marca nem
+  dígito (`꞉`, `…`, um emoji, um espaço como U+00A0, ou uma letra que a normalização de
+  compatibilidade lê como pontuação, como `🄁`, lido como `0,`), uma palavra que mistura escritas
+  (`tоken` com um `о` cirílico), uma sequência de escape de qualquer forma, cortada no início da
+  sua palavra (uma barra invertida antes de qualquer coisa exceto espaço em branco, `%3D`, um `&`
+  antes de uma letra ou `#`: `R&D`, `&amp`; um `&` que começa um campo, como em
+  `status=200&count=3`, não é escape), uma chave entre aspas
   que não está permitida (cortada na aspa de abertura: `"x":"hunter2"` é armazenada como
   `[REDACTED]`), marcação (um `<` que não é uma comparação: `<b>`, `</x>`, `<!--`; nenhuma tag
   guarda seu texto), uma aspa que não se fecha na sua linha, aspas que se

@@ -1,8 +1,8 @@
-/// Character classes of Unicode scalars, shared by the readers of keys, free text and values.
+/// Character classes of Unicode scalars, shared by the readers of ``RedactionPolicy``.
 enum ScalarClass {
     /// Letters of any script: the general categories Lu, Ll, Lt, Lm and Lo.
     static func isLetter(_ scalar: Unicode.Scalar) -> Bool {
-        switch ScalarTable.category(scalar) {
+        switch scalar.properties.generalCategory {
         case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter: true
         default: false
         }
@@ -10,7 +10,7 @@ enum ScalarClass {
 
     /// Letters, marks and numbers of any script: the general categories L*, M* and N*.
     static func isLetterOrNumber(_ scalar: Unicode.Scalar) -> Bool {
-        switch ScalarTable.category(scalar) {
+        switch scalar.properties.generalCategory {
         case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter,
              .nonspacingMark, .spacingMark, .enclosingMark, .decimalNumber, .letterNumber, .otherNumber: true
         default: false
@@ -44,10 +44,11 @@ enum ScalarClass {
     /// code point (fillers such as U+115F and U+3164, unassigned ones such as U+FFF0 and
     /// U+E0080), and control characters other than tab and the line terminators.
     static func isInvisible(_ scalar: Unicode.Scalar) -> Bool {
-        switch ScalarTable.category(scalar) {
+        let properties = scalar.properties
+        switch properties.generalCategory {
         case .format, .nonspacingMark, .enclosingMark, .spacingMark: return true
         case .control: return !isKeptControl(scalar)
-        default: return ScalarTable.isVariationSelector(scalar) || ScalarTable.isDefaultIgnorable(scalar)
+        default: return properties.isVariationSelector || properties.isDefaultIgnorableCodePoint
         }
     }
 
@@ -55,33 +56,13 @@ enum ScalarClass {
     /// which belong to letters and emoji. A word of free text that holds one cannot be read with
     /// certainty.
     static func isHiding(_ scalar: Unicode.Scalar) -> Bool {
-        if scalar.isASCII { return scalar.value < 0x20 && !isKeptControl(scalar) || scalar.value == 0x7F }
-        switch ScalarTable.category(scalar) {
+        let properties = scalar.properties
+        switch properties.generalCategory {
         case .format: return true
         case .control: return !isKeptControl(scalar)
         case .nonspacingMark, .enclosingMark, .spacingMark: return false
-        default: return ScalarTable.isDefaultIgnorable(scalar) && !ScalarTable.isVariationSelector(scalar)
+        default: return properties.isDefaultIgnorableCodePoint && !properties.isVariationSelector
         }
-    }
-
-    /// Whether the scalars hold one that only hides text (see ``isHiding(_:)``). A zero-width
-    /// joiner between two emoji (`👩‍💻`, `❤️‍🔥`) joins them into one emoji, as Unicode defines
-    /// emoji sequences, and hides nothing; one next to a letter, digit or other character does.
-    static func hidesText(_ scalars: some Collection<Unicode.Scalar>) -> Bool {
-        let scalars = Array(scalars)
-        for (index, scalar) in scalars.enumerated() where isHiding(scalar) {
-            guard scalar == zeroWidthJoiner, index > 0, index + 1 < scalars.count else { return true }
-            let before = scalars[..<index].last { !ScalarTable.isVariationSelector($0) }
-            guard let before, isEmoji(before), isEmoji(scalars[index + 1]) else { return true }
-        }
-        return false
-    }
-
-    private static let zeroWidthJoiner: Unicode.Scalar = "\u{200D}"
-
-    /// An emoji that is not ASCII (`#` and digits are emoji too, with a keycap) or a skin tone.
-    static func isEmoji(_ scalar: Unicode.Scalar) -> Bool {
-        !scalar.isASCII && ScalarTable.isEmoji(scalar)
     }
 
     /// Tab, line feed, carriage return, vertical tab, form feed and U+0085: the control characters

@@ -3,8 +3,8 @@ import Testing
 @testable import iOSDevelopmentTools
 
 /// Layouts that spread a name and its value over lines: a property list writes `<key>password</key>`
-/// and its value on lines of their own, and JSON after `name=` may span lines. Once a name hides
-/// what follows it, everything after it is hidden, on every line below.
+/// and its value on lines of their own, and JSON after `name=` may span lines. They need nothing
+/// carried from line to line: the first trigger hides every line after it.
 @Suite("Redaction corpus: values over several lines")
 struct RedactionMultiLineTests {
     static let secret = "Xq7Secret"
@@ -57,7 +57,7 @@ struct RedactionMultiLineTests {
     }
 
     // Review probes 328, 329, 382 and 383 of the eleventh review.
-    @Test("JSON over several lines after a key that holds a name hides everything after the key", arguments: [
+    @Test("JSON over several lines after a key that holds a name hides the rest of the line where it closes", arguments: [
         "name=[\n\"pin\"\n] S",
         "name={\"a\":\n\"pin\"} S",
         "key=[\n\"x\",\n] S",
@@ -68,19 +68,18 @@ struct RedactionMultiLineTests {
         expectHidden(layout.replacingOccurrences(of: "S", with: Self.secret))
     }
 
-    @Test("names that are not secret keep what follows them over lines after allowed keys")
-    func usefulness() {
-        #expect(redactor.redact("status=[\n1,\n2\n] ok") == "status=[\n1,\n2\n] ok")
-        #expect(Redactor(allowedTextKeys: ["name"]).redact("name=\"title\"\nHello") == "name=\"title\"\nHello")
-        // Markup is not parsed: the first tag cuts the text, whatever its name and whatever keys
-        // the app allows.
-        let allowing = Redactor(allowedTextKeys: ["name", "string"])
+    @Test("a trigger on one line hides every line after it, and text without one stays")
+    func cutOverLines() {
+        // Markup is never parsed in free text, so a property list is hidden from its first tag.
         #expect(redactor.redact("<key>CFBundleName</key>\n<string/>\nMyApp") == "[REDACTED]")
-        #expect(redactor.redact("<key>user</key>\n<string>bob</string>\nstatus=200") == "[REDACTED]")
-        #expect(redactor.redact("<string name=\"title\"></string>\nHello") == "[REDACTED]")
-        #expect(allowing.redact("<string name=\"title\"></string>\nHello") == "[REDACTED]")
-        #expect(allowing.redact("status=200\n<string name=\"title\">Hello</string>") == "status=200\n[REDACTED]")
         #expect(redactor.redact("<key>password</key>\n<string>k-1</string>\nnext") == "[REDACTED]")
+        #expect(redactor.redact("<string name=\"title\"></string>\nHello") == "[REDACTED]")
+        #expect(redactor.redact("status=[\n1,\n2\n] ok") == "status=[\n1,\n2\n] ok")
+        #expect(redactor.redact("started\nstatus=200\ncount=3\ndone") == "started\nstatus=200\ncount=3\ndone")
+        // After an allowed key that holds a name, a plain name is read on over the lines.
+        let allowing = Redactor(allowedTextKeys: ["name"])
+        #expect(allowing.redact("name=\"title\"\nHello") == "name=\"title\"\nHello")
+        #expect(allowing.redact("<string name=\"title\"></string>\nHello") == "[REDACTED]")
     }
 
     /// Generated layouts of a property list and of JSON after `name=`, with names that are secret

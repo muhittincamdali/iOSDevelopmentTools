@@ -79,7 +79,7 @@ struct RedactionParserDifferentialTests {
     @Test("still reads a strict multipart body, also with the boundary in a part as plain text")
     func multipartControl() {
         let body = Self.head + "see B0und and -B0und\r\n--B0und\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\n\(Self.secret)\r\n--B0und--\r\n"
-        let expected = Self.head + "see B0und and -B0und\r\n--B0und\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\n[REDACTED]\r\n--B0und--\r\n"
+        let expected = Self.head + "see B0und and -B0und\r\n--B0und\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\n[REDACTED]\r\n--B0und--"
         #expect(redactor.redact(body: Data(body.utf8), contentType: "Multipart/Form-Data; Boundary=B0und; charset=utf-8") == expected)
     }
 
@@ -176,14 +176,14 @@ struct RedactionParserDifferentialTests {
     // MARK: Content-Type header
 
     @Test("omits a body whose content type a server could read as another type or charset", arguments: [
-        ("note={S}", "application/x-www-form-urlencoded, text/plain", "no known content type"),
-        ("note={S}", "application/x-www-form-urlencoded text/plain", "no known content type"),
-        ("note={S}", "application /x-www-form-urlencoded", "no known content type"),
-        ("note={S}", "text/plain;; charset=utf-8", "no known content type"),
-        ("note={S}", "text/plain; charset = utf-8", "no known content type"),
+        ("note={S}", "application/x-www-form-urlencoded, text/plain", "unreadable content type"),
+        ("note={S}", "application/x-www-form-urlencoded text/plain", "unreadable content type"),
+        ("note={S}", "application /x-www-form-urlencoded", "unreadable content type"),
+        ("note={S}", "text/plain;; charset=utf-8", "unreadable content type"),
+        ("note={S}", "text/plain; charset = utf-8", "unreadable content type"),
         ("note={S}", "text/plain; charset=utf-8; charset=latin1", "text/plain"),
         ("{\"note\":\"{S}\"}", "application/json; charset=\"utf-8\"; charset=utf-16", "application/json"),
-        (head + "{S}\r\n--B0und--", "multipart/form-data; boundary = B0und", "no known content type"),
+        (head + "{S}\r\n--B0und--", "multipart/form-data; boundary = B0und", "unreadable content type"),
     ])
     func contentType(body: String, contentType: String, described: String) {
         expectOmitted(body, contentType, described: described)

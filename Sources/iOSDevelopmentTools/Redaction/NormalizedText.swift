@@ -14,6 +14,10 @@ struct NormalizedText {
     let offsets: ScalarOffsets
     /// The original scalars.
     let source: [Unicode.Scalar]
+    /// The offset of the first original scalar outside the safe alphabet of free text, or nil
+    /// (see ``FreeTextScanner/firstUnsafeOffset(in:)``). It is found while the copy is made, from
+    /// the same reading of each scalar.
+    let firstUnsafeOffset: Int?
     /// The number of original scalars.
     var sourceCount: Int { source.count }
 
@@ -21,58 +25,148 @@ struct NormalizedText {
     /// separator, and unlike it, it never stands for a letter.
     static let masked: UInt8 = 0xFE
 
-    /// - Parameter masked: Ranges of original scalars to read as ``masked``, so that no finding
-    ///   starts, ends or runs inside them.
-    init(_ scalars: [Unicode.Scalar], compatibility: CompatibilityText, masked: [Range<Int>] = []) {
-        // Most log text is plain ASCII: each byte is the scalar at its own offset, so no offsets
-        // are stored.
-        if scalars.allSatisfy({ $0.isASCII && !ASCII.isHidingControl(UInt8($0.value)) }) {
-            var bytes = scalars.map { UInt8($0.value) }
-            for range in masked {
-                for k in range.clamped(to: bytes.indices) { bytes[k] = Self.masked }
+    /// How much of a text the copy is made of.
+    enum Extent {
+        /// All of it: the value detectors read a whole text when no cut is made.
+        case whole
+        /// As much as free text is read (see ``FreeTextScanner``): to the end of the line of the
+        /// first scalar outside the safe alphabet, which cuts the text at the latest, and on
+        /// through the blank lines after it to the end of the next line that is not blank. The
+        /// scan and the value detectors read past that scalar only to finish what starts before
+        /// it — a word, a finding, a quote on its line, the white space before a separator or a
+        /// bracket — so the rest of the text is neither read nor cached: a megabyte that opens
+        /// with a control character costs a line, not a megabyte. A line ends at a line feed or a
+        /// carriage return: the value detectors read a finding across the other line separators
+        /// (see ``isBridgedLineBreak(_:)``), so the copy reads them as spaces.
+        case scanned
+    }
+
+    init(_ scalars: [Unicode.Scalar], compatibility: CompatibilityText, extent: Extent = .whole) {
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(scalars.count)
+        var alphabet = SafeAlphabetReader()
+        var end = CopyEnd(extent)
+        // While every scalar becomes one byte, as in printable ASCII, each byte comes from the
+        // scalar at its own index and no offsets are stored.
+        var index = 0
+        while index < scalars.count, !end.isReached {
+            let scalar = scalars[index]
+            let byte: UInt8
+            if scalar.isASCII {
+                byte = UInt8(scalar.value)
+                alphabet.read(ascii: byte, at: index)
+                guard !ASCII.isHidingControl(byte) else { break }
+            } else {
+                let reading = compatibility.reading(scalar)
+                alphabet.read(reading.alphabet, at: index)
+                guard !reading.isInvisible, reading.bytes.count == 1 else { break }
+                byte = reading.bytes[0]
             }
-            self.bytes = bytes
-            offsets = .identity
-            source = scalars
+            bytes.append(byte)
+            if alphabet.firstUnsafe != nil { end.read(byte, isASCII: scalar.isASCII) }
+            index += 1
+        }
+        guard index < scalars.count, !end.isReached else {
+            self.init(bytes: bytes, offsets: ScalarOffsets(), source: scalars, firstUnsafeOffset: alphabet.firstUnsafe)
             return
         }
-        var bytes: [UInt8] = []
-        var offsets: [UInt32] = []
-        bytes.reserveCapacity(scalars.count)
-        offsets.reserveCapacity(scalars.count)
-        var mask = masked.sorted { $0.lowerBound < $1.lowerBound }.makeIterator()
-        var nextMask = mask.next()
-        for (offset, scalar) in scalars.enumerated() {
-            while let range = nextMask, range.upperBound <= offset { nextMask = mask.next() }
-            if let range = nextMask, range.contains(offset) {
-                bytes.append(Self.masked)
-                offsets.append(UInt32(truncatingIfNeeded: offset))
-                continue
-            }
+        // Up to the scalar the fast loop stopped at, each byte came from the scalar at its own
+        // index: one run, which the builder starts with.
+        var offsets = ScalarOffsets.Builder()
+        // The scalar the fast loop stopped at is read again here, and the alphabet with it, which
+        // reads it the same way.
+        for offset in index..<scalars.count {
+            let scalar = scalars[offset]
             if scalar.isASCII {
+                let byte = UInt8(scalar.value)
+                if offset > index { alphabet.read(ascii: byte, at: offset) }
                 // Control characters other than tab and line terminators hide like format ones.
-                guard !ASCII.isHidingControl(UInt8(scalar.value)) else { continue }
-                bytes.append(UInt8(scalar.value))
-                offsets.append(UInt32(truncatingIfNeeded: offset))
-                continue
-            }
-            guard !ScalarClass.isInvisible(scalar) else { continue }
-            for byte in compatibility.ascii(scalar) {
+                guard !ASCII.isHidingControl(byte) else { continue }
+                offsets.add(byte: bytes.count, from: offset)
                 bytes.append(byte)
-                offsets.append(UInt32(truncatingIfNeeded: offset))
+                if alphabet.firstUnsafe != nil { end.read(byte, isASCII: true) }
+            } else {
+                let reading = compatibility.reading(scalar)
+                if offset > index { alphabet.read(reading.alphabet, at: offset) }
+                guard !reading.isInvisible else { continue }
+                for byte in reading.bytes {
+                    offsets.add(byte: bytes.count, from: offset)
+                    bytes.append(byte)
+                    if alphabet.firstUnsafe != nil { end.read(byte, isASCII: false) }
+                }
+            }
+            if end.isReached { break }
+        }
+        self.init(bytes: bytes, offsets: offsets.offsets, source: scalars, firstUnsafeOffset: alphabet.firstUnsafe)
+    }
+
+    /// Where a copy of the ``Extent/scanned`` extent ends, read from the bytes written from the
+    /// first scalar outside the safe alphabet on.
+    private struct CopyEnd {
+        private enum Stage {
+            /// The line of the first scalar outside the alphabet.
+            case unsafeLine
+            /// The blank lines after it.
+            case blankLines
+            /// The next line that is not blank.
+            case nextLine
+            case reached
+        }
+
+        private let ends: Bool
+        private var stage = Stage.unsafeLine
+
+        init(_ extent: Extent) {
+            ends = extent == .scanned
+        }
+
+        var isReached: Bool { stage == .reached }
+
+        /// Reads the next byte, which came from an ASCII scalar or not: a line feed read from
+        /// U+0085, U+2028 or U+2029, a vertical tab and a form feed are read as spaces.
+        mutating func read(_ byte: UInt8, isASCII: Bool) {
+            guard ends else { return }
+            let endsLine = (byte == 0x0A && isASCII) || byte == 0x0D
+            let isBlank = byte == UInt8(ascii: " ") || byte == UInt8(ascii: "\t") || byte == 0x0B || byte == 0x0C || byte == 0x0A
+            switch stage {
+            case .unsafeLine: if endsLine { stage = .blankLines }
+            case .blankLines: if !isBlank, byte != 0x0D { stage = .nextLine }
+            case .nextLine: if endsLine { stage = .reached }
+            case .reached: break
             }
         }
+    }
+
+    private init(bytes: [UInt8], offsets: ScalarOffsets, source: [Unicode.Scalar], firstUnsafeOffset: Int?) {
         self.bytes = bytes
-        self.offsets = .stored(offsets)
-        self.source = scalars
+        self.offsets = offsets
+        self.source = source
+        self.firstUnsafeOffset = firstUnsafeOffset
+    }
+
+    /// This copy with the bytes that come from scalars in `regions` read as ``masked``, so that no
+    /// finding starts, ends or runs inside them. The offsets and the scalars are shared, so the
+    /// masked copy takes only its bytes.
+    func masking(_ regions: [Range<Int>]) -> NormalizedText {
+        var masked = bytes
+        // The offsets only grow from byte to byte, so the bytes of a region are the ones from the
+        // first at or after its start to the first at or after its end.
+        for region in regions {
+            let start = byteIndex(atOrAfter: region.lowerBound)
+            let end = max(start, byteIndex(atOrAfter: region.upperBound))
+            for k in start..<end { masked[k] = Self.masked }
+        }
+        return NormalizedText(bytes: masked, offsets: offsets, source: source, firstUnsafeOffset: firstUnsafeOffset)
     }
 
     var count: Int { bytes.count }
 
-    /// A finding over bytes `range`, as a span of the original scalars hidden whole.
-    func span(_ range: Range<Int>) -> RedactionPolicy.Span {
-        RedactionPolicy.Span(
-            start: offsets[range.lowerBound], end: offsets[range.upperBound - 1] + 1, replacement: RedactionPolicy.replacement)
+    /// Whether some byte did not come from the scalar at its own index: the copy left scalars
+    /// out, or read one as several bytes. When not, no scalar was left out anywhere.
+    var leavesOutScalars: Bool { !offsets.isIdentity || bytes.count != source.count }
+
+    func span(_ range: Range<Int>, _ kind: RedactionPolicy.Kinds, _ replacement: String) -> RedactionPolicy.Span {
+        RedactionPolicy.Span(start: offsets[range.lowerBound], end: offsets[range.upperBound - 1] + 1, kind: kind, replacement: replacement)
     }
 
     /// The offset in the original scalars where byte `i` starts; the end of the text for
@@ -140,12 +234,24 @@ struct NormalizedText {
         return byte == 0x0A || byte == 0x0D || byte == 0x0B || byte == 0x0C
     }
 
+    // MARK: Line separators inside a value
+
     /// Whether byte `i` is a line separator that the value detectors read across: a vertical tab,
     /// a form feed, or a line feed read from U+0085, U+2028 or U+2029. Each of them is outside the
     /// safe alphabet and cuts free text, so a card number, an IBAN, an email address or a token
-    /// written across one is found whole and the cut, merged with it, moves back to its start
-    /// (`paid 4111 1111 1111` and U+2028 before `1111` keeps `paid `). A line feed or a carriage
-    /// return written as such ends a finding, as it ends a line.
+    /// written across one is found whole and the cut, which falls inside the finding, joins it at
+    /// its start (see ``RedactionPolicy/merged(_:)``); a line feed or carriage return
+    /// written as such ends a finding, as it ends a line of the log.
+    ///
+    /// The detectors never test for one themselves. They read such a separator in one of two
+    /// ways, each written once here: as the white space between the parts of a value
+    /// (``isGap(_:)``: the groups of a card number or an IBAN, and the token after `Bearer`), or
+    /// as nothing inside a run of a value (``readable(after:)``, ``readable(before:)`` and
+    /// ``readable(from:)``: an email address, a JSON Web Token, a long token, the token after
+    /// `Bearer`), which white space would end. One reading cannot serve both: read as nothing,
+    /// the groups of two card numbers on either side of it run together and neither is found;
+    /// read as white space, it ends an address, whose name the cut then shows. A finding never
+    /// starts or ends with one, and each byte is read a fixed number of times.
     func isBridgedLineBreak(_ i: Int) -> Bool {
         switch bytes[i] {
         case 0x0B, 0x0C: true
@@ -154,12 +260,28 @@ struct NormalizedText {
         }
     }
 
-    /// The first byte at or after `i` that is not a line separator read across (see
-    /// ``isBridgedLineBreak(_:)``); ``count`` when there is none.
-    func skippingBridgedLineBreaks(from i: Int) -> Int {
+    /// Whether byte `i` is white space between the parts of a value: a space, a tab or a line
+    /// separator that the value detectors read across.
+    func isGap(_ i: Int) -> Bool { isSpace(i) || isBridgedLineBreak(i) }
+
+    /// The first byte at or after `i` that is not a line separator the value detectors read
+    /// across; ``count`` when there is none.
+    func readable(from i: Int) -> Int {
         var k = i
         while k < count, isBridgedLineBreak(k) { k += 1 }
         return k
+    }
+
+    /// The next byte after `i` that is not a line separator the value detectors read across;
+    /// ``count`` when there is none.
+    func readable(after i: Int) -> Int { readable(from: i + 1) }
+
+    /// The last byte before `i` that is not a line separator the value detectors read across;
+    /// nil when there is none.
+    func readable(before i: Int) -> Int? {
+        var k = i - 1
+        while k >= 0, isBridgedLineBreak(k) { k -= 1 }
+        return k >= 0 ? k : nil
     }
 
     /// Whether a word starts at `i`: after a character that does not glue to it (see
@@ -187,18 +309,66 @@ struct NormalizedText {
     }
 }
 
-/// The offset in the original scalars of each byte of a scanning copy: none stored for plain
-/// ASCII, where each byte is the scalar at its own offset, and 32 bits each otherwise, since the
-/// copy of a megabyte of text holds a million of them. A text of more scalars than 32 bits count
-/// is hidden whole before a copy is made (see ``RedactionPolicy/maximumTextLength``).
-enum ScalarOffsets {
-    case identity
-    case stored([UInt32])
+/// The offset in the original scalars of each byte of a scanning copy, kept as runs, not one for
+/// each byte. In a run, each byte comes from the scalar after the one the byte before it came from,
+/// so a run is stored as the byte it starts at and the offset of that byte's scalar, in 32 bits
+/// each. A run starts where that stops: at the second byte of a scalar read as several (`ﬁ` is
+/// read as `fi`) and at the byte after scalars that the copy leaves out. When each byte comes from
+/// the scalar at its own index, as in printable ASCII, nothing is stored, and a megabyte of log
+/// lines with one `ﬁ` each stores one run for each line: the eighteenth review measured 4 MB of
+/// offsets, one for each byte, which pushed such text over 16 MB of memory. Free text of 2^28
+/// scalars or more is hidden whole before a copy is made (see
+/// ``RedactionPolicy/maximumTextLength``).
+struct ScalarOffsets {
+    /// The byte each run starts at, in order; empty when each byte comes from the scalar at its
+    /// own index.
+    private let starts: [UInt32]
+    /// The offset of the scalar that the first byte of each run came from.
+    private let firstOffsets: [UInt32]
 
+    init() {
+        starts = []
+        firstOffsets = []
+    }
+
+    fileprivate init(starts: [UInt32], firstOffsets: [UInt32]) {
+        self.starts = starts
+        self.firstOffsets = firstOffsets
+    }
+
+    /// Whether each byte comes from the scalar at its own index.
+    var isIdentity: Bool { starts.isEmpty }
+
+    /// The offset of the scalar byte `i` came from, found among the runs by binary search.
     subscript(i: Int) -> Int {
-        switch self {
-        case .identity: i
-        case .stored(let storage): Int(storage[i])
+        guard !starts.isEmpty else { return i }
+        var low = 0
+        var high = starts.count
+        while high - low > 1 {
+            let middle = (low + high) / 2
+            if Int(starts[middle]) <= i { low = middle } else { high = middle }
         }
+        return Int(firstOffsets[low]) + (i - Int(starts[low]))
+    }
+
+    /// Collects the runs while the bytes of a copy are written in order, starting with a run at
+    /// byte 0 from scalar 0.
+    struct Builder {
+        private var starts: [UInt32] = [0]
+        private var firstOffsets: [UInt32] = [0]
+
+        /// Records that byte `byte`, the next one written, comes from the scalar at `offset`.
+        mutating func add(byte: Int, from offset: Int) {
+            let last = starts.count - 1
+            guard Int(firstOffsets[last]) + (byte - Int(starts[last])) != offset else { return }
+            if Int(starts[last]) == byte {
+                firstOffsets[last] = UInt32(clamping: offset)
+            } else {
+                starts.append(UInt32(clamping: byte))
+                firstOffsets.append(UInt32(clamping: offset))
+            }
+        }
+
+        var offsets: ScalarOffsets { ScalarOffsets(starts: starts, firstOffsets: firstOffsets) }
     }
 }

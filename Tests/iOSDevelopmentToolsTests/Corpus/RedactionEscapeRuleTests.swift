@@ -4,8 +4,8 @@ import Testing
 
 /// Escapes in free text without a list of their forms: a backslash before anything but an ASCII
 /// space, a tab, a line break or the end of the text, `%` and two hex digits, and `&` before a
-/// letter or `#` cut the text where they start, on every path that reads free text. JSON escapes
-/// are read by the JSON parser and are no escapes of free text.
+/// letter or `#` cut the text at the start of the word they are in, on every path that reads free
+/// text. JSON escapes are read by the JSON parser and are no escapes of free text.
 @Suite("Redaction corpus: the escape rule of free text")
 struct RedactionEscapeRuleTests {
     let redactor = Redactor()
@@ -14,18 +14,18 @@ struct RedactionEscapeRuleTests {
     /// `xuUNo`) and of references (`&` with a name and `;`, `&#` with a digit) let through
     /// unchanged on all six paths, with the text each is stored as in a log line.
     static let reviewInputs: [(input: String, line: String)] = [
-        ("status dir\\data\\hunter2Zq ok", "status dir[REDACTED]"),
-        ("status line1\\nhunter2Zq", "status line1[REDACTED]"),
-        ("status a\\thunter2Zq", "status a[REDACTED]"),
+        ("status dir\\data\\hunter2Zq ok", "status [REDACTED]"),
+        ("status line1\\nhunter2Zq", "status [REDACTED]"),
+        ("status a\\thunter2Zq", "status [REDACTED]"),
         ("status He said \\\"hi\\\" hunter2Zq", "status He said [REDACTED]"),
-        ("status a\\\\b hunter2Zq", "status a[REDACTED]"),
+        ("status a\\\\b hunter2Zq", "status [REDACTED]"),
         ("status \\p{L} hunter2Zq", "status [REDACTED]"),
         ("status \\e8m hunter2Zq", "status [REDACTED]"),
         ("status \\8 hunter2Zq", "status [REDACTED]"),
         ("status \\cJ hunter2Zq", "status [REDACTED]"),
         ("status \\kx hunter2Zq", "status [REDACTED]"),
-        ("status a\\/b hunter2Zq", "status a[REDACTED]"),
-        ("status R&D hunter2Zq", "status R[REDACTED]"),
+        ("status a\\/b hunter2Zq", "status [REDACTED]"),
+        ("status R&D hunter2Zq", "status [REDACTED]"),
         ("status &amp hunter2Zq", "status [REDACTED]"),
         ("status &#x; hunter2Zq", "status [REDACTED]"),
         ("status &#q hunter2Zq", "status [REDACTED]"),
@@ -70,8 +70,11 @@ struct RedactionEscapeRuleTests {
     func ampersands() {
         for follower in Array("abcxyzABCXYZ#") + ["\u{0131}", "\u{00E9}", "\u{0436}"] {
             let input = "status a&\(follower)1 hunter2Zq"
-            #expect(redactor.redact(input) == "status a[REDACTED]", "\(input.debugDescription)")
+            #expect(redactor.redact(input) == "status [REDACTED]", "\(input.debugDescription)")
         }
+        // Before the name of a field and `=`, the field's key is read by the key rule instead.
+        #expect(redactor.redact("status=200&count=3") == "status=200&count=3")
+        #expect(redactor.redact("status=200&user=bob") == "status=200&user=[REDACTED]")
         for input in ["Tom & Jerry", "a && b", "a&1", "a&;", "a&-b", "a&"] {
             #expect(redactor.redact(input) == input)
         }
@@ -80,7 +83,7 @@ struct RedactionEscapeRuleTests {
     @Test("`%` cuts the text before two hex digits, and is text before anything else")
     func percents() {
         for escape in ["%00", "%3D", "%3d", "%7e", "%FF", "%u003D"] {
-            #expect(redactor.redact("status a\(escape)b hunter2Zq") == "status a[REDACTED]")
+            #expect(redactor.redact("status a\(escape)b hunter2Zq") == "status [REDACTED]")
         }
         for input in ["100% done", "50%off", "%ZZ", "a %4", "%g1"] {
             #expect(redactor.redact(input) == input)
@@ -110,19 +113,20 @@ struct RedactionEscapeRuleTests {
         }
     }
 
-    // A JSON body and JSON written into a line are read by the JSON parser: their escapes are
-    // decoded, and the strings are free text again.
-    @Test("JSON escapes are decoded by the parser, not cut as escapes of free text")
+    // A JSON body is read by the JSON parser: its escapes are decoded, and the strings are free
+    // text again. In a log line, the JSON is parsed too, but a backslash in the line is also a
+    // backslash of free text: the text after the JSON is cut, and so is a decoded string that
+    // holds one.
+    @Test("JSON escapes are decoded by the parser in a body; in a line, the text after them is cut")
     func jsonEscapes() {
         let body = #"{"note":"line1\nline2\tend","status":"\u0041BC"}"#
         let stored = redactor.redact(body: Data(body.utf8), contentType: "application/json")
         let parsed = try? JSONSerialization.jsonObject(with: Data(stored.utf8)) as? [String: String]
         #expect(parsed == ["note": "line1\nline2\tend", "status": "ABC"])
-        for line in [#"log {"status":"a\nb"} done"#, #"log {"status":"say \"hi\""} done"#, #"log {"status":"tab\there"} done"#] {
-            #expect(redactor.redact(line) == line)
+        for json in [#"{"status":"a\nb"}"#, #"{"status":"say \"hi\""}"#, #"{"status":"tab\there"}"#] {
+            #expect(redactor.redact("log \(json) done") == "log \(json) [REDACTED]")
         }
-        // The decoded string is free text: a backslash in it is an escape.
-        #expect(redactor.redact(#"log {"status":"dir\\x"} done"#) == #"log {"status":"dir[REDACTED]"} done"#)
+        #expect(redactor.redact(#"log {"status":"dir\\x"} done"#) == #"log {"status":"[REDACTED]"#)
     }
 
     // A JSON member name is no free text: its value is hidden by the key rule. A backslash escape
@@ -135,13 +139,13 @@ struct RedactionEscapeRuleTests {
         #expect(!stored.contains("hunter2Zq"), "\(stored)")
     }
 
-    // A name read for secret words (a URL path segment, a name written as a value) with a
-    // backslash escape in it cannot be read, so it counts as one that names a secret.
-    @Test("a path segment with a backslash escape hides the segment after it")
+    // An escaped backslash (`%5C`) in a path is resolved differently by servers, so the URL is
+    // written with its scheme and host only.
+    @Test("a path with an escaped backslash records the scheme and host only")
     func backslashInPathSegments() throws {
         for segment in ["pa%5Cx%7B73%7Dsword", "pa%5Cu0073sword", "pa%5C163sword", "x%5Cqy"] {
             let url = try #require(URL(string: "https://h.example/v1/\(segment)/4831"))
-            #expect(redactor.redact(url: url) == "https://h.example/v1/:id/:id")
+            #expect(redactor.redact(url: url) == "https://h.example")
         }
     }
 }

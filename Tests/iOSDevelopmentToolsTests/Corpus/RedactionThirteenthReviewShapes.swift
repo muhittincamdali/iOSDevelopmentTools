@@ -1,10 +1,10 @@
 import Foundation
 @testable import iOSDevelopmentTools
 
-/// The shapes the thirteenth review of the shared redaction rules measured in iOSSecurityTools:
-/// long single words of free text, which the reading of a word copied whole, and bodies of many
-/// small values, which their trees and fields held several times over. Free text is made a
-/// megabyte long; bodies `size` bytes long, as large as the redactor that reads them takes.
+/// The shapes the thirteenth review measured: long single words of free text, which the reading
+/// of a word copied whole, and bodies of many small values, which their trees and fields held
+/// several times over. Free text is made a megabyte long; bodies `size` bytes long, as large as
+/// the redactor that reads them takes.
 enum ThirteenthReviewShapes {
     private static let redactor = Redactor()
 

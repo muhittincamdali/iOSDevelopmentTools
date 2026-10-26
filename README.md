@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 631 Swift Testing tests on macOS and 628 on an iOS simulator. Requests travel
+- **Tested** — 857 Swift Testing tests on macOS and 854 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -70,7 +70,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Paste it into the search field at the top right of the window. Leave **Dependency Rule** at
-**Up to Next Major Version** from `2.1.0`, then click **Add Package**. In the next window, choose
+**Up to Next Major Version** from `2.1.1`, then click **Add Package**. In the next window, choose
 your app target next to **iOSDevelopmentTools** and click **Add Package** again.
 
 **2. Import the module**
@@ -127,7 +127,7 @@ Or add it to the `dependencies` in your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -197,10 +197,17 @@ func configureNetworkLogger() {
   values under secret names such as `password`, `token` or `api_key`, path segments that look
   like identifiers (shown as `:id`) and the segment after one that names a secret or is not plain
   ASCII (`/caf%C3%A9/menu` is kept as `/caf%C3%A9/:id`), the path and query of a URL
-  whose path has a dot segment or a `;` (`/pin/./4831`, `..`, `%2E`, `/cart;jsessionid=…`,
-  `%3B`: only the scheme and host are kept, so matrix parameters are never parsed), the path
-  and query after a host that names a secret (`myapp://pin/4831` is kept as `myapp://pin`; a
-  host such as `auth.example.com` hides its path too), and file parts of multipart bodies.
+  whose path has a dot segment, a `;` or an escaped `.`, `/`, `\`, `;` or `%` (`/pin/./4831`,
+  `..`, `/cart;jsessionid=…`, `%2E`, `%2F`, `%5C`, `%3B`, `%25`: only the scheme and host are
+  kept, so matrix parameters are never parsed), a host that names a secret with everything after
+  it (`myapp://pin/4831` and `myapp://pin-4831` are kept as `myapp://[REDACTED]`; a host such as
+  `auth.example.com` is hidden too), file parts of multipart bodies, and the values of multipart
+  part headers other than `Content-Length` and `Content-Transfer-Encoding` (`Content-ID` and four
+  other `Content-*` names keep their name; any other part header, such as `User-Agent`, is stored
+  as `[REDACTED]: [REDACTED]`), and any value of those two outside their form: a
+  `Content-Length` other than ASCII digits and a `Content-Transfer-Encoding` other than `7bit`,
+  `8bit`, `binary`, `base64` or `quoted-printable` (kept in lowercase) are stored as `[REDACTED]`
+  (`Content-Length: pin-4831` as `Content-Length: [REDACTED]`).
 - **Keys that are not plain ASCII** once escapes are decoded, NFKC is applied and case is folded
   (`pаssword` with a Cyrillic `а`, `pass\u200Dword`, `şifre`) have their values hidden by default.
 - **Bodies that cannot be parsed** (an unknown or missing content type, malformed JSON or
@@ -208,10 +215,12 @@ func configureNetworkLogger() {
   `[body omitted: 512 bytes, application/xml]`.
 - **Log messages** are kept up to their first trigger: a secret name, a key that is not on the
   allowlist (`status`, `method`, `path`, `duration_ms` and `count` by default; add yours with
-  `allowedTextKeys`), a character outside ASCII that is not a letter, mark, digit or space (`꞉`,
-  `…`, an emoji, or a letter that compatibility normalization reads as punctuation, such as `🄁`
-  read as `0,`), an escape of any form (a backslash before anything but white space, `%3D`, `&`
-  before a letter or `#`: `R&D`, `&amp`), a key in quotes that is not allowed (cut at its
+  `allowedTextKeys`), a character outside ASCII that is not a letter, mark or digit (`꞉`, `…`,
+  an emoji, a space such as U+00A0, or a letter that compatibility normalization reads as
+  punctuation, such as `🄁` read as `0,`), a word that mixes scripts (`tоken` with a Cyrillic
+  `о`), an escape of any form, cut at the start of its word (a backslash before anything but
+  white space, `%3D`, `&` before a letter or `#`: `R&D`, `&amp`; an `&` that starts a field, as
+  in `status=200&count=3`, is no escape), a key in quotes that is not allowed (cut at its
   opening quote: `"x":"hunter2"` is stored as `[REDACTED]`), markup (a `<` that is not a
   comparison: `<b>`, `</x>`, `<!--`; no tag keeps its text), a quote that does not close on its
   line, quotes that overlap (`'x "y' z"`) or a bracket that does not close hides everything

@@ -9,29 +9,29 @@
 /// would turn into ASCII), a mark, a format character, mixed scripts, an escape or any other
 /// punctuation can make a key look like something it is not, and no list of look-alikes is ever
 /// complete.
-///
-/// This is the one function that makes that decision, for every path that reads a key.
-extension RedactionPolicy {
-    /// Whether the value under a key of structured input (JSON, form, multipart, a query, a header)
-    /// is hidden: the key is not plain ASCII, or it names a secret.
-    func hidesValue(ofKey name: some Collection<Unicode.Scalar>) -> Bool {
+enum FieldName {
+    /// Whether the value under a key of structured input (JSON, form, multipart) is hidden: the key
+    /// is not plain ASCII, or it names a secret.
+    static func hidesValue(_ name: some Collection<Unicode.Scalar>, names: SecretNameTable = .standard) -> Bool {
         guard let plain = PlainName(name) else { return true }
-        return plain.namesSecret(in: secretNameTable)
+        return plain.namesSecret(in: names)
     }
 
     /// The key folded for an allowlist: lowercase letters and digits without separators; nil when
     /// the key is not plain ASCII or names a secret, so it can never be allowed.
-    func allowableFold(_ name: some Collection<Unicode.Scalar>) -> String? {
-        guard let plain = PlainName(name), !plain.namesSecret(in: secretNameTable) else { return nil }
+    static func allowableFold(_ name: some Collection<Unicode.Scalar>, names: SecretNameTable = .standard) -> String? {
+        guard let plain = PlainName(name), !plain.namesSecret(in: names) else { return nil }
         return plain.folded
     }
 }
 
-/// A key made only of ASCII letters, digits, `_`, `-`, `.` and spaces.
+/// A key made only of ASCII letters, digits, `_`, `-`, `.` and spaces, or the ASCII skeleton of a
+/// word of free text.
 ///
 /// The key is read as its letters and digits, lowercased, and where its words start: after a
 /// separator, between letters and digits, at a camel-case hump (`accessToken`) and at the last
-/// capital of an acronym (`AWSSecret`). Comparing it takes time linear in its length.
+/// capital of an acronym (`AWSSecret`). Comparing it with the secret names takes time linear in
+/// its length: each letter is tried only with the names that can start there, each in one pass.
 struct PlainName {
     /// Longer keys are not plain: their value is hidden without reading them.
     static let maximumKeyLength = 256
@@ -44,29 +44,31 @@ struct PlainName {
     /// letter, and at the end; nil for a key, which has no such letters.
     private let gaps: [Bool]?
 
-    /// - Parameter maximumLength: Longer names are not read; nil reads any length.
+    /// - Parameter maximumLength: Longer names are not read; nil reads any length. A longer name
+    ///   is turned down before any of it is copied.
     init?(_ name: some Collection<Unicode.Scalar>, maximumLength: Int? = maximumKeyLength) {
+        if let maximumLength, name.count > maximumLength { return nil }
         var bytes: [UInt8] = []
+        bytes.reserveCapacity(name.count)
         for scalar in name {
             guard scalar.isASCII else { return nil }
             bytes.append(UInt8(scalar.value))
         }
-        self.init(bytes: bytes, maximumLength: maximumLength)
+        self.init(bytes: bytes, maximumLength: nil)
     }
 
     init?(bytes: some Collection<UInt8>, maximumLength: Int? = maximumKeyLength) {
-        let bytes = Array(bytes)
         if let maximumLength, bytes.count > maximumLength { return nil }
+        let bytes = Array(bytes)
         guard bytes.allSatisfy(ASCII.isNameCharacter) else { return nil }
         self.init(nameBytes: bytes, leftOutBefore: nil, leftOutAtEnd: false)
     }
 
-    /// The ASCII skeleton of a word of free text (see ``LooseReading``): its bytes once the letters,
-    /// marks and numbers that have no ASCII form are left out, with any other punctuation between
-    /// its letters read as a separator (`pass~word`, `t*okens`). `leftOutBefore` says for each byte
-    /// whether such characters were left out after the letter before it, and `leftOutAtEnd`
-    /// whether some were after the last one. Never used for keys, which are compared only when
-    /// plain.
+    /// The ASCII skeleton of a word of free text (see ``LooseReading``): its bytes once the letters
+    /// that have no ASCII form are left out, with any other punctuation between its letters read
+    /// as a separator (`pass~word`, `t*okens`). `leftOutBefore` says for each byte whether such
+    /// letters were left out after the letter before it, and `leftOutAtEnd` whether some were
+    /// after the last one. Never used for keys, which are compared only when plain.
     init?(skeleton bytes: [UInt8], leftOutBefore: [Bool], leftOutAtEnd: Bool) {
         var name = bytes
         for i in name.indices where !ASCII.isNameCharacter(name[i]) { name[i] = UInt8(ascii: "_") }
@@ -98,25 +100,26 @@ struct PlainName {
     /// The letters and digits as a string, for allowlists.
     var folded: String { String(decoding: letters, as: UTF8.self) }
 
-    /// Whether the name holds a secret word of `table` where ``SecretNameTable/Placement`` requires it:
-    /// `password`, `aws_secret_access_key`, `dbPassword`, `apitoken`, `user_pin` or `tokens`, but
-    /// not `tokenizer`, `keyboard` or `bypass`. A plural `s` after the secret word counts.
-    func namesSecret(in table: SecretNameTable) -> Bool { secretEnd(in: table) != nil }
+    /// Whether the name holds a secret word of `table` where ``SecretNameTable/Placement``
+    /// requires it: `password`, `aws_secret_access_key`, `dbPassword`, `apitoken`, `user_pin` or
+    /// `tokens`, but not `spinner`, `keyboard` or `bypass`. A plural `s` after the secret word
+    /// counts.
+    func namesSecret(in table: SecretNameTable = .standard) -> Bool { secretEnd(in: table) != nil }
 
     /// The number of letters up to the end of the first secret word, its plural `s` included; nil
     /// when the name holds none.
-    func secretEnd(in table: SecretNameTable) -> Int? { firstSecret(in: table) { _ in true }?.upperBound }
+    func secretEnd(in table: SecretNameTable = .standard) -> Int? { firstSecret(in: table) { _ in true }?.upperBound }
 
     /// The letters of the first secret word that `accepts` takes, its plural `s` included.
     ///
     /// A secret word is spelled by the letters as they are, or, in a skeleton, by the letters with
-    /// one of its own letters missing where characters were left out (`pɑssword` is `pssword`,
-    /// which is `password` without its `a`, and an `ɑ` was left out there). Each start is tried
-    /// only with the words that can start there (see ``SecretNameTable/entries(startingWith:)``):
-    /// those that start with its letter, and after a gap those whose second letter it is. Each word
-    /// is read in one pass from each end, so both ways of spelling it are known at once and a name
-    /// is read in time linear in its length, however many characters were left out of it.
-    func firstSecret(in table: SecretNameTable, where accepts: (Range<Int>) -> Bool) -> Range<Int>? {
+    /// one of its own letters missing where letters were left out (`pɑssword` is `pssword`, which
+    /// is `password` without its `a`, and an `ɑ` was left out there). Each start is tried only with
+    /// the words that can start there (see ``SecretNameTable/entries(startingWith:)``): those that
+    /// start with its letter, and after a gap those whose second letter it is. Each word is read in
+    /// one pass from each end, so both ways of spelling it are known at once and nothing is tried
+    /// again.
+    func firstSecret(in table: SecretNameTable = .standard, where accepts: (Range<Int>) -> Bool) -> Range<Int>? {
         for start in letters.indices {
             let letter = letters[start]
             if let found = firstSecret(in: table.entries(startingWith: letter), at: start, where: accepts) { return found }
@@ -150,7 +153,8 @@ struct PlainName {
 
     /// Where `word` ends when it is spelled from letter `start`: with all its letters, and, in a
     /// skeleton, with one of them missing at a gap. Only a word of two letters or more is read
-    /// with one missing, so that at least one of its letters is written.
+    /// with one missing, so that at least one of its letters is written; an added secret name may
+    /// have one letter.
     private func spelledEnds(of word: [UInt8], at start: Int) -> (whole: Int?, withGap: Int?) {
         let count = word.count
         var prefix = 0
@@ -168,8 +172,7 @@ struct PlainName {
         return (whole, nil)
     }
 
-    /// `end`, or the letter after it when a plural `s` ends the word there: it does not start a
-    /// word, and a word or the name ends after it.
+    /// `end`, or the letter after it when a plural `s` ends the word there.
     private func withPlural(_ end: Int) -> Int {
         guard end < letters.count, letters[end] == UInt8(ascii: "s"), !startsWord[end], endsWord(end + 1) else { return end }
         return end + 1
@@ -184,17 +187,6 @@ struct PlainName {
     }
 
     private func endsWord(_ k: Int) -> Bool { k == letters.count || startsWord[k] }
-
-    /// Whether one of the name's words, lowercased, is in `words` (`newValue` and `value_2` hold
-    /// `value`).
-    func holdsWord(of words: Set<String>) -> Bool {
-        var start = 0
-        for end in 1...letters.count where end == letters.count || startsWord[end] {
-            if words.contains(String(decoding: letters[start..<end], as: UTF8.self)) { return true }
-            start = end
-        }
-        return false
-    }
 
     /// Whether a word starts at byte `i`: after a separator, between letters and digits, at a
     /// camel-case hump (`accessToken`) or at the last capital of an acronym (`AWSSecret`).

@@ -1,83 +1,73 @@
 /// Words in free text: keys before a separator, and words that name a secret or cannot be read.
 extension FreeTextScanner {
-    /// What a word says about the text after it.
+    /// What a word that no separator follows says about the text after it.
     enum WordReading: Equatable {
         case plain
-        /// The word mixes scripts or holds a character that only hides text: it cannot be read
-        /// with certainty.
+        /// The word mixes scripts, holds a character that only hides text or is longer than
+        /// ``longestWord``: it cannot be read with certainty.
         case ambiguous
-        /// The word holds a secret name or an escaped `=` or `:`; a value starts at this byte:
-        /// right after the secret word or at the escape, or at the end of the word.
+        /// The word holds a secret name; a value starts at this byte, right after the secret word.
         case valueStart(Int)
     }
 
-    /// A run of characters up to white space, a separator, a quote or a boundary. It is a
-    /// trigger when it holds a character outside the safe alphabet with text after it (see
-    /// ``isOutsideSafeAlphabet(_:)``) or an escaped separator, and, in text, when it holds an
-    /// escape (see ``startsEscape(_:)``), is longer than ``longestWord``, names a secret
-    /// (`password hunter2`, `PIN 1234`, also split by a space: `pass word`) or cannot be read.
-    /// Only the part of the word before its first escape or unsafe character is read for names:
-    /// escapes are never decoded to read a name in text, and the cut is there at the latest.
+    /// A run of characters up to white space, a separator, a quote or a boundary: a key when a
+    /// separator follows (see ``separator()``), otherwise a word. A word that holds a secret name
+    /// (`password hunter2`, `PIN 1234`, also split by a space: `pass word`) hides what follows
+    /// the name; one that cannot be read hides itself and what follows. A key or word longer than
+    /// ``longestWord``, or with an escape in it, is not read: it hides itself and what follows.
     mutating func word() {
         let start = position
-        let lineEnd = currentLineEnd()
-        let end = wordEnd(from: start, to: lineEnd)
-        position = end
-        let range = start..<end
-        guard readsWords else {
-            // In a name, a separator of its own, escaped or one that only looks like one, starts a
-            // value written into the name. A backslash escape is not decoded in any form, so it
-            // may stand for one (`pass\x3dhunter2`, `pass\075hunter2`).
-            let starts = [firstUnsafeCharacter(in: range), range.first(where: startsBackslashEscape), escapedValueStart(in: range)]
-            if let embedded = starts.compactMap({ $0 }).min() { cut(atByte: embedded) }
-            return
-        }
-        guard !isOpaque(range) else {
+        let end = wordEnd(from: start, to: scanEnd)
+        if isOpaque(start..<end) || holdsEscape(start..<end) {
             cut(atByte: start)
             return
         }
-        // What a value detector finds in the word with its escapes decoded starts the cut there
-        // (`a\u0040b.com`), so the decoding only ever hides more.
-        let stop = [firstUnsafeCharacter(in: range), firstEscape(in: range), escapedValueStart(in: range)].compactMap { $0 }.min()
-        let readable = start..<(stop ?? end)
-        if !readable.isEmpty {
-            switch read(readable) {
-            case .plain:
-                if stop == nil, let secretEnd = secretEndAcrossSpace(after: range, lineEnd: lineEnd) {
-                    cut(afterByte: secretEnd - 1)
-                    return
-                }
-            case .ambiguous:
-                cut(atByte: start)
-                return
-            case .valueStart(let valueStart):
-                cut(afterByte: valueStart - 1)
-                return
+        let next = nextNonBlank(from: end)
+        if next < text.count, isSeparator(next) {
+            pendingKey = start..<end
+            position = end
+            return
+        }
+        pendingKey = nil
+        guard role == .text else {
+            position = end
+            return
+        }
+        switch read(start..<end) {
+        case .ambiguous:
+            cut(atByte: start)
+        case .valueStart(let valueStart):
+            cut(atByte: self.valueStart(after: valueStart))
+        case .plain:
+            if let secretEnd = secretEndAcrossSpace(after: start..<end) {
+                cut(atByte: valueStart(after: secretEnd))
+            } else {
+                position = end
             }
         }
-        if let stop { cut(atByte: stop) }
     }
 
     /// A secret word split by white space or by one of `|`, `,`, `;`, `&` and `?` (`pass word`,
     /// `to ken`, `p|wd`): the byte after it, when it starts in this word and ends in the next one
-    /// on the line.
-    func secretEndAcrossSpace(after word: Range<Int>, lineEnd: Int) -> Int? {
-        var nextStart = firstNonSpace(from: word.upperBound, to: lineEnd)
-        if nextStart < lineEnd, Self.splittingBoundaries.contains(text.bytes[nextStart]) {
-            nextStart = firstNonSpace(from: nextStart + 1, to: lineEnd)
+    /// on the line. A next word longer than ``longestWord`` is not read with it.
+    func secretEndAcrossSpace(after word: Range<Int>) -> Int? {
+        var nextStart = nextNonSpace(from: word.upperBound)
+        if nextStart < text.count, Self.splittingBoundaries.contains(text.bytes[nextStart]) {
+            nextStart = nextNonSpace(from: nextStart + 1)
         }
-        guard nextStart > word.upperBound, nextStart < lineEnd, !endsWord(nextStart) else { return nil }
-        let next = nextStart..<wordEnd(from: nextStart, to: lineEnd)
-        guard let reading = LooseReading(text, [word, next], source: source, names: policy.secretNameTable) else { return nil }
-        return reading.secretEnd { $0.lowerBound < nextStart && $0.upperBound > nextStart }
+        guard nextStart > word.upperBound, nextStart < scanEnd, !endsWord(nextStart) else { return nil }
+        let next = nextStart..<wordEnd(from: nextStart, to: scanEnd)
+        guard !isOpaque(next), let reading = LooseReading(text, [word, next], source: source, names: names) else { return nil }
+        let split = reading.letterCount(before: nextStart)
+        return reading.secretEnd { $0.lowerBound < split && $0.upperBound > split }
     }
 
     private static let splittingBoundaries = ByteSet("|,;&?")
 
     /// The end of the word that starts at `start`. An HTML character reference (`&#97;`) is part
-    /// of a word, though `&` and `;` end words elsewhere, so a name reads it with the word. A
-    /// backslash escape needs no such rule: it cuts the text, or a name, at the backslash,
-    /// whatever its form and wherever the word ends after it (see ``backslashEscapes(at:)``).
+    /// of a word, though `&` and `;` end words elsewhere. A backslash escape needs no such rule:
+    /// the word it is in cuts the text or cannot be read, whatever the form of the escape and
+    /// wherever the word ends after the backslash (see ``backslashEscapes(at:)``).
     func wordEnd(from start: Int, to lineEnd: Int) -> Int {
         var end = start
         while end < lineEnd {
@@ -92,6 +82,26 @@ extension FreeTextScanner {
         return min(end, lineEnd)
     }
 
+    /// Whether an escape starts in the bytes `range` (see ``isEscape(at:)``).
+    private func holdsEscape(_ range: Range<Int>) -> Bool {
+        var k = range.lowerBound
+        while k < range.upperBound {
+            if isEscape(at: k) { return true }
+            k += 1
+        }
+        return false
+    }
+
+    /// Where the word that byte `i` is glued to starts: an escape at a boundary (`alice&commat;…`,
+    /// `user&colon;…`) belongs to the word before it, which the value detectors cannot read
+    /// through the escape (`alice%40example.com`), so the word is hidden with it.
+    func wordStart(before i: Int) -> Int {
+        var k = i
+        while k > 0, !endsWord(k - 1) { k -= 1 }
+        return k
+    }
+
+    /// Whether byte `i` ends a word: white space, a separator, a quote or a boundary.
     func endsWord(_ i: Int) -> Bool {
         let byte = text.bytes[i]
         return text.isSpace(i) || text.isLineTerminator(i) || isSeparator(i) || byte == UInt8(ascii: "\"") || Self.boundaries.contains(byte)

@@ -1,49 +1,37 @@
-/// Reads free text for its first trigger: the point from which the rest of the text is hidden.
+/// Reads free text by the one rule that ``RedactionPolicy/redact(text:)`` describes: the first
+/// trigger hides everything after it, to the end of the text.
 ///
-/// Free text has no grammar, so the scanner does not try to tell where a value ends. It reads the
-/// text once, left to right, on the scanning copy (``NormalizedText``), and stops at the first
-/// trigger:
+/// The text is read only as far as it is written in the safe alphabet (see
+/// ``firstUnsafeOffset(in:)``): the first character outside it is the last possible cut. Up to
+/// there the scan runs once over the scanning copy (``NormalizedText``), left to right, and stops
+/// at the first trigger, which becomes the cut: the offset in the original scalars from which the
+/// text is hidden. A trigger is a key that is not on ``RedactionPolicy/allowedTextKeys``, in
+/// `key=value`, in quotes (`"key": value`, cut at its opening quote), as a JSON member and as the
+/// first string of a two-element JSON array; markup, which is never parsed (see
+/// ``startsMarkup(at:)``); a secret name written without a separator (see ``LooseReading``); a
+/// name written as a value that names a secret or is not plain ASCII; an escape (see
+/// ``isEscape(at:)``); a word that cannot be read or is longer than ``longestWord``; JSON that does
+/// not parse; a URL that is not clean; a quote that does not close on its line; and a bracket that
+/// is still open at the end of the text (see ``openMarks()``). Nothing is carried from one line to
+/// the next: the cut covers every line after it. JSON and clean URLs before the cut are redacted by
+/// their own rules and recorded as regions, which the value detectors do not read again; a URL
+/// that is not clean is a trigger where it starts (see ``url(to:)``).
 ///
-/// - a key before `=` or `:` that is not on the allowlist (``RedactionPolicy/allowedTextKeys``),
-///   is not plain ASCII, names a secret or is missing (`x=…`, `pаssword=…`, `=…`), and JSON
-///   with a member whose name is not on it (`{"x":…}`): hidden from the value;
-/// - a key in quotes (`"x": …`, `'x'=…`) that is not on the allowlist: hidden from its opening
-///   quote, so nothing written in the quotes shows (see ``quote()``);
-/// - a secret name, with or without a separator, quoted or not, also written as a value
-///   (`name="password"`): the text is hidden from the value after it;
-/// - a name held by an allowed key that holds one (`name=`, `label=`, …) that names a secret or
-///   is not plain ASCII: hidden from its value;
-/// - a character outside the safe alphabet (see ``isOutsideSafeAlphabet(_:)``), an escape
-///   (`%3D`, `&#61;`, `&amp`, a backslash before anything but white space: `\x41`, `\"`,
-///   `dir\data`), which is never decoded, and a word longer than ``longestWord``: hidden from
-///   there;
-/// - markup: a `<` before anything but an ASCII space, tab or line break, an ASCII digit, `=` or
-///   the end of the text (`<b>`, `</x>`, `<!--`, `<?pi`, `<#`): hidden from the `<` (see
-///   ``startsMarkup(at:)``);
-/// - a word that cannot be read with certainty (mixed scripts, an invisible character in it), a
-///   quote that does not close on its line, a bracket that does not close and JSON that does not
-///   parse: hidden from there;
-/// - a URL that is not clean: anything but `scheme://host` with an optional path of ASCII
-///   letters, digits, `.`, `_`, `-` and `/` that names no secret, followed by white space, a line
-///   break, the end of the text or one mark that ends a sentence and then one of those
-///   (`?page=2`, `:8080`, `user@`, `%3D`, `/password`, `x"y`, `x),`): hidden from where the URL
-///   starts (see ``url(to:)``).
-///
-/// Everything from the trigger to the end of the text is hidden, whatever lines follow. JSON and
-/// URLs before the trigger are read with their parsers and recorded as regions, which the value
-/// detectors do not read again. No tag, quote or bracket is open while the scan reads: markup is
-/// never parsed, and one pass of its own finds the first quote that does not close on its line
-/// and the last closing bracket of each kind (see ``noteMarks()``). Besides its position and the
-/// cut, the scanner keeps those positions and the end of the line only.
+/// Besides the findings of the JSON and URLs it reads, the scan keeps two positions: the cut and
+/// the key before the next separator. Quotes and brackets are read by position alone, in one
+/// pass of their own, and no tag or quote is open while the scan reads. Each JSON it reads is
+/// parsed and its tree released before the next one is read (see ``JSONDocument``), so its extra
+/// memory grows with what it finds, not with the number of JSON texts or the length of the text.
 struct FreeTextScanner {
     /// What kind of text is read.
     enum Role {
-        /// A log line, a message, a string value: every rule applies.
+        /// A log line, a message, a string value: every trigger counts.
         case text
-        /// A key that is written out, such as a JSON name or a form field name. The key rule hides
-        /// its value, so its words are not read as triggers. A separator in it, plain, escaped or
-        /// one that only looks like one, starts a value written into the name
-        /// (`{"password=hunter2":1}`), hidden from there.
+        /// A key that is written out, such as a JSON name or a form field name. Its value is hidden
+        /// by the key rule, so its own words are not triggers (`password_hint` and `pass word`
+        /// stay as they are): only a key written inside it that is not allowed (`password=…`,
+        /// `a=b`), a character outside the safe alphabet, an escape, a word longer than
+        /// ``longestWord`` and JSON are.
         case name
     }
 
@@ -51,35 +39,38 @@ struct FreeTextScanner {
     let text: NormalizedText
     let policy: RedactionPolicy
     let compatibility: CompatibilityText
+    /// The secret names the words of the text are compared with: those of the input's policy,
+    /// which the readings table carries (see ``CompatibilityText/secretNames``).
+    var names: SecretNameTable { compatibility.secretNames }
     let role: Role
     /// The documents the text is in and the JSON objects and arrays around it.
     let nesting: Nesting
-    /// The folded keys after which the text is read on.
-    let allowedKeys: Set<String>
+    /// Whether a word longer than ``longestWord`` is read as any other word is, rather than as
+    /// one that cannot be read: for the words of a string in a field that holds no name, which is
+    /// read at any length for a label (see ``WrittenName/shape(of:compatibility:)``). A string of
+    /// a few hundred characters is no name, but the label at its end is one, and so is a secret
+    /// word glued to a long word (`…xxxPIN:`). Free text keeps the rule: such a word cuts it.
+    let readsLongWords: Bool
 
-    /// The replacements of the JSON and URLs read before the cut.
     private(set) var spans: [RedactionPolicy.Span] = []
     private(set) var regions: [Range<Int>] = []
-    /// The offset in the original scalars from which the rest of the text is hidden.
-    private(set) var cut: Int?
     /// Whether JSON or a URL in the text went past a limit of ``nesting`` while the text is inside
     /// a document, so the text is hidden whole.
     private(set) var hidesWholeText = false
+    /// The offset in the original scalars from which the text is hidden to its end; nil when no
+    /// trigger was found.
+    private(set) var cut: Int?
 
     var position = 0
-    /// The last closing bracket of each kind in the text, so that whether one opened later
-    /// closes is known without searching (see ``readMark()``).
-    var lastCloses: [Int] = [-1, -1, -1]
-    /// The earliest quote still open where a quote does not close on its line or overlaps
-    /// another (see ``noteMarks()``): the byte of the quote, or of the backslashes before it when
-    /// it is escaped (`\"`). The text is cut there at the latest.
-    var unclosedQuote: Int?
-    /// The end of the line the position is on, found once per line (see ``currentLineEnd()``).
-    private var lineEndCache = -1
+    /// The byte before which the scan stops: the end of the text, or the first byte of the first
+    /// character outside the safe alphabet. No word is read past it.
+    private(set) var scanEnd = 0
+    /// The bytes of the key that the next separator belongs to, when only white space follows it.
+    var pendingKey: Range<Int>?
 
     init(
         source: [Unicode.Scalar], text: NormalizedText, policy: RedactionPolicy, compatibility: CompatibilityText, role: Role = .text,
-        nesting: Nesting, allowedKeys: Set<String>
+        nesting: Nesting, readsLongWords: Bool = false
     ) {
         self.source = source
         self.text = text
@@ -87,53 +78,53 @@ struct FreeTextScanner {
         self.compatibility = compatibility
         self.role = role
         self.nesting = nesting
-        self.allowedKeys = allowedKeys
+        self.readsLongWords = readsLongWords
+        scanEnd = text.count
     }
 
-    /// Whether words, quotes and brackets are read as triggers: in text, not in a name.
-    var readsWords: Bool { role == .text }
-
     mutating func run() {
-        if readsWords { noteMarks() }
-        while position < text.count, cut == nil, !hidesWholeText { step() }
+        // Nothing past the first character outside the safe alphabet is read: the text is cut
+        // there at the latest.
+        let unsafe = text.firstUnsafeOffset
+        scanEnd = unsafe.map(text.byteIndex(atOrAfter:)) ?? text.count
+        while position < scanEnd, cut == nil, !hidesWholeText { step() }
+        // The earlier of the two cuts holds, whatever the scan recorded before it.
+        if let unsafe { cut(atOffset: unsafe) }
+        guard !hidesWholeText, role == .text else { return }
+        let marks = openMarks()
         // A quote that does not close on its line may hold a key and its value over lines
         // (`"note\nQx31": 1`): the text is cut at it, whatever the scan found after it.
-        if !hidesWholeText, let unclosedQuote { cut(atByte: unclosedQuote) }
+        if let quote = marks.unclosedQuote { cut(atByte: quote) }
+        // A bracket that does not close before the text ends, or before the character that cuts
+        // it, leaves the end of what it holds unknown: it is a trigger, and the earliest trigger
+        // cuts the text (`items (a, b user=bob` keeps `items (`).
+        if let bracket = marks.openBracket { cut(atByte: bracket + 1) }
     }
 
     // MARK: Reading
 
     private mutating func step() {
-        if readsWords, let control = hiddenControl(before: position) {
-            cut(atOffset: control)
-            return
-        }
-        // A character outside ASCII that the scanning copy reads as a space, a quote, a bracket or
-        // a boundary (the blank Braille pattern, `（`, `，`) is judged as the character it is; a
-        // separator written outside ASCII (`＝`, `：`) hides the text after it, and ``word()``
-        // judges a character inside a word.
-        if !isSeparator(position), isOutsideSafeAlphabet(position), firstText(from: scalarEnd(position)) != nil {
-            cut(atByte: position)
-            return
-        }
         let byte = text.bytes[position]
         if text.isSpace(position) || text.isLineTerminator(position) {
             position += 1
+            return
+        }
+        if isEscape(at: position) {
+            cut(atByte: wordStart(before: position))
         } else if isSeparator(position) {
             separator()
+        } else if Self.quotes.contains(byte), opensQuote(at: position) {
+            quote()
         } else if startsJSON(position) {
+            pendingKey = nil
             embeddedJSON()
-        } else if Self.marks.contains(byte), readsWords {
-            readMark()
-        } else if readsWords, startsMarkup(at: position) {
+        } else if role == .text, startsMarkup(at: position) {
             cut(atByte: position)
-        } else if readsWords, startsEscape(position) {
-            // `&` ends a word, so an escape that starts with it (`&amp`, `&#61;`, `R&D`) is found
-            // here; one inside a word is found by ``word()``.
-            cut(atByte: position)
-        } else if Self.boundaries.contains(byte) || Self.quotes.contains(byte), referenceLength(at: position) == nil {
+        } else if Self.boundaries.contains(byte) {
+            pendingKey = nil
             position += 1
-        } else if let end = urlEnd(from: position, lineEnd: currentLineEnd()) {
+        } else if let end = urlEnd(from: position) {
+            pendingKey = nil
             url(to: end)
         } else {
             word()
@@ -141,125 +132,169 @@ struct FreeTextScanner {
     }
 
     /// Characters that end a key and a word without being part of either.
-    static let boundaries = ByteSet(",;&?|()[]{}<>")
+    static let boundaries = ByteSet(",;&?|([{<")
 
-    static let quotes = ByteSet("\"'`")
+    // MARK: Keys
 
-    /// A run of `=`, `:` and `>` (`:=`, `==`, `=>`) after a key. In a name every separator starts
-    /// a value. In text, the value is read on only after a key on ``allowedKeys``: plain ASCII,
-    /// naming no secret, on the same line as its separator, which is written in ASCII. Any other
-    /// key cuts the text at its value (`x=hunter2`, `Error: …`, `pаssword=…`, `user：bob`), and so
-    /// does a separator with no key before it (`=hunter2`) and the last words before the separator
-    /// when, read as one name, they name a secret (`pass word`, `c v v`). A key with an escape in
-    /// it (`status\=…`, `pass&#119;ord=`) never reaches the separator: the escape cuts the text
-    /// first (see ``startsEscape(_:)``). After an allowed key that holds a name (`name=`, `id=`,
-    /// … when the app allows them), a name that names a secret, is not plain ASCII or is JSON,
-    /// which cannot be read as a name, cuts it too.
+    /// A run of `=`, `:` and `>` (`:=`, `==`, `=>`) after a key. The value is read on only after a
+    /// key on the allowlist (see
+    /// ``allowsValue(ofKey:)``); in text, after a key on it that holds a name (`id=`, `type=`), the
+    /// name is read too (see ``heldName(after:key:)``). After any other key, and after a separator
+    /// with no key, the text is cut. Separators outside ASCII are never read: the safe alphabet
+    /// ends before them.
     private mutating func separator() {
-        let start = position
         var end = position + 1
         while end < text.count, isSeparator(end) || text.bytes[end] == UInt8(ascii: ">") { end += 1 }
+        let key = pendingKey
+        pendingKey = nil
+        // A key on the line before its separator is a key, but never an allowed one.
+        let isBroken = key.map { (($0.upperBound)..<position).contains(where: text.isLineTerminator) } ?? false
         position = end
-        guard readsWords else {
-            cut(afterByte: end - 1)
+        guard !isBroken, allowsValue(ofKey: key) else {
+            cut(atByte: nextNonSpace(from: end))
             return
         }
-        let isLookAlike = (start..<end).contains { !source[text.offsets[$0]].isASCII }
-        guard !isLookAlike, !isKeyOnLineBefore(separator: start), let name = keyName(before: start),
-              policy.allowsTextKey(name, in: allowedKeys), !keyWordsNameSecret(before: start)
-        else {
-            cut(afterByte: end - 1)
-            return
+        if role == .text, let name = keyName(key), WrittenName.holdsNameInText(name) { heldName(after: end, key: name) }
+    }
+
+    /// Whether the value after a key is read on: the key, without the brackets and single quotes
+    /// around it, is plain ASCII, does not name a secret and is on the allowlist. A backslash is
+    /// part of the key (`status\=…` escapes the `=` in some formats), so such a key is not plain.
+    func allowsValue(ofKey key: Range<Int>?) -> Bool {
+        guard let name = keyName(key) else { return false }
+        return policy.allowsTextKey(name)
+    }
+
+    /// A quote that opens a quoted key (`"user": …`, `'user'=…`, a key in backticks) or quoted text:
+    /// a `"` or a backtick anywhere, a `'` at the start of a word (see ``opensQuote(at:)``). A
+    /// quoted key follows the key rule, whatever its quotes: unless it is on the allowlist (see
+    /// ``allowsQuotedKey(_:)``), the text is cut at its opening quote, so nothing written in the
+    /// quotes shows (`"session Qz9W…": …`, `'x status': …`, `"password hint": 1`). Text in
+    /// quotes that no separator follows is read like any other, for the keys and names written in
+    /// it; whether the quote closes on its line is read apart from the scan (see
+    /// ``openMarks()``). No quote the scan reaches is escaped: a backslash before it is an escape,
+    /// which cuts the text first (escaped JSON, `\"key\":`, is cut at its first backslash). A
+    /// quote glued to the word before it (`x"status":`, `À"status":`, `🄁"status":`) leaves that
+    /// word in the key, which is then not plain: the text is cut where that word starts. So is a
+    /// quote right after a mark that the scanning copy leaves out (`\u{0300}"status":`).
+    private mutating func quote() {
+        let open = position
+        if let close = closingQuote(after: open, quote: text.bytes[open], escaped: false) {
+            let next = nextNonBlank(from: close + 1)
+            if next < text.count, isSeparator(next) {
+                let key = (open + 1)..<close
+                let start = wordStart(before: open)
+                let followsLeftOut = text.offset(at: open) > (open > 0 ? text.offsets[open - 1] + 1 : 0)
+                guard start == open, !followsLeftOut, allowsQuotedKey(key) else {
+                    cut(atByte: start)
+                    return
+                }
+                pendingKey = key
+                position = close + 1
+                return
+            }
         }
-        guard WrittenName.holdsNameInText(name), let valueStart = firstText(from: end) else { return }
-        let valueLineEnd = valueStart <= currentLineEnd() ? currentLineEnd() : lineEnd(from: valueStart)
-        if namedValueIsSecret(at: valueStart, lineEnd: valueLineEnd, key: name) { cut(afterByte: end - 1) }
+        pendingKey = nil
+        position = open + 1
     }
 
-    /// Whether the value after a key that holds a name (`name="password"`, `label=Пароль`,
-    /// `name=["pin"]`) names a secret or cannot be read as a name.
-    private func namedValueIsSecret(at start: Int, lineEnd: Int, key: [Unicode.Scalar]) -> Bool {
-        let byte = text.bytes[start]
-        if byte == UInt8(ascii: "{") || byte == UInt8(ascii: "[") { return true }
-        var range = start..<wordEnd(from: start, to: lineEnd)
-        if Self.quotes.contains(byte) {
-            var close = start + 1
-            while close < text.count, text.bytes[close] != byte, !text.isLineTerminator(close) { close += 1 }
-            range = (start + 1)..<close
-        }
-        let scalars = range.isEmpty ? [] : Array(source[text.originalWithInvisiblesBefore(range)])
-        return WrittenName.namesSecret(scalars, in: .quoted(after: key), policy: policy, compatibility: compatibility)
+    /// Whether the quoted key in the bytes `key` is on the allowlist (see
+    /// ``RedactionPolicy/allowsTextKey(_:)``), compared where it is in the text: the key as
+    /// written, the invisible characters before it included, and nothing taken off it. A key
+    /// longer than ``PlainName/maximumKeyLength`` is turned down before any of it is read, so no
+    /// key is copied whatever its length.
+    func allowsQuotedKey(_ key: Range<Int>) -> Bool {
+        let region = text.originalWithInvisiblesBefore(key)
+        guard !region.isEmpty, region.count <= PlainName.maximumKeyLength else { return false }
+        return policy.allowsTextKey(source[region])
     }
 
-    /// Whether a line break comes between the separator at `separator` and the key before it: a
-    /// key is never read on from the line above.
-    private func isKeyOnLineBefore(separator: Int) -> Bool {
-        var k = separator
-        while k > 0, text.isSpace(k - 1) || text.isLineTerminator(k - 1) {
-            if text.isLineTerminator(k - 1) { return true }
-            k -= 1
-        }
-        return false
-    }
-
-    // MARK: Lines
-
-    /// The end of the line the position is on. Positions only grow, so a line's end is looked
-    /// for once, not once for every word on it.
-    mutating func currentLineEnd() -> Int {
-        if lineEndCache < position { lineEndCache = lineEnd(from: position) }
-        return lineEndCache
-    }
-
-    func lineEnd(from i: Int) -> Int {
-        var end = i
-        while end < text.count, !text.isLineTerminator(end) { end += 1 }
-        return end
-    }
-
-    func firstNonSpace(from i: Int, to end: Int) -> Int {
+    /// The first of the backslashes right before byte `i`.
+    func backslashesStart(before i: Int) -> Int {
         var k = i
-        while k < end, text.isSpace(k) { k += 1 }
+        while k > 0, text.bytes[k - 1] == UInt8(ascii: "\\") { k -= 1 }
         return k
     }
 
-    /// The first byte at or after `i` that is not white space or a line terminator; nil at the
-    /// end of the text.
-    func firstText(from i: Int) -> Int? {
+    /// The key as written, invisible characters before it included, without the brackets and
+    /// single quotes around it; nil when there is none.
+    func keyName(_ key: Range<Int>?) -> [Unicode.Scalar]? {
+        guard let key, !key.isEmpty else { return nil }
+        var name = source[text.originalWithInvisiblesBefore(key)]
+        while let first = name.first, "([{<'".unicodeScalars.contains(first) { name = name.dropFirst() }
+        while let last = name.last, last == "'" { name = name.dropLast() }
+        return Array(name)
+    }
+
+    // MARK: Quotes and white space
+
+    /// Whether the byte at `i` comes after an odd number of backslashes.
+    func isEscaped(_ i: Int) -> Bool {
+        var count = 0
+        var k = i
+        while k > 0, text.bytes[k - 1] == UInt8(ascii: "\\") {
+            count += 1
+            k -= 1
+        }
+        return count % 2 == 1
+    }
+
+    /// The next `quote` after `open` on its line, escaped like the opening one (`\"…\"` in escaped
+    /// JSON) or not escaped, within `limit` bytes.
+    func closingQuote(after open: Int, quote: UInt8, escaped: Bool, limit: Int = .max) -> Int? {
+        var k = open + 1
+        while k < text.count, k - open <= limit, !text.isLineTerminator(k) {
+            if text.bytes[k] == quote, isEscaped(k) == escaped { return k }
+            k += 1
+        }
+        return nil
+    }
+
+    /// The first byte at or after `i` that is not a space or a tab.
+    func nextNonSpace(from i: Int) -> Int {
+        var k = i
+        while k < text.count, text.isSpace(k) { k += 1 }
+        return k
+    }
+
+    /// The first byte at or after `i` that is not white space or a line break: a key may be
+    /// written on the line before its separator.
+    func nextNonBlank(from i: Int) -> Int {
         var k = i
         while k < text.count, text.isSpace(k) || text.isLineTerminator(k) { k += 1 }
-        return k < text.count ? k : nil
+        return k
     }
 
-    // MARK: The cut
-
-    /// Hides the text from byte `i`, the trigger, invisible characters before it included.
-    mutating func cut(atByte i: Int) {
-        guard i < text.count else { return }
-        cut(atOffset: startOffset(ofByte: i))
+    /// Where the value after a secret name starts: after the quotes and brackets that close
+    /// around the name (`<password>`, `"token"`), the separators and the spaces after it.
+    func valueStart(after i: Int) -> Int {
+        var k = i
+        while k < text.count, Self.closingMarks.contains(text.bytes[k]) || text.isSpace(k) || isSeparator(k) { k += 1 }
+        return k
     }
 
-    /// The offset where byte `i` starts, invisible characters before it included.
-    func startOffset(ofByte i: Int) -> Int {
-        i > 0 ? min(text.offsets[i - 1] + 1, text.offsets[i]) : 0
+    private static let closingMarks = ByteSet("\"'`)]}>")
+
+    // MARK: Findings
+
+    /// Hides the text from byte `byte` to its end, with the invisible characters right before
+    /// that byte, and ends the scan.
+    mutating func cut(atByte byte: Int) {
+        cut(atOffset: cutOffset(byte))
     }
 
-    /// Hides the text after byte `i`, the end of a trigger: what follows a secret name or a
-    /// separator. White space, separators and quotes right after it are kept, so
-    /// `password = "…"` reads as such.
-    mutating func cut(afterByte i: Int) {
-        var k = i + 1
-        while k < text.count, text.isSpace(k) || text.isLineTerminator(k) || Self.keptAfterName.contains(text.bytes[k]) { k += 1 }
-        cut(atOffset: k < text.count ? text.offsets[k - 1] + 1 : text.sourceCount)
-    }
-
-    private static let keptAfterName = ByteSet("=:\"'`")
-
-    /// Hides the text from the original scalar `offset` to its end, or from an earlier cut, and
-    /// ends the scan.
+    /// Hides the text from the original scalar `offset` to its end and ends the scan.
     mutating func cut(atOffset offset: Int) {
         cut = min(cut ?? offset, offset)
-        position = text.count
+    }
+
+    /// The first scalar hidden from byte `i` on: right after the scalar of the byte before, so the
+    /// invisible characters before byte `i` go too, or the scalar of byte `i` when the byte
+    /// before came from the same scalar (`ﬁ` is read as `fi`).
+    private func cutOffset(_ i: Int) -> Int {
+        guard i > 0 else { return 0 }
+        if i < text.count, text.offsets[i] == text.offsets[i - 1] { return text.offsets[i] }
+        return text.offsets[i - 1] + 1
     }
 
     /// Ends the scan with the whole text hidden: JSON or a URL in it went past a limit of the
@@ -270,7 +305,7 @@ struct FreeTextScanner {
     }
 
     mutating func record(spans found: [RedactionPolicy.Span], region: Range<Int>) {
-        spans += found
+        for span in found { spans.appendGrowingByAQuarter(span) }
         regions.append(region)
     }
 }

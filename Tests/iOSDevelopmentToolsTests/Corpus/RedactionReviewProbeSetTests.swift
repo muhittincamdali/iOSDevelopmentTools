@@ -2,23 +2,25 @@ import Foundation
 import Testing
 @testable import iOSDevelopmentTools
 
-/// The probes of every adversarial review of the shared redaction rules — the third, fifth,
-/// seventh, ninth, tenth, twelfth and thirteenth of iOSSecurityTools, the correctness repros of
-/// the twelfth and thirteenth, and the twentieth and twenty-second sets of this package's
+/// The probes of every adversarial review of the redesign — the third, fifth, seventh, ninth,
+/// tenth and twelfth, and the correctness repros of the twelfth review's second lens — run
+/// against the free-text rule of one cut. Each probe the documentation says is hidden is hidden,
+/// apart from the limitations that "What it does not find" names. The probes of the thirteenth
+/// to sixteenth, the eighteenth and the twentieth reviews are in the same resource and checked claim by claim in
+/// suites of their own; the large ones of every review are checked here. The resource also holds the
+/// probes of this package's own reviews of the rules — the twentieth and twenty-second sets of its
 /// sixteenth review (`a-16n20`, `a-16n22`: a letter, mark or number with no ASCII form in place of
-/// one letter of a name, in every shape) and the wildcard probes of its eighteenth (`a-18n25`: a
-/// decimal digit of another script and the other wildcards in place of a letter or put into a
-/// name, on every path, and two long texts) — as `Resources/ReviewProbes.jsonl` holds them, run
-/// against this package's rules. Each probe the documentation says is hidden is hidden, apart from the
-/// limitations that "What it does not find" names.
+/// one letter of a name, in every shape) and the wildcard probes of its eighteenth (`a-18n25`) —
+/// which run here with the others.
 @Suite("Redaction corpus: review probe sets")
 struct RedactionReviewProbeSetTests {
-    static let reviews = ["a-3", "a-5", "a-7", "a-9", "a-10", "a-12", "a-13", "c-12", "c-13", "a-16n20", "a-16n22", "a-18n25"]
+    static let reviews = ["a-3", "a-5", "a-7", "a-9", "a-10", "a-12", "c-12", "a-16n20", "a-16n22", "a-18n25"]
 
     /// The probes that show their secret, by review and number, with the limitation each one is.
     static let documentedLimitations: [String: String] = {
         var limitations: [String: String] = [:]
-        // #43 is a URL path: a segment that is not plain ASCII is a label, so the one after it is hidden.
+        // `a-10#43` writes the name as a URL path segment, which is not a plain-ASCII name, so the
+        // segment after it is a value.
         let twoLookAlikeLetters = Array(1...14) + Array(23...25) + Array(27...29) + Array(37...42) + [336]
         let byReason: [(String, [String])] = [
             ("a value written before its name", ["a-3#311"]),
@@ -38,10 +40,11 @@ struct RedactionReviewProbeSetTests {
         let counts = Dictionary(grouping: ReviewProbes.all, by: \.review).mapValues(\.count)
         #expect(counts == [
             "a-3": 453, "a-5": 452, "a-7": 560, "a-9": 353, "a-10": 475, "a-12": 613, "a-13": 579, "c-12": 66, "c-13": 245,
-            "a-16n20": 240, "a-16n22": 766, "a-18n25": 275,
+            "a-14": 758, "a-14b": 402, "a-14q": 60, "a-15": 300, "a-15q": 15, "c-15": 315, "a-16": 381, "c-16": 98, "a-18": 1_084,
+            "c-18": 417, "a-20": 240, "a-16n20": 240, "a-16n22": 766, "a-18n25": 275,
         ])
         #expect(Self.documentedLimitations.count == 32)
-        #expect(Self.large.count == 51)
+        #expect(Self.large.count == 105)
     }
 
     /// The probes of up to a few megabytes, each a test case of its own so that they run side by side.
@@ -54,7 +57,7 @@ struct RedactionReviewProbeSetTests {
         }
     }
 
-    @Test("no large probe the documentation says is hidden shows its secret", arguments: large)
+    @Test("no large probe the documentation says is hidden shows its secret", .enabled(if: isOptimized, "the large probes take minutes in a debug build: swift test -c release"), arguments: large)
     func largeProbesHideTheirSecrets(name: String) throws {
         expectHidden(try #require(ReviewProbes.all.first { $0.name == name }))
     }

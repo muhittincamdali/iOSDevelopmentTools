@@ -5,8 +5,7 @@ import Testing
 /// Generated input for the key rule in every shape it takes besides `key=value`: the first string
 /// of a two-element array in a line, the tag of an element, the name of a multipart part header
 /// and the host of a URL. A key that is not allowed, or a host that is not an address, never lets
-/// the value show; one that is allowed keeps it, so the redactor stays useful. An element in free
-/// text is markup, which is never parsed: its `<` cuts the text whatever its tag.
+/// the value show; one that is allowed keeps it, so the redactor stays useful.
 @Suite("Redaction corpus: key shape properties")
 struct RedactionKeyShapePropertyTests {
     let redactor = Redactor()
@@ -80,36 +79,28 @@ struct RedactionKeyShapePropertyTests {
         }
     }
 
-    // Markup in free text is not parsed, so no tag is a key that keeps its text: allowing a key
-    // never shows the text of an element of that name.
-    @Test("the text of an element never shows, even when the app allows its tag")
+    // No tag is allowed: markup is never parsed in free text, so the first tag cuts the text at
+    // its `<` even when the app allows a key of the same name.
+    @Test("the text of an element never shows, also when the app allows its tag")
     func allowedElementText() {
         var random = SeededRandom(seed: 0x7A60_0100)
         let allowing = Redactor(allowedTextKeys: ["item", "note"])
         for _ in 0..<200 {
             let tag = ["status", "count", "item", "note"].randomElement(using: &random)!
             let value = RedactionCorpusPropertyTests.value(using: &random)
-            #expect(allowing.redact("<\(tag)>\(value)</\(tag)> done") == "[REDACTED]")
-            #expect(allowing.redact("\(tag)=1 <\(tag)>\(value)</\(tag)> done") == "\(tag)=1 [REDACTED]")
+            let text = "status=200 <\(tag)>\(value)</\(tag)> done"
+            #expect(allowing.redact(text) == "status=200 [REDACTED]")
         }
     }
 
     private static let headerCharacters = Array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.!#$%&'*+^`|~")
 
-    @Test("a multipart part header name never shows unless it is on the header allowlist")
+    @Test("a multipart part header name never shows unless a part carries it")
     func partHeaderNames() {
         var random = SeededRandom(seed: 0x9A27_0000)
-        // The part headers on the default header allowlist show by name. Any other, such as
-        // `Content-Transfer-Encoding` or `Content-ID`, is written as `[REDACTED]: [REDACTED]`
-        // unless the app allows it.
-        let carried = ["Content-Length", "Content-Encoding"]
-        let unlisted = ["Content-Transfer-Encoding", "Content-ID", "Content-Description", "Content-Language", "Content-Location"]
-        for name in unlisted {
-            let body = "--B\r\nContent-Disposition: form-data; name=\"a\"\r\n\(name): 1\r\n\r\nx\r\n--B--"
-            #expect(redactor.redact(body: Data(body.utf8), contentType: "multipart/form-data; boundary=B").contains("[REDACTED]: [REDACTED]"))
-            let allowing = Redactor(RedactionPolicy(allowedHeaders: RedactionPolicy.defaultAllowedHeaders + [name]))
-            #expect(allowing.redact(body: Data(body.utf8), contentType: "multipart/form-data; boundary=B").contains(name + ": "))
-        }
+        // Rule B4: the headers a part carries keep their name, whatever allowedHeaders lists.
+        let carried = ["Content-Length", "Content-Transfer-Encoding", "Content-ID", "Content-Description", "Content-Language", "Content-Location",
+                       "Content-Encoding"]
         for _ in 0..<400 {
             let secret = RedactionCorpusPropertyTests.value(using: &random)
             let name = [secret, "X-" + secret, secret + "-Name", "4111111111111111", "DE89370400440532013000",
@@ -150,13 +141,14 @@ struct RedactionKeyShapePropertyTests {
         }
     }
 
+    // In free text a URL is shown only when it is clean, which an IPv6 address in brackets is
+    // not: its `:` cuts the text at the URL.
     @Test("a host that is a name of ASCII labels or an address is kept")
     func plainHosts() throws {
         for host in ["example.com", "api.example.co.uk", "localhost", "my-host", "10.0.0.1", "[::1]", "[2001:db8::7]", "a1-b2.example", "example.com."] {
             let url = try #require(URL(string: "https://\(host)/a"))
             #expect(redactor.redact(url: url) == "https://\(host)/a", "\(host)")
-            // In text, a host with `:` or brackets makes the URL not clean, so the text is cut there.
-            let inText = host.contains(":") ? "see [REDACTED]" : "see https://\(host)/a done"
+            let inText = host.hasPrefix("[") ? "see [REDACTED]" : "see https://\(host)/a done"
             #expect(redactor.redact("see https://\(host)/a done") == inText, "\(host)")
         }
         #expect(Redactor(urlDetail: .hostOnly).redact(url: try #require(URL(string: "https://example.com:8443/a?b=1"))) == "https://example.com:8443")

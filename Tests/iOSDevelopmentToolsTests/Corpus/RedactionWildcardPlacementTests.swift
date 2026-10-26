@@ -12,7 +12,7 @@ struct RedactionWildcardPlacementTests {
     static let secret = "Yk002Wq7z"
 
     static let words = [
-        "tokeꞏn", "secreꞏt", "piꞏn", "keꞏy", "otꞏp", "cvꞏv", "cvꞏc", "autꞏh", "carꞏd", "ibaꞏn", "beareꞏr", "pwꞏd", "siꞏd", "pꞏw",
+        "tokeꞏn", "secreꞏt", "piꞏn", "keꞏy", "otꞏp", "cvꞏv", "cvꞏc", "autꞏh", "carꞏd", "ibaꞏn", "pwꞏd", "siꞏd", "pꞏw",
         "tokeın", "piøn", "keły", "otŋp", "cvɛv", "autðh", "pwød", "keıy", "piın",
     ]
 

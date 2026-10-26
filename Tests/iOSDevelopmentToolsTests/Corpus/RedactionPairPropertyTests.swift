@@ -55,7 +55,7 @@ struct RedactionPairPropertyTests {
         var random = SeededRandom(seed: 0xA1_2B_0009)
         var checked = 0
         for _ in 0..<4_000 {
-            let name = RedactionCutPropertyTests.name(using: &random)
+            let name = RedactionAllowlistPropertyTests.key(using: &random)
             // `-` alone is the index past the end of an array in a JSON Pointer, not a name.
             guard PlainName(name.unicodeScalars) == nil, name != "-" else { continue }
             let value = RedactionCorpusPropertyTests.value(using: &random)
@@ -73,8 +73,8 @@ struct RedactionPairPropertyTests {
         var random = SeededRandom(seed: 0xA1_2B_000A)
         var checked = 0
         for _ in 0..<4_000 {
-            let name = RedactionCutPropertyTests.name(using: &random)
-            guard let plain = PlainName(name.unicodeScalars), !plain.namesSecret(in: .standard) else { continue }
+            let name = RedactionAllowlistPropertyTests.key(using: &random)
+            guard let plain = PlainName(name.unicodeScalars), !plain.namesSecret() else { continue }
             // Without vowels, `s`, `p`, `c`, `k`, `v` and `w` the value spells no secret word, which
             // free text would read in it.
             let value = String((0..<12).map { _ in "BDFGHJLMNRTXYZ23456789".randomElement(using: &random)! })

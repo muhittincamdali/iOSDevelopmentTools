@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -52,7 +52,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 631 个 Swift Testing 测试，iOS 模拟器上有 628 个。请求从应用的会话
+- **经过测试** — macOS 上有 857 个 Swift Testing 测试，iOS 模拟器上有 854 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -65,7 +65,7 @@
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-把它粘贴到窗口右上角的搜索框中。将 **Dependency Rule** 保持为从 `2.1.0` 开始的
+把它粘贴到窗口右上角的搜索框中。将 **Dependency Rule** 保持为从 `2.1.1` 开始的
 **Up to Next Major Version**，然后点击 **Add Package**。在下一个窗口中，在 **iOSDevelopmentTools**
 旁边选择你的应用 target，再次点击 **Add Package**。
 
@@ -122,7 +122,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -190,19 +190,26 @@ func configureNetworkLogger() {
   `Cookie` 和 `Set-Cookie` 即使在允许列表中也不记录）、`password`、`token`、`api_key` 等秘密名称下的
   值、看起来像标识符的路径段（显示为 `:id`）、
   紧跟在表示秘密名称或不是纯 ASCII 的路径段之后的路径段（`/caf%C3%A9/menu` 记录为
-  `/caf%C3%A9/:id`）、路径含点段（`/pin/./4831`、`..`、`%2E`）或 `;`
-  （`/cart;jsessionid=…`、`%3B`）的 URL 的路径和查询（只记录 scheme 和主机，从不解析矩阵参数）、
-  主机名为秘密名称时其后的路径和查询（`myapp://pin/4831` 记录为 `myapp://pin`；`auth.example.com`
-  这样的主机也会隐藏路径），以及 multipart 消息体中的文件部分。
+  `/caf%C3%A9/:id`）、路径含点段（`/pin/./4831`、`..`）、`;`（`/cart;jsessionid=…`）或转义的
+  `.`、`/`、`\`、`;`、`%`（`%2E`、`%2F`、`%5C`、`%3B`、`%25`）的 URL 的路径和查询（只记录 scheme
+  和主机，从不解析矩阵参数）、表示秘密名称的主机及其后的全部内容（`myapp://pin/4831` 和
+  `myapp://pin-4831` 记录为 `myapp://[REDACTED]`；`auth.example.com` 这样的主机也会被隐藏），以及
+  multipart 消息体中的文件部分，以及 multipart 消息体中除 `Content-Length` 和
+  `Content-Transfer-Encoding` 之外的部分头的值（`Content-ID` 和另外四个 `Content-*` 名称只保留名称；
+  其他部分头，例如 `User-Agent`，记录为 `[REDACTED]: [REDACTED]`），以及这两个头中不符合其格式的值：
+  不全是 ASCII 数字的 `Content-Length`，以及 `7bit`、`8bit`、`binary`、`base64`、`quoted-printable`
+  之外的 `Content-Transfer-Encoding`（后者以小写保留）记录为 `[REDACTED]`
+  （`Content-Length: pin-4831` 记录为 `Content-Length: [REDACTED]`）。
 - **不是纯 ASCII 的键**（在解码转义、应用 NFKC 并统一大小写之后，例如含西里尔字母 `а` 的
   `pаssword`、`pass\u200Dword`、`şifre`）的值默认会被隐藏。
 - **无法解析的消息体**（未知或缺失的内容类型、格式错误的 JSON 或 multipart、在大小上限处被截断的
   消息体）会被替换为 `[body omitted: 512 bytes, application/xml]` 这样的说明。
 - **日志消息**只保留到第一个触发点之前：秘密名称、不在允许列表中的键（默认是 `status`、`method`、
   `path`、`duration_ms` 和 `count`，可用 `allowedTextKeys` 添加自己的键）、ASCII 之外且不是字母、
-  附加符号、数字或空白的字符（`꞉`、`…`、表情符号，以及兼容性规范化读作标点的字符，例如读作
-  `0,` 的 `🄁`）、任何形式的转义（反斜杠后跟空白以外的任何字符、`%3D`、`&` 后跟字母或 `#`：`R&D`、
-  `&amp`）、不被允许的带引号的键
+  附加符号或数字的字符（`꞉`、`…`、表情符号、U+00A0 这样的空白，以及兼容性规范化读作标点的字符，
+  例如读作 `0,` 的 `🄁`）、混用多种文字的单词（含西里尔字母 `о` 的 `tоken`）、从所在单词开头截断的
+  任何形式的转义（反斜杠后跟空白以外的任何字符、`%3D`、`&` 后跟字母或 `#`：`R&D`、`&amp`；像
+  `status=200&count=3` 中开始一个字段的 `&` 不是转义）、不被允许的带引号的键
   （从开引号处截断：`"x":"hunter2"` 会存储为 `[REDACTED]`）、标记（不是比较的 `<`：`<b>`、`</x>`、
   `<!--`；任何标签都不保留其文本）、在本行内未闭合的引号、相互交叠的引号（`'x "y' z"`）或未闭合的括号，会让其后的所有内容（包括
   下面的行）都被隐藏（`login password=hunter2 status=200` 会存储为

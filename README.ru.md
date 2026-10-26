@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -59,7 +59,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 631 тест Swift Testing на macOS и 628 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 857 тестов Swift Testing на macOS и 854 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -74,7 +74,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Вставьте его в поле поиска в правом верхнем углу окна. Оставьте **Dependency Rule** равным
-**Up to Next Major Version** начиная с `2.1.0` и нажмите **Add Package**. В следующем окне выберите
+**Up to Next Major Version** начиная с `2.1.1` и нажмите **Add Package**. В следующем окне выберите
 target вашего приложения рядом с **iOSDevelopmentTools** и снова нажмите **Add Package**.
 
 **2. Импортируйте модуль**
@@ -131,7 +131,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -203,10 +203,17 @@ func configureNetworkLogger() {
   `token` или `api_key`, сегменты пути, похожие на идентификаторы (показываются как `:id`), и сегмент после
   сегмента, который называет секрет или не является простым ASCII (`/caf%C3%A9/menu` сохраняется
   как `/caf%C3%A9/:id`), путь и запрос URL с
-  точечным сегментом (`/pin/./4831`, `..`, `%2E`) или `;` (`/cart;jsessionid=…`, `%3B`): сохраняются
-  только схема и хост, так что матричные параметры никогда не разбираются; путь и запрос после
-  хоста, который называет секрет (`myapp://pin/4831` сохраняется как `myapp://pin`; хост вроде
-  `auth.example.com` тоже скрывает свой путь); и файловые части тел multipart.
+  точечным сегментом (`/pin/./4831`, `..`), `;` (`/cart;jsessionid=…`) или экранированными `.`,
+  `/`, `\`, `;` или `%` (`%2E`, `%2F`, `%5C`, `%3B`, `%25`): сохраняются только схема и хост, так
+  что матричные параметры никогда не разбираются; хост, который называет секрет, со всем, что идёт
+  после него (`myapp://pin/4831` и `myapp://pin-4831` сохраняются как `myapp://[REDACTED]`; хост
+  вроде `auth.example.com` тоже скрывается); файловые части тел multipart; и значения заголовков
+  частей multipart, кроме `Content-Length` и `Content-Transfer-Encoding` (`Content-ID` и ещё четыре имени
+  `Content-*` сохраняют только имя; любой другой заголовок части, например `User-Agent`,
+  записывается как `[REDACTED]: [REDACTED]`), а также любое значение этих двух вне их формы:
+  `Content-Length` не только из цифр ASCII и `Content-Transfer-Encoding`, кроме `7bit`, `8bit`,
+  `binary`, `base64` и `quoted-printable` (сохраняется строчными буквами), записываются как
+  `[REDACTED]` (`Content-Length: pin-4831` как `Content-Length: [REDACTED]`).
 - **Ключи, которые не являются простым ASCII** после декодирования escape-последовательностей,
   NFKC и приведения регистра (`pаssword` с кириллической `а`, `pass\u200Dword`, `şifre`), по
   умолчанию скрывают своё значение.
@@ -215,11 +222,13 @@ func configureNetworkLogger() {
   `[body omitted: 512 bytes, application/xml]`.
 - **Сообщения журнала** сохраняются до первого триггера: секретное имя, ключ не из списка
   разрешённых (по умолчанию `status`, `method`, `path`, `duration_ms` и `count`; свои ключи
-  добавляются через `allowedTextKeys`), символ вне ASCII, который не является буквой, диакритикой,
-  цифрой или пробелом (`꞉`, `…`, эмодзи, а также буква, которую нормализация совместимости
-  читает как знак препинания, например `🄁` как `0,`), escape-последовательность любого вида
-  (обратная косая черта перед чем угодно, кроме пробельного символа, `%3D`, `&` перед буквой или
-  `#`: `R&D`, `&amp`), ключ в кавычках
+  добавляются через `allowedTextKeys`), символ вне ASCII, который не является буквой, диакритикой
+  или цифрой (`꞉`, `…`, эмодзи, пробел вроде U+00A0, а также буква, которую нормализация
+  совместимости читает как знак препинания, например `🄁` как `0,`), слово, смешивающее
+  письменности (`tоken` с кириллической `о`), escape-последовательность любого вида, которая
+  обрезает текст с начала своего слова (обратная косая черта перед чем угодно, кроме пробельного
+  символа, `%3D`, `&` перед буквой или `#`: `R&D`, `&amp`; `&`, начинающий поле, как в
+  `status=200&count=3`, не escape), ключ в кавычках
   не из списка разрешённых (текст обрезается по открывающей кавычке: `"x":"hunter2"` сохраняется
   как `[REDACTED]`), разметка (`<`, который не является сравнением: `<b>`, `</x>`, `<!--`; ни один
   тег не сохраняет свой текст), кавычка, не закрытая в своей строке, перекрывающиеся кавычки

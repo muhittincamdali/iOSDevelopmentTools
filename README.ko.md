@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@35e61d77773f37038a6c7b618c6465a324f8f277 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -56,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 631개, iOS 시뮬레이터에서 628개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 857개, iOS 시뮬레이터에서 854개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -70,7 +70,7 @@ Xcode에서 **File › Add Package Dependencies…**를 선택하고 저장소 U
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-창 오른쪽 위의 검색 필드에 붙여 넣으세요. **Dependency Rule**은 `2.1.0`부터 시작하는
+창 오른쪽 위의 검색 필드에 붙여 넣으세요. **Dependency Rule**은 `2.1.1`부터 시작하는
 **Up to Next Major Version**으로 둔 채 **Add Package**를 클릭합니다. 다음 창에서
 **iOSDevelopmentTools** 옆에 있는 앱 타깃을 선택하고 **Add Package**를 다시 클릭하세요.
 
@@ -127,7 +127,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.0")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -195,19 +195,27 @@ func configureNetworkLogger() {
   헤더 값(`Authorization`, `Cookie`, `Set-Cookie`는 허용 목록에 있어도 제외), `password`, `token`,
   `api_key` 같은 비밀 이름 아래의 값, 식별자처럼 보이는 경로 세그먼트(`:id`로 표시), 비밀 이름이거나
   일반 ASCII가 아닌 세그먼트 다음의 세그먼트(`/caf%C3%A9/menu`는 `/caf%C3%A9/:id`로 기록), 점 세그먼트
-  (`/pin/./4831`, `..`, `%2E`)나 `;`(`/cart;jsessionid=…`, `%3B`)가 있는 URL의 경로와 쿼리(스킴과 호스트만
-  기록하며 매트릭스 파라미터는 해석하지 않음), 비밀 이름을 나타내는 호스트 뒤의 경로와 쿼리
-  (`myapp://pin/4831`은 `myapp://pin`으로 기록하며, `auth.example.com` 같은 호스트도 경로를
-  가림), multipart 본문의 파일 파트.
+  (`/pin/./4831`, `..`), `;`(`/cart;jsessionid=…`) 또는 이스케이프된 `.`, `/`, `\`, `;`, `%`
+  (`%2E`, `%2F`, `%5C`, `%3B`, `%25`)가 있는 URL의 경로와 쿼리(스킴과 호스트만 기록하며 매트릭스
+  파라미터는 해석하지 않음), 비밀 이름을 나타내는 호스트와 그 뒤의 모든 것(`myapp://pin/4831`과
+  `myapp://pin-4831`은 `myapp://[REDACTED]`로 기록하며, `auth.example.com` 같은 호스트도 가림),
+  multipart 본문의 파일 파트, `Content-Length`와 `Content-Transfer-Encoding`을 제외한 multipart
+  파트 헤더의 값(`Content-ID`와 다른 `Content-*` 이름 네 개는 이름만 남기고, `User-Agent` 같은 그 밖의
+  파트 헤더는 `[REDACTED]: [REDACTED]`로 기록), 그리고 이 두 헤더의 값 중 정해진 형식이 아닌 값
+  (ASCII 숫자만이 아닌 `Content-Length`, `7bit`, `8bit`, `binary`, `base64`, `quoted-printable`
+  이외의 `Content-Transfer-Encoding`. 후자는 소문자로 남김)은 `[REDACTED]`로 기록
+  (`Content-Length: pin-4831`은 `Content-Length: [REDACTED]`).
 - **순수 ASCII가 아닌 키**(이스케이프를 풀고 NFKC를 적용하고 대소문자를 맞춘 뒤 기준, 예를 들어
   키릴 문자 `а`가 들어간 `pаssword`, `pass\u200Dword`, `şifre`)의 값은 기본적으로 가려집니다.
 - **파싱할 수 없는 본문**(알 수 없거나 없는 Content-Type, 잘못된 JSON이나 multipart, 크기 한도에서
   잘린 본문)은 `[body omitted: 512 bytes, application/xml]` 같은 안내 문구로 바뀝니다.
 - **로그 메시지**는 첫 번째 트리거까지만 보관됩니다. 비밀 이름, 허용 목록에 없는 키(기본값은
   `status`, `method`, `path`, `duration_ms`, `count`이며 `allowedTextKeys`로 직접 추가할 수
-  있습니다), 문자·결합 부호·숫자·공백이 아닌 ASCII 밖의 문자(`꞉`, `…`, 이모지, 호환성 정규화가 문장 부호로
-  읽는 문자. 예: `0,`으로 읽히는 `🄁`), 모든 형태의 이스케이프(공백이 아닌 문자 앞의 백슬래시, `%3D`,
-  문자나 `#` 앞의 `&`: `R&D`, `&amp`), 허용되지 않은 따옴표 속 키(여는 따옴표에서 잘립니다. `"x":"hunter2"`는
+  있습니다), 문자·결합 부호·숫자가 아닌 ASCII 밖의 문자(`꞉`, `…`, 이모지, U+00A0 같은 공백,
+  호환성 정규화가 문장 부호로 읽는 문자. 예: `0,`으로 읽히는 `🄁`), 문자 체계가 섞인 단어(키릴
+  문자 `о`가 들어간 `tоken`), 단어의 시작에서 잘리는 모든 형태의 이스케이프(공백이 아닌 문자
+  앞의 백슬래시, `%3D`, 문자나 `#` 앞의 `&`: `R&D`, `&amp`. `status=200&count=3`처럼 필드를
+  시작하는 `&`는 이스케이프가 아님), 허용되지 않은 따옴표 속 키(여는 따옴표에서 잘립니다. `"x":"hunter2"`는
   `[REDACTED]`로 저장됩니다), 마크업(비교가 아닌 `<`: `<b>`, `</x>`, `<!--`. 어떤 태그도 텍스트를
   남기지 않습니다), 같은 줄에서 닫히지 않은 따옴표, 서로 겹치는 따옴표(`'x "y' z"`), 닫히지 않은 괄호가 나오면 그 뒤의 모든 내용이
   아래 줄까지 가려집니다

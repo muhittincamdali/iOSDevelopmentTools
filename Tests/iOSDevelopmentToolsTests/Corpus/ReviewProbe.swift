@@ -1,10 +1,9 @@
 import Foundation
 @testable import iOSDevelopmentTools
 
-/// One input of the adversarial reviews of the shared redaction rules, as
-/// `Resources/ReviewProbes.jsonl` holds it: the review it comes from and its number there, what the
-/// review claimed for it, how it is redacted and the secret that must not show. The resource was
-/// first written for the same rules in iOSSecurityTools; the probes run here through ``Redactor``.
+/// One input of the adversarial reviews, as `Resources/ReviewProbes.jsonl` holds it: the review it
+/// comes from and its number there, what the review claimed for it, how it is redacted and the
+/// secret that must not show.
 struct ReviewProbe: Decodable, Sendable {
     /// A long input written as a piece repeated between a prefix and a suffix.
     struct Repeat: Decodable, Sendable {
@@ -22,9 +21,10 @@ struct ReviewProbe: Decodable, Sendable {
     let claim: String
     /// `text`, `body` or `url`.
     let kind: String
-    /// The allowed text keys for `text`, the allowed query parameters for `url`.
+    /// The allowed text keys for `text` and `body`, the allowed query parameters for `url`.
     let keys: [String]?
-    /// The allowed query parameters for `text` and `body`.
+    /// The allowed query parameters for `text` and `body`, which free text does not use: a URL in
+    /// it is shown only when it is clean.
     let queryKeys: [String]?
     /// The content type of a body; nil for none.
     let type: String?
@@ -54,9 +54,9 @@ struct ReviewProbe: Decodable, Sendable {
             return URL(string: text).map { redactor.redact(url: $0) } ?? "<URL(string:) nil>"
         case "body":
             let body = data.flatMap { Data(base64Encoded: $0) } ?? Data(text.utf8)
-            return Redactor(allowedQueryParameters: queryKeys ?? []).redact(body: body, contentType: type)
+            return Redactor(allowedTextKeys: keys ?? [], allowedQueryParameters: queryKeys ?? []).redact(body: body, contentType: type)
         default:
-            return Redactor(allowedQueryParameters: queryKeys ?? [], allowedTextKeys: keys ?? []).redact(text)
+            return Redactor(allowedTextKeys: keys ?? [], allowedQueryParameters: queryKeys ?? []).redact(text)
         }
     }
 

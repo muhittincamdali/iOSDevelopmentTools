@@ -13,21 +13,22 @@ struct MultipartRedactionTests {
         for part in parts {
             text += "--\(boundary)\r\n\(part.headers)\r\n\r\n\(part.content)\r\n"
         }
-        text += "--\(boundary)--\r\n"
+        // Written as the redactor writes it: the closing delimiter without a line break after it.
+        text += "--\(boundary)--"
         return Data(text.utf8)
     }
 
-    // Section 6 of the redaction rules: a part header name outside the header allowlist is written
-    // as `[REDACTED]`, and the value detectors read the names too.
-    @Test("A part header name outside the allowlist, or with a finding in it, is written as [REDACTED] with its value")
+    // Rule B4 of the shared redaction specification: a part header name outside the part header
+    // list is written as `[REDACTED]` with its value; the request-header allowlist does not apply.
+    @Test("A part header name outside the part header list is written as [REDACTED] with its value, also when allowedHeaders lists it")
     func partHeaderNames() {
         let lenient = RedactionPolicy(allowedHeaders: ["X-Note", "X-4111111111111111"])
         let body = multipart([("Content-Disposition: form-data; name=\"a\"\r\nX-Note: hi\r\nX-4111111111111111: v\r\nX-Other: v", "ok")])
         let (data, _) = lenient.redact(body: body, contentType: contentType)
-        #expect(data == multipart([("Content-Disposition: form-data; name=\"a\"\r\nX-Note: hi\r\n\(redacted): \(redacted)\r\n\(redacted): \(redacted)", "ok")]))
+        #expect(data == multipart([("Content-Disposition: form-data; name=\"a\"\r\n\(redacted): \(redacted)\r\n\(redacted): \(redacted)\r\n\(redacted): \(redacted)", "ok")]))
     }
 
-    @Test("Fields are redacted by name, file parts omitted, other part headers follow the header rule and hide their names")
+    @Test("Fields are redacted by name, file parts omitted, a part header outside the part header list hidden with its name")
     func fields() {
         let body = multipart([
             ("Content-Disposition: form-data; name=\"user\"", "ada"),
@@ -48,7 +49,7 @@ struct MultipartRedactionTests {
         let body = multipart([
             ("Content-Disposition: form-data; name=\"meta\"\r\nContent-Type: application/json", #"{"token":"t","title":"x"}"#),
             ("Content-Disposition: form-data; name=\"form\"\r\nContent-Type: application/x-www-form-urlencoded", "token;x=hunter2"),
-            ("Content-Disposition: form-data; name=\"note\"", "a\r\npassword: hunter2"),
+            ("Content-Disposition: form-data; name=\"note\"", "a\r\npassword=hunter2"),
             ("Content-Disposition: form-data; name=\"xml\"\r\nContent-Type: application/xml", "<a/>"),
         ])
         let (data, outcome) = policy.redact(body: body, contentType: contentType)
@@ -56,7 +57,7 @@ struct MultipartRedactionTests {
         #expect(data == multipart([
             ("Content-Disposition: form-data; name=\"meta\"\r\nContent-Type: application/json", #"{"token":"[REDACTED]","title":"x"}"#),
             ("Content-Disposition: form-data; name=\"form\"\r\nContent-Type: application/x-www-form-urlencoded", "[body omitted: 15 bytes, application/x-www-form-urlencoded]"),
-            ("Content-Disposition: form-data; name=\"note\"", "a\r\npassword: \(redacted)"),
+            ("Content-Disposition: form-data; name=\"note\"", "a\r\npassword=\(redacted)"),
             ("Content-Disposition: form-data; name=\"xml\"\r\nContent-Type: application/xml", "[body omitted: 4 bytes, application/xml]"),
         ]))
         // Only `multipart/form-data` names its fields, so other multipart types are omitted.
@@ -140,11 +141,11 @@ struct MultipartRedactionTests {
         #expect(policy.redact(body: delimiters, contentType: "multipart/form-data; boundary=b").outcome == .omitted)
     }
 
-    @Test("A body written as the parser reads it is stored unchanged, with or without the last line break")
+    @Test("A body written as the redactor writes it is stored unchanged; a line break after the last delimiter is not written")
     func canonicalBody() {
         let body = multipart([("Content-Disposition: form-data; name=\"a\"", "v"), ("Content-Disposition: form-data; name=\"b\"", "w")])
         #expect(policy.redact(body: body, contentType: contentType) == (body, .unchanged))
-        let withoutBreak = body.dropLast(2)
-        #expect(policy.redact(body: Data(withoutBreak), contentType: contentType) == (Data(withoutBreak), .unchanged))
+        let withBreak = body + Data("\r\n".utf8)
+        #expect(policy.redact(body: withBreak, contentType: contentType) == (body, .redacted))
     }
 }

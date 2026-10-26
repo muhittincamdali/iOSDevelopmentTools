@@ -12,8 +12,7 @@ struct RedactionDetectorTests {
         ("pay to DE89370400440532013000", "pay to [REDACTED]"),
         ("to DE89 3704 0044 0532 0130 00 today", "to [REDACTED] today"),
         ("GB82 WEST 1234 5698 7654 32", "[REDACTED]"),
-        ("{\"status\":\"DE89370400440532013000\"}", "{\"status\":\"[REDACTED]\"}"),
-        ("{\"note\":\"DE89370400440532013000\"}", "{\"note\":[REDACTED]"),
+        ("[\"DE89370400440532013000\"]", "[\"[REDACTED]\"]"),
     ])
     func ibans(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -29,11 +28,9 @@ struct RedactionDetectorTests {
     @Test("finds runs of 32 or more hex digits and base64 strings", arguments: [
         ("commit 2c73d1a49804c8035388364230944e541f8e6e2c", "commit [REDACTED]"),
         ("fingerprint 0123456789abcdef0123456789abcdef ok", "fingerprint [REDACTED] ok"),
-        // The `==` that pads base64 is a separator after a plain key, so only the token goes.
-        // `==` after the token is a separator with a key that is not allowed, so the rest goes too.
+        // The `==` that pads base64 is also read as a separator, so the rest of the line goes.
         ("b64 dGhpcyBpcyBhIHNlY3JldCB2YWx1ZSAxMjM0NTY3OA== end", "b64 [REDACTED] [REDACTED]"),
-        ("b64 dGhpcyBpcyBhIHNlY3JldCB2YWx1ZSAxMjM0NTY3OA end", "b64 [REDACTED] end"),
-        ("{\"status\":\"sk_live_" + "51HxQ2wErTyUiOpAsDfGhJkLzXcVbNm1234\"}", "{\"status\":\"[REDACTED]\"}"),
+        ("[\"sk_\("live")_51HxQ2wErTyUiOpAsDfGhJkLzXcVbNm1234\"]", "[\"[REDACTED]\"]"),
     ])
     func longTokens(input: String, expected: String) {
         #expect(redactor.redact(input) == expected)
@@ -47,16 +44,20 @@ struct RedactionDetectorTests {
         #expect(redactor.redact(input) == input)
     }
 
-    @Test("an IBAN and a long token next to each other are hidden apart")
-    func ibanAndToken() {
+    @Test("the IBAN and long-token detectors each find their own kind")
+    func kinds() {
         let text = "DE89370400440532013000 2c73d1a49804c8035388364230944e541f8e6e2c"
-        #expect(redactor.redact(text) == "[REDACTED] [REDACTED]")
+        #expect(DetectorRedactor(kinds: .ibans).redact(text) == "[REDACTED] 2c73d1a49804c8035388364230944e541f8e6e2c")
+        #expect(DetectorRedactor(kinds: .longTokens).redact(text) == "DE89370400440532013000 [REDACTED]")
+        #expect(RedactionPolicy.Kinds.all.contains([.ibans, .longTokens]))
+        #expect(redactor.matches(in: text).map(\.kind) == [.ibans, .longTokens])
     }
 
+    // A dash outside ASCII cuts the text, and the card number it groups is found across it and
+    // hidden whole.
     @Test("card numbers grouped by tabs or dashes of any kind", arguments: [
         ("paid 4111\t1111\t1111\t1111", "paid [REDACTED]"),
         ("paid 4111\u{2010}1111\u{2010}1111\u{2010}1111", "paid [REDACTED]"),
-        // A dash outside ASCII is outside the safe alphabet, so the text after the card goes too.
         ("paid 4111\u{2013}1111\u{2013}1111\u{2013}1111 ok", "paid [REDACTED]"),
     ])
     func cardSeparators(input: String, expected: String) {

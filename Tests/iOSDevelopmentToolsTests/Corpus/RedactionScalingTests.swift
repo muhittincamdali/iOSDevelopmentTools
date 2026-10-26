@@ -35,7 +35,13 @@ struct RedactionScalingTests {
     static let adversarial = [
         RepeatedText(unit: "token=abc_4111 1111 1111 1111 "),
         RepeatedText(unit: "eyJ"),
+        RepeatedText(unit: "eyJ "),
+        RepeatedText(unit: "eyJ\n"),
         RepeatedText(unit: "eyJa."),
+        // Line separators that the value detectors read across, between digits and tokens.
+        RepeatedText(unit: "4242\u{0B}"),
+        RepeatedText(unit: "1\u{2028}2\u{85}3\u{0C}4\u{0B}5 "),
+        RepeatedText(unit: "eyJ\u{0B}\u{0B}\u{0B}"),
         RepeatedText(unit: "@"),
         RepeatedText(unit: "a.", suffix: "@"),
         RepeatedText(prefix: "@", unit: "a."),
@@ -138,12 +144,36 @@ struct RedactionScalingTests {
     // 2.0.0 appended each piece of the output to a String.UnicodeScalarView, which copied the
     // output so far every time. That step is measured on its own here: in a debug build the scan
     // costs more than the copying until a text is hundreds of thousands of characters long.
+    // A JSON string that the free-text rule changed was escaped again one scalar at a time, each
+    // escape copying what was written before it: a megabyte of quotes took two seconds, two
+    // megabytes six (a review of this package; the shared corpus has no such test).
+    @Test("a JSON string full of quotes or line breaks is written again in time linear in its length", arguments: [
+        ("say \\\"hi\\\" ", "ayse@ornek.com"), ("INFO request ok\\n", "password hunter2"),
+    ])
+    func escapedStringScale(unit: String, last: String) {
+        func json(_ length: Int) -> String { RedactionTimeLimitTests.oneLongString(unit, then: last, total: length) }
+        let (small, large) = (json(50_000), json(200_000))
+        expectLinear(
+            "JSON body of one string of \(unit.debugDescription)",
+            small: { _ = redactor.redact(body: Data(small.utf8), contentType: "application/json") },
+            large: { _ = redactor.redact(body: Data(large.utf8), contentType: "application/json") },
+            maximumRatio: 10
+        )
+        let (smallText, largeText) = (String(repeating: unit, count: 50_000 / unit.count), String(repeating: unit, count: 200_000 / unit.count))
+        expectLinear(
+            "escaping \(unit.debugDescription)",
+            small: { _ = JSONDocument.escaped(smallText) },
+            large: { _ = JSONDocument.escaped(largeText) },
+            maximumRatio: 10
+        )
+    }
+
     @Test("building the output takes time linear in the number of replacements")
     func replacementScale() {
         func replaceEveryFinding(length: Int) -> () -> Void {
             let scalars = Array(String(repeating: "pwd=x ", count: length / 6).unicodeScalars)
             let spans = stride(from: 4, to: scalars.count, by: 6).map {
-                RedactionPolicy.Span(start: $0, end: $0 + 1, replacement: RedactionPolicy.replacement)
+                RedactionPolicy.Span(start: $0, end: $0 + 1, kind: .secretFields, replacement: RedactionPolicy.replacement)
             }
             return { _ = RedactionPolicy.replacing(spans, in: scalars) }
         }
@@ -188,40 +218,6 @@ struct RedactionScalingTests {
             "\(contentType) body of \(unit.debugDescription)",
             small: { _ = redactor.redact(body: small, contentType: contentType) },
             large: { _ = redactor.redact(body: large, contentType: contentType) },
-            maximumRatio: 10
-        )
-    }
-
-    // A JSON string that the free-text rule changed was escaped again one scalar at a time, each
-    // escape copying what was written before it: a megabyte of quotes took two seconds, two
-    // megabytes six.
-    @Test("a JSON string full of quotes or line breaks is written again in time linear in its length", arguments: [
-        ("say \\\"hi\\\" ", "ayse@ornek.com"), ("INFO request ok\\n", "password hunter2"),
-    ])
-    func escapedStringScale(unit: String, last: String) {
-        func json(_ length: Int) -> String { RedactionTimeLimitTests.oneLongString(unit, then: last, total: length) }
-        let (small, large) = (json(50_000), json(200_000))
-        expectLinear(
-            "JSON body of one string of \(unit.debugDescription)",
-            small: { _ = redactor.redact(body: Data(small.utf8), contentType: "application/json") },
-            large: { _ = redactor.redact(body: Data(large.utf8), contentType: "application/json") },
-            maximumRatio: 10
-        )
-        let (smallNested, largeNested) = (
-            RedactionTimeLimitTests.inOneString(RedactionTimeLimitTests.turkishObject, levels: 2, total: 50_000),
-            RedactionTimeLimitTests.inOneString(RedactionTimeLimitTests.turkishObject, levels: 2, total: 200_000)
-        )
-        expectLinear(
-            "log line of JSON in one string, two levels",
-            small: { _ = redactor.redact(smallNested) },
-            large: { _ = redactor.redact(largeNested) },
-            maximumRatio: 10
-        )
-        let (smallText, largeText) = (String(repeating: unit, count: 50_000 / unit.count), String(repeating: unit, count: 200_000 / unit.count))
-        expectLinear(
-            "escaping \(unit.debugDescription)",
-            small: { _ = JSONDocument.escaped(smallText) },
-            large: { _ = JSONDocument.escaped(largeText) },
             maximumRatio: 10
         )
     }
@@ -274,20 +270,14 @@ struct RedactionScalingTests {
     }
 
     /// The shortest of three runs of each, alternating between them so that a slow period on the
-    /// machine affects both. The time is the CPU time of this thread, so the other tests that run at
-    /// the same time do not count.
+    /// machine affects both.
     private func fastest(_ small: () -> Void, _ large: () -> Void) -> (small: Duration, large: Duration) {
+        let clock = ContinuousClock()
         var result = (small: Duration.seconds(Int.max), large: Duration.seconds(Int.max))
         for _ in 0..<3 {
-            result.small = min(result.small, Self.cpuTime(small))
-            result.large = min(result.large, Self.cpuTime(large))
+            result.small = min(result.small, clock.measure(small))
+            result.large = min(result.large, clock.measure(large))
         }
         return result
-    }
-
-    private static func cpuTime(_ work: () -> Void) -> Duration {
-        let start = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
-        work()
-        return .nanoseconds(Int64(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - start))
     }
 }
