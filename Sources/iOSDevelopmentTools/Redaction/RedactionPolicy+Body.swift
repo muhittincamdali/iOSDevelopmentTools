@@ -35,9 +35,13 @@ extension RedactionPolicy {
     ///   printable ASCII without `;`, every `%` the start of an escape, and no name spelled two
     ///   ways (`a.b` and `a_b`, `pass%77ord` and `password`, `Note` and `note`).
     /// - **Multipart form data**: every part is written again with its field name and its
-    ///   `type/subtype`; its other headers follow the header rule (see ``redact(headers:)``). A
-    ///   part whose name hides its value shows `[REDACTED]`, and any other part is read by its own
-    ///   content type (`text/plain` when it has none). Uploaded files, nested multipart bodies,
+    ///   `type/subtype`. Of its other headers, `Content-Length` and `Content-Transfer-Encoding`
+    ///   keep their value, read as free text; `Content-ID`, `Content-Description`,
+    ///   `Content-Language`, `Content-Location` and `Content-Encoding` keep their name with the
+    ///   value hidden; any other is written as `[REDACTED]: [REDACTED]`, whatever
+    ///   ``allowedHeaders`` lists. A part whose name hides its value shows `[REDACTED]`, and any
+    ///   other part is read by its own content type (`text/plain` when it has none). Uploaded
+    ///   files, nested multipart bodies,
     ///   parts in a transfer encoding other than `7bit`, `8bit` or `binary` and parts of other
     ///   types are omitted like a body. A part that holds a name (`label`, `name`, `type`, …)
     ///   names a secret unless its content is plain UTF-8 text naming none. The body is read only

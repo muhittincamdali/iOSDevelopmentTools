@@ -98,9 +98,9 @@ struct RedactionKeyShapePropertyTests {
     @Test("a multipart part header name never shows unless a part carries it")
     func partHeaderNames() {
         var random = SeededRandom(seed: 0x9A27_0000)
-        // Part headers follow the header allowlist: of the headers a part carries, those on the
-        // default allowlist keep their name.
-        let carried = ["Content-Length", "Content-Encoding"]
+        // Rule B4: the headers a part carries keep their name, whatever allowedHeaders lists.
+        let carried = ["Content-Length", "Content-Transfer-Encoding", "Content-ID", "Content-Description", "Content-Language", "Content-Location",
+                       "Content-Encoding"]
         for _ in 0..<400 {
             let secret = RedactionCorpusPropertyTests.value(using: &random)
             let name = [secret, "X-" + secret, secret + "-Name", "4111111111111111", "DE89370400440532013000",

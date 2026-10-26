@@ -2,6 +2,16 @@ import Foundation
 
 /// Multipart bodies, written again part by part from what the parser read.
 extension RedactionPolicy {
+    /// The part headers whose values are kept, besides the field name and the content type.
+    private static let keptPartHeaders: Set<String> = ["content-length", "content-transfer-encoding"]
+
+    /// The names of the other part headers that are written; any other name is a key that is not
+    /// allowed, so it is written as ``replacement`` with its value. ``allowedHeaders`` lists
+    /// request and response headers and does not apply here.
+    private static let namedPartHeaders: Set<String> = keptPartHeaders.union([
+        "content-description", "content-encoding", "content-id", "content-language", "content-location",
+    ])
+
     /// The transfer encodings that leave the content as it is.
     private static let identityTransferEncodings: Set<String> = ["7bit", "8bit", "binary"]
 
@@ -26,27 +36,22 @@ extension RedactionPolicy {
     }
 
     /// The disposition with only the field name, read as free text; the content type as
-    /// `type/subtype`; other headers by the header rule (see ``redact(headers:)``), with a name
-    /// that is not on ``allowedHeaders``, or in which a value detector finds something, written as
-    /// ``replacement`` with its value. A file name is never written. Header names are keys of the
-    /// part: the app or a library writes them into the body, so a name may hold what its value
-    /// would.
+    /// `type/subtype`; other headers by name when the name is one of ``namedPartHeaders`` and as
+    /// ``replacement`` otherwise, their values hidden unless they are kept, and a kept value read as
+    /// free text. A file name is never written. Header names are keys of the part: the app or a
+    /// library writes them into the body, so a name outside the list, such as one that holds a
+    /// card number or a token, is never written.
     private func renderedHeaders(of part: MultipartBody.Part, nesting: Nesting, compatibility: CompatibilityText) -> [String] {
         let fieldName = redactedName(part.name, nesting: nesting, compatibility: compatibility)
         var lines = ["Content-Disposition: form-data; name=\"\(Self.quotedStringContent(fieldName))\""]
         if let contentType = part.contentType { lines.append("Content-Type: " + contentType.essence) }
-        let reader = headerValueReader
         for header in part.headers {
             let name = header.name.lowercased()
             guard name != "content-disposition", name != "content-type" else { continue }
+            let shownName = Self.namedPartHeaders.contains(name) ? header.name : Self.replacement
             let value = header.value.trimmingCharacters(in: .whitespaces)
-            guard !hidesHeader(named: header.name),
-                  detectorSpans(in: NormalizedText(Array(header.name.unicodeScalars), compatibility: compatibility)).isEmpty
-            else {
-                lines.append(Self.replacement + ": " + Self.replacement)
-                continue
-            }
-            lines.append(header.name + ": " + reader.redactedHeaderValue(name: header.name, value: value, compatibility: compatibility))
+            let shownValue = Self.keptPartHeaders.contains(name) ? redact(value, nesting: nesting, compatibility: compatibility) : Self.replacement
+            lines.append(shownName + ": " + shownValue)
         }
         return lines
     }

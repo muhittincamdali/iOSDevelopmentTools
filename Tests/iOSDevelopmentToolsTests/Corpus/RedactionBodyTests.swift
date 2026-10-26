@@ -161,8 +161,8 @@ struct RedactionBodyTests {
         #expect(redact(body, "multipart/form-data; boundary=XyZ") + "\r\n" == expected)
     }
 
-    // Part headers follow the header allowlist, as request and response headers do: a name that is
-    // not on it, such as `Content-Transfer-Encoding` by default, is written as `[REDACTED]`.
+    // Rule B4: of the part headers, only `Content-Length` and `Content-Transfer-Encoding` keep their
+    // value; a name outside the part header list, such as `X-Secret`, is written as `[REDACTED]`.
     @Test("writes part headers again: the field name, the type, and other headers only when they are kept")
     func multipartHeaders() {
         let body = multipart([
@@ -174,7 +174,7 @@ struct RedactionBodyTests {
         let expected = multipart([
             "Content-Disposition: form-data; name=\"note\"\r\nContent-Type: text/plain\r\n\r\n[body omitted: 1 byte, text/plain]",
             "Content-Disposition: form-data; name=\"bio\"\r\n[REDACTED]: [REDACTED]\r\nContent-Length: 2\r\n\r\nhi",
-            "Content-Disposition: form-data; name=\"data\"\r\n[REDACTED]: [REDACTED]\r\n\r\n[body omitted: 12 bytes, text/plain]",
+            "Content-Disposition: form-data; name=\"data\"\r\nContent-Transfer-Encoding: base64\r\n\r\n[body omitted: 12 bytes, text/plain]",
             "Content-Disposition: form-data; name=\"a=[REDACTED]\"\r\n\r\n[REDACTED]",
         ])
         let output = redact(body, "multipart/form-data; boundary=XyZ")
@@ -188,11 +188,11 @@ struct RedactionBodyTests {
         let expected = multipart(["Content-Disposition: form-data; name=\"bio\"\r\n[REDACTED]: [REDACTED]\r\n\r\nhi"])
         #expect(redact(body, "multipart/form-data; boundary=XyZ") + "\r\n" == expected)
         let named = multipart(["Content-Disposition: form-data; name=\"bio\"\r\nContent-ID:\u{301}s3cr3t\r\n\r\nhi"])
-        let namedExpected = multipart(["Content-Disposition: form-data; name=\"bio\"\r\n[REDACTED]: [REDACTED]\r\n\r\nhi"])
+        let namedExpected = multipart(["Content-Disposition: form-data; name=\"bio\"\r\nContent-ID: [REDACTED]\r\n\r\nhi"])
         #expect(redact(named, "multipart/form-data; boundary=XyZ") + "\r\n" == namedExpected)
     }
 
-    // A part header name is a key of the part: only the names on the header allowlist are written,
+    // A part header name is a key of the part: only the names on the part header list are written,
     // so a name that holds a card number, an IBAN or a token never shows.
     @Test("writes a part header name only when it is one a part carries", arguments: [
         "4111111111111111", "X-4111111111111111", "DE89370400440532013000",

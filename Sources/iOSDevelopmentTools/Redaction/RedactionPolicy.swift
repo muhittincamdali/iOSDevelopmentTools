@@ -140,8 +140,9 @@ public struct RedactionPolicy: Sendable, Hashable {
     /// names passed to the initializer.
     let secretNameTable: SecretNameTable
 
-    /// The folded names of the headers whose values are kept. A name that is not plain ASCII or
-    /// names a secret is never on it.
+    /// The folded names of the request and response headers whose values are kept. A name that is
+    /// not plain ASCII or names a secret is never on it. Multipart part headers do not use it: they
+    /// follow their own list (see ``redact(body:contentType:isComplete:)``).
     public let allowedHeaders: Set<String>
 
     /// The folded names of the query parameters whose values are kept. Empty by default. A name
@@ -171,8 +172,9 @@ public struct RedactionPolicy: Sendable, Hashable {
     ///     key, a shorter one as a word of it or at its end; in free text and in names written as
     ///     values it is read as the default names are. A name that is not plain ASCII is dropped:
     ///     it could only match keys that are hidden anyway.
-    ///   - allowedHeaders: The headers whose values are kept. Headers that are always hidden
-    ///     (`Authorization`, `Cookie`, names with `token`, `key`, …) stay hidden when listed.
+    ///   - allowedHeaders: The request and response headers whose values are kept. Headers that
+    ///     are always hidden (`Authorization`, `Cookie`, names with `token`, `key`, …) stay hidden
+    ///     when listed. Multipart part headers do not use it.
     ///   - allowedQueryParameters: The query parameters whose values are kept in a recorded URL. A
     ///     secret name stays hidden when listed. A URL in free text does not use them.
     ///   - allowedTextKeys: Keys after which free text is read on, in addition to
