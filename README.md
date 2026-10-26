@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 853 Swift Testing tests on macOS and 850 on an iOS simulator. Requests travel
+- **Tested** — 857 Swift Testing tests on macOS and 854 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -204,7 +204,10 @@ func configureNetworkLogger() {
   `auth.example.com` is hidden too), file parts of multipart bodies, and the values of multipart
   part headers other than `Content-Length` and `Content-Transfer-Encoding` (`Content-ID` and four
   other `Content-*` names keep their name; any other part header, such as `User-Agent`, is stored
-  as `[REDACTED]: [REDACTED]`).
+  as `[REDACTED]: [REDACTED]`), and any value of those two outside their form: a
+  `Content-Length` other than ASCII digits and a `Content-Transfer-Encoding` other than `7bit`,
+  `8bit`, `binary`, `base64` or `quoted-printable` (kept in lowercase) are stored as `[REDACTED]`
+  (`Content-Length: pin-4831` as `Content-Length: [REDACTED]`).
 - **Keys that are not plain ASCII** once escapes are decoded, NFKC is applied and case is folded
   (`pаssword` with a Cyrillic `а`, `pass\u200Dword`, `şifre`) have their values hidden by default.
 - **Bodies that cannot be parsed** (an unknown or missing content type, malformed JSON or

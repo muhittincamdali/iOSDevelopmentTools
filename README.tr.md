@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 853, iOS simülatöründe 850 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 857, iOS simülatöründe 854 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -211,7 +211,10 @@ func configureNetworkLogger() {
   `auth.example.com` gibi bir host da gizlenir), multipart gövdelerindeki dosya parçaları ve
   `Content-Length` ile `Content-Transfer-Encoding` dışındaki parça başlıklarının değerleri
   (`Content-ID` ve dört `Content-*` adı daha adıyla tutulur; `User-Agent` gibi diğer her parça başlığı
-  `[REDACTED]: [REDACTED]` olarak kaydedilir).
+  `[REDACTED]: [REDACTED]` olarak kaydedilir) ve bu ikisinin biçimine uymayan her değeri: yalnız
+  ASCII rakamlarından oluşmayan bir `Content-Length` ile `7bit`, `8bit`, `binary`, `base64` ya da
+  `quoted-printable` dışındaki bir `Content-Transfer-Encoding` (küçük harfle tutulur)
+  `[REDACTED]` olarak kaydedilir (`Content-Length: pin-4831`, `Content-Length: [REDACTED]` olur).
 - **Düz ASCII olmayan anahtarların** değerleri varsayılan olarak gizlenir: kaçış dizileri
   çözüldükten, NFKC uygulandıktan ve harfler katlandıktan sonra ASCII dışı karakter içeren
   anahtarlar (Kiril `а` içeren `pаssword`, `pass\u200Dword`, `şifre`).

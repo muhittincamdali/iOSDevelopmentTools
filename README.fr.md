@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 853 tests Swift Testing sur macOS et 850 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 857 tests Swift Testing sur macOS et 854 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -214,7 +214,11 @@ func configureNetworkLogger() {
   `auth.example.com` est aussi masqué) ; les parties fichier des corps multipart ; et les valeurs des
   en-têtes de partie multipart autres que `Content-Length` et `Content-Transfer-Encoding`
   (`Content-ID` et quatre autres noms `Content-*` gardent leur nom ; tout autre en-tête
-  de partie, comme `User-Agent`, est enregistré comme `[REDACTED]: [REDACTED]`).
+  de partie, comme `User-Agent`, est enregistré comme `[REDACTED]: [REDACTED]`), et toute valeur
+  de ces deux-là hors de leur forme : un `Content-Length` qui n'est pas fait de chiffres ASCII et
+  un `Content-Transfer-Encoding` autre que `7bit`, `8bit`, `binary`, `base64` ou
+  `quoted-printable` (gardé en minuscules) sont enregistrés comme `[REDACTED]`
+  (`Content-Length: pin-4831` comme `Content-Length: [REDACTED]`).
 - **Les clés qui ne sont pas en ASCII simple** une fois les échappements décodés, NFKC appliqué et
   la casse normalisée (`pаssword` avec un `а` cyrillique, `pass\u200Dword`, `şifre`) ont leur
   valeur masquée par défaut.

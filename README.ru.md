@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -59,7 +59,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 853 теста Swift Testing на macOS и 850 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 857 тестов Swift Testing на macOS и 854 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -210,7 +210,10 @@ func configureNetworkLogger() {
   вроде `auth.example.com` тоже скрывается); файловые части тел multipart; и значения заголовков
   частей multipart, кроме `Content-Length` и `Content-Transfer-Encoding` (`Content-ID` и ещё четыре имени
   `Content-*` сохраняют только имя; любой другой заголовок части, например `User-Agent`,
-  записывается как `[REDACTED]: [REDACTED]`).
+  записывается как `[REDACTED]: [REDACTED]`), а также любое значение этих двух вне их формы:
+  `Content-Length` не только из цифр ASCII и `Content-Transfer-Encoding`, кроме `7bit`, `8bit`,
+  `binary`, `base64` и `quoted-printable` (сохраняется строчными буквами), записываются как
+  `[REDACTED]` (`Content-Length: pin-4831` как `Content-Length: [REDACTED]`).
 - **Ключи, которые не являются простым ASCII** после декодирования escape-последовательностей,
   NFKC и приведения регистра (`pаssword` с кириллической `а`, `pass\u200Dword`, `şifre`), по
   умолчанию скрывают своё значение.

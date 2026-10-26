@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 853 Swift-Testing-Tests auf macOS und 850 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 857 Swift-Testing-Tests auf macOS und 854 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -212,7 +212,10 @@ func configureNetworkLogger() {
   Datei-Parts von Multipart-Bodys und die Werte der Part-Header außer `Content-Length`
   und `Content-Transfer-Encoding` (`Content-ID` und vier weitere `Content-*`-Namen behalten ihren
   Namen; jeder andere Part-Header, etwa `User-Agent`, wird als
-  `[REDACTED]: [REDACTED]` gespeichert).
+  `[REDACTED]: [REDACTED]` gespeichert) sowie jeder Wert dieser beiden außerhalb ihrer Form: ein
+  `Content-Length`, der nicht nur aus ASCII-Ziffern besteht, und ein `Content-Transfer-Encoding`
+  außer `7bit`, `8bit`, `binary`, `base64` oder `quoted-printable` (in Kleinbuchstaben behalten)
+  werden als `[REDACTED]` gespeichert (`Content-Length: pin-4831` als `Content-Length: [REDACTED]`).
 - **Schlüssel, die kein reines ASCII sind**, nachdem Escapes dekodiert, NFKC angewendet und
   Groß-/Kleinschreibung angeglichen wurde (`pаssword` mit kyrillischem `а`, `pass\u200Dword`,
   `şifre`), haben standardmäßig verborgene Werte.

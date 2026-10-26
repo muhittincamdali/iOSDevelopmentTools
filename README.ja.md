@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -58,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 853 件、iOS シミュレーターで 850 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 857 件、iOS シミュレーターで 854 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -207,7 +207,10 @@ func configureNetworkLogger() {
   `auth.example.com` のようなホストも隠します）、multipart ボディのファイルパート、
   `Content-Length` と `Content-Transfer-Encoding` 以外の multipart のパートヘッダーの値（`Content-ID`
   とほか 4 つの `Content-*` 名は名前だけ残します。`User-Agent` など、それ以外のパートヘッダーは
-  `[REDACTED]: [REDACTED]` として記録します）。
+  `[REDACTED]: [REDACTED]` として記録します）、そしてこの 2 つの値のうち決まった形でないもの
+  （ASCII 数字だけではない `Content-Length` と、`7bit`、`8bit`、`binary`、`base64`、
+  `quoted-printable` 以外の `Content-Transfer-Encoding`。後者は小文字で残します）は
+  `[REDACTED]` として記録します（`Content-Length: pin-4831` は `Content-Length: [REDACTED]`）。
 - **プレーンな ASCII ではないキー** (エスケープのデコード、NFKC、大文字小文字の統一の後。キリル文字の
   `а` を含む `pаssword`、`pass\u200Dword`、`şifre` など) の値は、デフォルトで隠されます。
 - **解析できないボディ** (不明または欠落した Content-Type、不正な JSON や multipart、サイズ上限で

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@b1db5b5257f4eddb5a6b091c6594274ddefba560 status=reviewed -->
+<!-- i18n-source: README.md@a4fc74905b9d41683742bf2db2fa84160da52dca status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -56,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 853개, iOS 시뮬레이터에서 850개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 857개, iOS 시뮬레이터에서 854개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -201,7 +201,10 @@ func configureNetworkLogger() {
   `myapp://pin-4831`은 `myapp://[REDACTED]`로 기록하며, `auth.example.com` 같은 호스트도 가림),
   multipart 본문의 파일 파트, `Content-Length`와 `Content-Transfer-Encoding`을 제외한 multipart
   파트 헤더의 값(`Content-ID`와 다른 `Content-*` 이름 네 개는 이름만 남기고, `User-Agent` 같은 그 밖의
-  파트 헤더는 `[REDACTED]: [REDACTED]`로 기록).
+  파트 헤더는 `[REDACTED]: [REDACTED]`로 기록), 그리고 이 두 헤더의 값 중 정해진 형식이 아닌 값
+  (ASCII 숫자만이 아닌 `Content-Length`, `7bit`, `8bit`, `binary`, `base64`, `quoted-printable`
+  이외의 `Content-Transfer-Encoding`. 후자는 소문자로 남김)은 `[REDACTED]`로 기록
+  (`Content-Length: pin-4831`은 `Content-Length: [REDACTED]`).
 - **순수 ASCII가 아닌 키**(이스케이프를 풀고 NFKC를 적용하고 대소문자를 맞춘 뒤 기준, 예를 들어
   키릴 문자 `а`가 들어간 `pаssword`, `pass\u200Dword`, `şifre`)의 값은 기본적으로 가려집니다.
 - **파싱할 수 없는 본문**(알 수 없거나 없는 Content-Type, 잘못된 JSON이나 multipart, 크기 한도에서
