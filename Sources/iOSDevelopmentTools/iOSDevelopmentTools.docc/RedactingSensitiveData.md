@@ -218,10 +218,16 @@ rule.
   and only when every `--boundary` in it is a delimiter line after a CRLF and every part header
   ends with CRLF. Every part is written again with its field name and its type, and the body ends
   at its closing delimiter. A part header name is a key of the part, so of the other part headers
-  only `Content-Length` and `Content-Transfer-Encoding` are written with their value, read as free
-  text; `Content-ID`, `Content-Description`, `Content-Language`, `Content-Location` and
-  `Content-Encoding` are written with `[REDACTED]` as their value, and any other is written as
-  `[REDACTED]: [REDACTED]` (`User-Agent: …` and `X-4111111111111111: 1` alike).
+  only `Content-Length` and `Content-Transfer-Encoding` are written with their value, and only in
+  their form, which is not read as free text: a length of ASCII digits in which the value
+  detectors find nothing (`Content-Length: 12`, but not a card number), and one of `7bit`,
+  `8bit`, `binary`, `base64` and `quoted-printable` in lowercase (`BASE64` is written as
+  `base64`). Any other value of theirs is written as `[REDACTED]`: `Content-Length: pin-4831`,
+  `Content-Length: 12 hunter2` and `Content-Transfer-Encoding: hunter2` keep only their name, and
+  the content of a part whose transfer encoding is hidden is omitted. `Content-ID`,
+  `Content-Description`, `Content-Language`, `Content-Location` and `Content-Encoding` are written
+  with `[REDACTED]` as their value, and any other is written as `[REDACTED]: [REDACTED]`
+  (`User-Agent: …` and `X-4111111111111111: 1` alike).
   ``RedactionPolicy/allowedHeaders`` does not apply to part headers. File parts are always
   replaced by a note, and the file name is never written. Each field is read by its own content
   type (`text/plain` when it has none).

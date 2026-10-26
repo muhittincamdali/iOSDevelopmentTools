@@ -36,12 +36,16 @@ extension RedactionPolicy {
     ///   ways (`a.b` and `a_b`, `pass%77ord` and `password`, `Note` and `note`).
     /// - **Multipart form data**: every part is written again with its field name and its
     ///   `type/subtype`. Of its other headers, `Content-Length` and `Content-Transfer-Encoding`
-    ///   keep their value, read as free text; `Content-ID`, `Content-Description`,
-    ///   `Content-Language`, `Content-Location` and `Content-Encoding` keep their name with the
-    ///   value hidden; any other is written as `[REDACTED]: [REDACTED]`, whatever
-    ///   ``allowedHeaders`` lists. A part whose name hides its value shows `[REDACTED]`, and any
-    ///   other part is read by its own content type (`text/plain` when it has none). Uploaded
-    ///   files, nested multipart bodies,
+    ///   keep their value only in their form, which is not read as free text: a `Content-Length`
+    ///   of ASCII digits in which the value detectors find nothing (such as a card number), and a
+    ///   `Content-Transfer-Encoding` of `7bit`, `8bit`, `binary`, `base64` or `quoted-printable`,
+    ///   written in lowercase (`BASE64` as `base64`). Any other value of theirs is written as
+    ///   `[REDACTED]` (`Content-Length: pin-4831` as `Content-Length: [REDACTED]`).
+    ///   `Content-ID`, `Content-Description`, `Content-Language`, `Content-Location` and
+    ///   `Content-Encoding` keep their name with the value hidden; any other is written as
+    ///   `[REDACTED]: [REDACTED]`, whatever ``allowedHeaders`` lists. A part whose name hides its
+    ///   value shows `[REDACTED]`, and any other part is read by its own content type
+    ///   (`text/plain` when it has none). Uploaded files, nested multipart bodies,
     ///   parts in a transfer encoding other than `7bit`, `8bit` or `binary` and parts of other
     ///   types are omitted like a body. A part that holds a name (`label`, `name`, `type`, …)
     ///   names a secret unless its content is plain UTF-8 text naming none. The body is read only
