@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-10-26
+
+A security release. 2.1.0 followed an earlier generation of the redaction specification that this
+package shares with iOSSecurityTools and iOS-Networking-Architecture-Pro. Checked against the
+specification's current revision (2.1-r2), it showed values that the specification hides in a
+URL host that names a secret, in paths with some escapes, in free text with white space outside
+ASCII, and beside names of control characters or names written outside ASCII, and it read some
+other input differently from the specification. 2.1.1 replaces the redaction rules with the
+current generation, the design iOSSecurityTools 2.1.0 and iOS-Networking-Architecture-Pro 2.0.0
+use, behind the same `RedactionPolicy` API. The API is source compatible. Stored text can differ
+from 2.1.0 for the same traffic: mostly more is hidden, and the cases where less is hidden are
+listed under Changed.
+
+### Security
+
+- A URL host that names a secret is hidden with everything after it, as its value may be in the
+  host itself: `myapp://password.hunter2`, `myapp://pin-4831` and
+  `https://pin-4831.example.com/a` were recorded with their host in 2.1.0 and are now recorded as
+  `myapp://[REDACTED]` and `https://[REDACTED]`, in `redact(url:)`, in the host and path that the
+  console lists (`NetworkEntry.host`, `NetworkEntry.path`), in HAR files and in cURL commands.
+  `myapp://pin/4831` is now `myapp://[REDACTED]` instead of `myapp://pin`, and a host such as
+  `auth.example.com` is hidden whole, which over-hides on purpose. An IP address names nothing.
+- A recorded URL whose path holds an escaped `/`, `\` or `%` (`%2F`, `%5C`, `%25`, in either case)
+  is recorded with its scheme, host and port only, as a path with a dot segment or a `;` already
+  was. Servers decode such escapes before they route, some of them twice, so which segment follows
+  a secret name depends on the server; 2.1.0 read such a path segment by segment
+  (`/pin%2F4831/x` as `/:id/:id`, `/a%25/x` as `/a%25/:id`).
+- White space outside ASCII (U+00A0, U+2009, U+3000 and the others) cuts free text where it
+  stands, as every other character outside the safe alphabet does: `ok`, U+00A0, `status=1`,
+  U+00A0 and `x=hunter2` is stored as `ok[REDACTED]`. 2.1.0 read such a space as a space and read
+  on. A word that mixes scripts with no separator after it (`120µs`, as the micro sign reads as a
+  Greek letter) cuts the text at its start, and `Bearer` with U+2028 after it no longer keeps the
+  separator.
+- A string of control characters and white space alone (`"\t"`, `"\n"`, `"\u0000"`, a form value
+  `%0A`) names a secret beside any member or field: `{"ParameterKey":"\t","ParameterValue":"x"}`,
+  `{"title":"\t","data":"x"}` and `ParameterKey=%0A&ParameterValue=x` showed `x` in 2.1.0.
+- A name written outside plain ASCII in a member that holds a name (`name`, `id`, `type`, …) hides
+  the other members of the object: `{"id":42,"name":"Ayşe Yılmaz","price":12.5}` is stored as
+  `{"id":"[REDACTED]","name":"Ayşe Yılmaz","price":"[REDACTED]"}`, and
+  `{"name":"Şifre","x":"hunter2"}` hides `x`. 2.1.0 kept the other members of such a record. This
+  over-hides on purpose: the name itself stays readable.
+- `token`, `secret` and `bearer` count anywhere in a key, as the guide already said every secret
+  word of five or more letters does; 2.1.0 counted them only as a word or at the end, so
+  `{"secretanswer":…}`, `{"secretvalue":…}`, `[["secretvalue",…]]` and `/v1/secretanswer/…` kept
+  their values. `secretary` and `tokenizer` are hidden too.
+- An escape (a backslash, `%` and two hex digits, `&` before a letter) cuts free text at the start
+  of the word it is in, so no letter before it shows: `login pa\x{73}sword hunter2` is stored as
+  `login [REDACTED]` (2.1.0: `login pa[REDACTED]`) and `R&D team` as `[REDACTED]`.
+- JSON in a line of text, a two-element array and a quoted key that is not allowed cut the text at
+  the opening quote of the name, so the name does not show: `{"status":200,"user":"bob"} done` is
+  stored as `{"status":200,[REDACTED]` and `log [["X-User","bob"]]` as `log [[[REDACTED]`. A quote
+  glued to the word before it (`x"status": 200`) cuts at the start of that word, and
+  `field name="password" hunter2` no longer keeps the opening quote.
+- Also hidden now, by rules taken from iOS-Networking-Architecture-Pro: a label written outside
+  ASCII and ended by a separator, in a member that holds no name (`{"title":"Пароль:","value":…}`,
+  `{"title":"【暗証番号】","value":…}`); a card number in a JSON number written with an exponent
+  (`4.111111111111111E15`) and a JSON number of 32 or more digits written out (`1e31`); a
+  character outside the safe alphabet at the end of a text (`done 👍` is stored as
+  `done [REDACTED]`).
+- Free text longer than 2^28 − 1 Unicode scalars is hidden whole (2.1.0: 2^32 − 1), the limit of
+  the specification.
+
+### Changed
+
+- Where 2.1.0 hid more than the specification asks, the text is now kept as the specification
+  reads it: `status=200&count=3` is kept (an `&` that starts a field before `=` is no escape),
+  `say (hello` keeps `say (` (the text is cut after a bracket that does not close),
+  `line 42:10: error` keeps `line 42:10: `, `1:2:3` and `ratio 16:9` are kept (a line and column),
+  `pаssword=hunter2` with a Cyrillic `а` keeps its key, and a path segment `:id` is no label, so
+  `/users/:id/x` is kept as it is.
+- A URL without a scheme and a host is recorded as `<unparsed URL>`: `mailto:ada@example.com` was
+  recorded as `mailto::id`.
+- The note of an omitted body says `no content type` when there is none and
+  `unreadable content type` when it cannot be read (2.1.0: `no known content type` for both), and
+  `1 byte` for a body of one byte.
+- JSON bodies in UTF-16 or UTF-32 and a byte order mark are read the same way on every OS version;
+  a JSON body with a second byte order mark is omitted.
+- The readings cache of characters outside ASCII has up to 8,192 slots (2.1.0: 4,096), in sets of
+  two chosen with a hash seeded at random in every process.
+- The tests hold the specification's required test set, and the shared corpus of review probes
+  grows from 5,077 to 9,147 probes with the later review rounds of iOSSecurityTools.
+- `HTTPArchive.creatorVersion` is `2.1.1`.
+
 ## [2.1.0] - 2026-10-21
 
 This is a security release for everyone who records traffic that can carry secrets: redaction in
@@ -426,7 +509,8 @@ new major version.
 First tagged release: a network client built on Alamofire, storage, analytics and logging
 managers and utility extensions in five modules, each also offered as its own library.
 
-[Unreleased]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/muhittincamdali/iOSDevelopmentTools/releases/tag/v1.0.0
