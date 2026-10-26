@@ -13,12 +13,12 @@ A security release. 2.1.0 followed an earlier generation of the redaction specif
 package shares with iOSSecurityTools and iOS-Networking-Architecture-Pro. Checked against the
 specification's current revision (2.1-r2), it showed values that the specification hides in a
 URL host that names a secret, in paths with some escapes, in free text with white space outside
-ASCII, and beside names of control characters or names written outside ASCII, and it read some
-other input differently from the specification. 2.1.1 replaces the redaction rules with the
-current generation, the design iOSSecurityTools 2.1.0 and iOS-Networking-Architecture-Pro 2.0.0
-use, behind the same `RedactionPolicy` API. The API is source compatible. Stored text can differ
-from 2.1.0 for the same traffic: mostly more is hidden, and the cases where less is hidden are
-listed under Changed.
+ASCII, beside names of control characters or names written outside ASCII, and in multipart part
+headers, and it read some other input differently from the specification. 2.1.1 replaces the
+redaction rules with the current generation, the design iOSSecurityTools 2.1.0 and
+iOS-Networking-Architecture-Pro 2.0.0 use, behind the same `RedactionPolicy` API. The API is
+source compatible. Stored text can differ from 2.1.0 for the same traffic: mostly more is hidden,
+and the cases where less is hidden are listed under Changed.
 
 ### Security
 
@@ -60,6 +60,15 @@ listed under Changed.
   stored as `{"status":200,[REDACTED]` and `log [["X-User","bob"]]` as `log [[[REDACTED]`. A quote
   glued to the word before it (`x"status": 200`) cuts at the start of that word, and
   `field name="password" hunter2` no longer keeps the opening quote.
+- Multipart part headers follow their own list instead of `allowedHeaders`, which is the
+  allowlist of request and response headers. 2.1.0 applied `allowedHeaders` to part headers, so
+  with the default policy `User-Agent: hunter2`, `ETag: "hunter2"`, `Accept-Language: hunter2` and
+  `Cache-Control: max-age=hunter2` in a part were stored with their values, and so was any part
+  header an app added to `allowedHeaders`. They are now stored as `[REDACTED]: [REDACTED]`. Only
+  `Content-Length` and `Content-Transfer-Encoding` keep their value, and `Content-ID`,
+  `Content-Description`, `Content-Language`, `Content-Location` and `Content-Encoding` their name
+  (`Content-Encoding: [REDACTED]`). Such headers are rare in a part, and in 2.1.0 their values
+  still went through the free-text rule, which hid what it detects there.
 - Also hidden now, by rules taken from iOS-Networking-Architecture-Pro: a label written outside
   ASCII and ended by a separator, in a member that holds no name (`{"title":"Пароль:","value":…}`,
   `{"title":"【暗証番号】","value":…}`); a card number in a JSON number written with an exponent
@@ -77,6 +86,9 @@ listed under Changed.
   `line 42:10: error` keeps `line 42:10: `, `1:2:3` and `ratio 16:9` are kept (a line and column),
   `pаssword=hunter2` with a Cyrillic `а` keeps its key, and a path segment `:id` is no label, so
   `/users/:id/x` is kept as it is.
+- A multipart part keeps its `Content-Transfer-Encoding` header (`Content-Transfer-Encoding:
+  base64`), which 2.1.0 stored as `[REDACTED]: [REDACTED]` by default, and the names `Content-ID`,
+  `Content-Description`, `Content-Language` and `Content-Location` with the value hidden.
 - A URL without a scheme and a host is recorded as `<unparsed URL>`: `mailto:ada@example.com` was
   recorded as `mailto::id`.
 - The note of an omitted body says `no content type` when there is none and
