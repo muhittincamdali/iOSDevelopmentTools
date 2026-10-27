@@ -15,6 +15,9 @@ its reading limit, and the type of a content type in which the header rule finds
 note of an omitted body and in a multipart part. The API is unchanged. Every text of up to
 2^28 − 1 Unicode scalars is stored as 2.1.1 stores it, except such a type.
 
+The correctness review of this release passed with no open findings. An adversarial sweep for
+bypass variants was not completed.
+
 ### Security
 
 - A text longer than 2^28 − 1 Unicode scalars (268,435,455) is hidden whole, as the 2.1.1 notes
