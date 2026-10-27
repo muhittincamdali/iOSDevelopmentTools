@@ -29,15 +29,19 @@ stored as 2.1.1 stores it.
 - A span, the internal record of what to replace in a text, keeps its offsets in 28 bits. An
   offset that does not fit now makes the span hide the whole text instead of keeping the low 28
   bits of the offset, so no path that reaches a span with such an offset can show the rest of
-  the text.
+  the text. A span's offsets are checked once, when it is made: the setters of its start and
+  end, which masked an offset the same way in 2.1.1 and were used only by tests, are gone. A
+  span that ends past the text it is applied to, such as one that hides the whole text, writes
+  that text as `[REDACTED]` alone instead of ending at the end of the text.
 
 ### Changed
 
 - The port of the specification's required test set checks item 2 with the JSON escape it is
   written with (the port tested the plain name before), item 17c on every path that reads text,
-  with the limit made short for the test, and the value detectors on form, query and multipart
-  names, query values, path segments and kept header values (rule P4). The new span tests fail on
-  2.1.1 and pass now; the tests for item 2 and rule P4 pass on 2.1.1 too.
+  with the limit made short for the test (also on form and query names, a part's
+  `Content-Length` and a recorded error description), and the value detectors on form, query and
+  multipart names, query values, path segments and kept header values (rule P4). The new span
+  tests fail on 2.1.1 and pass now; the tests for item 2 and rule P4 pass on 2.1.1 too.
 - The redaction guide lists what is stored for a text over the limit, and its introduction names
   the rule 2.1.1 missed.
 - `HTTPArchive.creatorVersion` is `2.1.2`.
