@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-10-27
+
+A security release. Checked again against the shared redaction specification (revision 2.1-r2,
+with the required tests added to it on 26 October 2026), 2.1.1 showed most of a text longer than
+its reading limit. The API is unchanged, and every text of up to 2^28 − 1 Unicode scalars is
+stored as 2.1.1 stores it.
+
+### Security
+
+- A text longer than 2^28 − 1 Unicode scalars (268,435,455) is hidden whole, as the 2.1.1 notes
+  and the guide said it was. 2.1.1 hid only its first scalars and stored the rest as it was: a
+  text of 2^28 + 99 scalars passed to `RedactionPolicy.redact(text:)` was stored as `[REDACTED]`
+  followed by all but its first 99 scalars, so a secret after them showed. The same happened to a
+  kept header value (`redact(headers:)`), to the value of an allowed query parameter
+  (`redact(url:)`, the recorded URL, HAR files and cURL commands) and to an error description
+  that `NetworkEntry` records, at that length. A message logged to `LogStore` is redacted up to
+  1 MiB and a body over 16 MiB is omitted, so neither was affected. Such a text is now not read
+  at all and is stored as `[REDACTED]`, and a path segment of that length becomes `:id` with the
+  segment after it. 2.1.0 had the same flaw for texts longer than 2^32 − 1 scalars.
+- A span, the internal record of what to replace in a text, keeps its offsets in 28 bits. An
+  offset that does not fit now makes the span hide the whole text instead of keeping the low 28
+  bits of the offset, so no path that reaches a span with such an offset can show the rest of
+  the text.
+
+### Changed
+
+- The port of the specification's required test set checks item 2 with the JSON escape it is
+  written with (the port tested the plain name before), item 17c on every path that reads text,
+  with the limit made short for the test, and the value detectors on form, query and multipart
+  names, query values, path segments and kept header values (rule P4). The new span tests fail on
+  2.1.1 and pass now; the tests for item 2 and rule P4 pass on 2.1.1 too.
+- The redaction guide lists what is stored for a text over the limit, and its introduction names
+  the rule 2.1.1 missed.
+- `HTTPArchive.creatorVersion` is `2.1.2`.
+
 ## [2.1.1] - 2026-10-26
 
 A security release. 2.1.0 followed an earlier generation of the redaction specification that this
@@ -87,7 +122,8 @@ and the cases where less is hidden are listed under Changed.
   character outside the safe alphabet at the end of a text (`done 👍` is stored as
   `done [REDACTED]`).
 - Free text longer than 2^28 − 1 Unicode scalars is hidden whole (2.1.0: 2^32 − 1), the limit of
-  the specification.
+  the specification. (This did not hold in 2.1.1, which hid only the first scalars of such a
+  text; see 2.1.2.)
 
 ### Changed
 
@@ -534,7 +570,8 @@ new major version.
 First tagged release: a network client built on Alamofire, storage, analytics and logging
 managers and utility extensions in five modules, each also offered as its own library.
 
-[Unreleased]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.2...HEAD
+[2.1.2]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v1.0.0...v2.0.0
