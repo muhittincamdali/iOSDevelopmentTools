@@ -16,9 +16,11 @@ first sign of a secret, everything to the end of the text is hidden.
 
 These are the redaction rules this package shares with iOSSecurityTools and
 iOS-Networking-Architecture-Pro, written down as one specification and tested with one shared
-corpus of review probes. Release 2.1.0 followed an earlier generation of that specification; 2.1.1
-follows its current revision (2.1-r2) in every rule this package applies, and every input that
-2.1.0 read differently is kept as a test.
+corpus of review probes. Release 2.1.0 followed an earlier generation of that specification, and
+every input that 2.1.0 read differently is kept as a test. 2.1.1 follows its current revision
+(2.1-r2) except for one rule: a text longer than the reading limit was not hidden whole (see
+"Limits" below). 2.1.2 follows that rule too, and its required test set is ported to this
+package's API.
 
 ### A safety net, not a guarantee
 
@@ -429,7 +431,12 @@ and the time that a request or a log message can use:
 - A log message is redacted up to ``LogStore/maximumRedactedMessageLength`` (1 MiB of Unicode
   scalars), on the thread that logs it. A longer message is redacted up to its last line break
   before that length, and the rest of it is hidden.
-- A text longer than 2^28 − 1 Unicode scalars (256 Mi) is hidden whole.
+- A text longer than 2^28 − 1 Unicode scalars (268,435,455) is not read and is hidden whole: free
+  text, a kept header value, a query value, a JSON string or name, a form value and a multipart
+  part or field name of that length are each recorded as `[REDACTED]`, and such a path segment as
+  `:id`, with the segment after it. Nothing of it shows. Through 2.1.1 such a text was recorded
+  with only its first scalars hidden (fixed in 2.1.2). A log message is redacted up to 1 MiB and a
+  body over 16 MiB is omitted, so neither reaches this limit.
 - JSON in a line of free text is parsed when it is at most 65,536 scalars long. Longer JSON cuts
   the text at its first bracket, as JSON that does not parse does.
 - JSON objects and arrays may be open ``RedactionPolicy/maximumJSONDepth`` (64) levels deep in
