@@ -22,6 +22,11 @@ struct RedactionSpecKeyAndBodyTests {
     @Test("#1–#7: the key rule in JSON bodies")
     func keyRule() {
         #expect(body(#"{"user":"bob","password":"hunter2"}"#) == #"{"user":"bob","password":"[REDACTED]"}"#)
+        // #2 writes the `w` of the name as a JSON escape, which the name keeps as it was sent. The
+        // escape is put together here so that it stays a backslash, `u` and four digits.
+        let escapedName = "pass" + "\\" + "u0077ord"
+        #expect(escapedName.count == 13)
+        #expect(body(#"{"\#(escapedName)":"hunter2","id":"7"}"#) == #"{"\#(escapedName)":"[REDACTED]","id":"7"}"#)
         #expect(body(#"{"password":"hunter2","id":"7"}"#) == #"{"password":"[REDACTED]","id":"7"}"#)
         #expect(body(#"{"PASS-WORD":"a","pass.word":"b","created_at":"c"}"#) == #"{"PASS-WORD":"[REDACTED]","pass.word":"[REDACTED]","created_at":"c"}"#)
         #expect(body(#"{"pаssword":"x","şifre":"y","user[id]":"z","ok":"1"}"#) == #"{"pаssword":"[REDACTED]","şifre":"[REDACTED]","user[id]":"[REDACTED]","ok":"1"}"#)
@@ -73,6 +78,7 @@ struct RedactionSpecKeyAndBodyTests {
         for (header, shown, content) in [
             ("Content-Length: pin-4831", "Content-Length: [REDACTED]", "x"),
             ("Content-Length: 12 hunter2", "Content-Length: [REDACTED]", "x"),
+            ("Content-Length: \u{0661}\u{0662}", "Content-Length: [REDACTED]", "x"),
             ("Content-Transfer-Encoding: hunter2", "Content-Transfer-Encoding: [REDACTED]", "[body omitted: 1 byte, text/plain]"),
             ("Content-Transfer-Encoding: BASE64", "Content-Transfer-Encoding: base64", "[body omitted: 1 byte, text/plain]"),
         ] {
@@ -84,6 +90,9 @@ struct RedactionSpecKeyAndBodyTests {
             + "Content-Disposition: form-data; name=\"password\"\r\n\r\nhunter2\r\n--B0und--"
         #expect(body(bareLineFeed, "multipart/form-data; boundary=B0und") == omitted(bareLineFeed, "multipart/form-data"))
     }
+
+    // #17c, a text longer than the limit, is ported with the limit made short in
+    // RedactionTextLengthLimitTests, on every path that reads text.
 
     @Test("#19: a content type that is not one type is unreadable")
     func unreadableContentType() {
@@ -149,6 +158,24 @@ struct RedactionSpecDetectorTests {
     func jsonNames() {
         let redacted = policy.redact(body: Data(#"{"4111111111111111":1,"alice@example.com":2}"#.utf8), contentType: "application/json").body
         #expect(String(decoding: redacted, as: UTF8.self) == #"{"[REDACTED]":1,"[REDACTED]":"[REDACTED]"}"#)
+    }
+
+    // P4 (KL-A7): every detector runs on every path that reads text, names included.
+    @Test("P4: the detectors read form, query and multipart names, query values, segments and header values")
+    func everyPath() throws {
+        let policy = RedactionPolicy(allowedQueryParameters: ["q"])
+        func body(_ text: String, _ type: String) -> String {
+            String(decoding: policy.redact(body: Data(text.utf8), contentType: type).body, as: UTF8.self)
+        }
+        let form = "application/x-www-form-urlencoded"
+        #expect(body("4111111111111111=1&count=2", form) == "[REDACTED]=1&count=2")
+        #expect(body("count=4111+1111+1111+1111", form) == "count=[REDACTED]")
+        let part = "--B0und\r\nContent-Disposition: form-data; name=\"4111111111111111\"\r\n\r\nok\r\n--B0und--"
+        #expect(body(part, "multipart/form-data; boundary=B0und") == part.replacingOccurrences(of: "4111111111111111", with: "[REDACTED]"))
+        #expect(policy.redact(url: try #require(URL(string: "https://example.com/a?4111111111111111=1"))) == "https://example.com/a?[REDACTED]=[REDACTED]")
+        #expect(policy.redact(url: try #require(URL(string: "https://example.com/a?q=alice@example.com"))) == "https://example.com/a?q=[REDACTED]")
+        #expect(policy.redact(url: try #require(URL(string: "https://example.com/a/alice@example.com/b"))) == "https://example.com/a/:id/:id")
+        #expect(policy.redact(headers: [HTTPHeader(name: "Accept", value: "x 4111 1111 1111 1111 y")])[0].value == "x [REDACTED] y")
     }
 
     @Test("#35–#36: VT, FF, NEL, LS and PS are bridged; LF and CR end a finding", arguments: [
