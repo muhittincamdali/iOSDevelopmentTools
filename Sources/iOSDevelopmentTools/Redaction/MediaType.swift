@@ -1,8 +1,13 @@
 /// A `Content-Type` value, read strictly as RFC 9110 writes it: `type/subtype` and
 /// `; name=value` parameters whose value is a token or a quoted string.
-struct MediaType: CustomStringConvertible {
+///
+/// The essence is part of a header value that may hold anything, so it is written only through
+/// ``RedactionPolicy/shownEssence(of:nesting:compatibility:)``.
+struct MediaType {
     /// `type/subtype` in lowercase, such as `application/json`.
     let essence: String
+    /// `type/subtype` in the letter case it was sent in.
+    let writtenEssence: String
     /// The subtype in lowercase, such as `json` or `problem+json`.
     let subtype: String
     /// The parameters in order, with lowercase names; quoted values without their quotes.
@@ -15,12 +20,11 @@ struct MediaType: CustomStringConvertible {
         reader.skipWhitespace()
         guard let type = reader.token(), reader.consume("/"), let subtype = reader.token() else { return nil }
         guard let parameters = reader.parameters() else { return nil }
-        self.essence = (type + "/" + subtype).lowercased()
+        self.writtenEssence = type + "/" + subtype
+        self.essence = writtenEssence.lowercased()
         self.subtype = subtype.lowercased()
         self.parameters = parameters
     }
-
-    var description: String { essence }
 
     var isJSON: Bool { subtype == "json" || subtype.hasSuffix("+json") }
     var isForm: Bool { essence == "application/x-www-form-urlencoded" }

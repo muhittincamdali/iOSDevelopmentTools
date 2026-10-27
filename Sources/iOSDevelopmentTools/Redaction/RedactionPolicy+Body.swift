@@ -80,15 +80,19 @@ extension RedactionPolicy {
         guard isComplete, body.count <= maximumBodySize, let mediaType,
               let (checked, changed) = redact(body: body, as: mediaType, nesting: nesting, compatibility: readings(length: length))
         else {
-            return (Data(Self.omissionNote(byteCount: byteCount, contentType: contentType).utf8), .omitted)
+            return (Data(omissionNote(byteCount: byteCount, contentType: contentType).utf8), .omitted)
         }
         return (checked, changed ? .redacted : .unchanged)
     }
 
-    /// The note stored in place of an omitted body: its size and its content type, `no content
-    /// type` or `unreadable content type`.
-    static func omissionNote(byteCount: Int, contentType: String?) -> String {
-        omitted(byteCount, contentType == nil ? "no content type" : MediaType(contentType)?.essence ?? "unreadable content type")
+    /// The note stored in place of an omitted body: its size and its content type as
+    /// ``shownEssence(of:nesting:compatibility:)`` writes it, `no content type` or
+    /// `unreadable content type`.
+    func omissionNote(byteCount: Int, contentType: String?) -> String {
+        guard let contentType else { return Self.omitted(byteCount, "no content type") }
+        guard let type = MediaType(contentType) else { return Self.omitted(byteCount, "unreadable content type") }
+        let length = type.writtenEssence.unicodeScalars.count
+        return Self.omitted(byteCount, shownEssence(of: type, nesting: .text(length: length), compatibility: readings(length: length)))
     }
 
     /// The note for `count` bytes of `type`.
