@@ -11,9 +11,11 @@ struct RedactionSpanOffsetTests {
     static let scalars = Array(("status=200 " + String(repeating: "ok ", count: 100) + secret).unicodeScalars)
     static let beyond = 1 << 28
 
-    @Test("hides the whole text", arguments: [
-        (0, beyond + 100), (0, beyond), (0, 2 * beyond + 5), (beyond + 150, beyond + 160), (5, beyond + 1), (-1, 10),
-    ])
+    static let offsetPairs: [(Int, Int)] = [
+        (0, 268_435_556), (0, 268_435_456), (0, 536_870_917), (268_435_606, 268_435_616), (5, 268_435_457), (-1, 10),
+    ]
+
+    @Test("hides the whole text", arguments: offsetPairs)
     func hidesWholeText(start: Int, end: Int) {
         let span = RedactionPolicy.Span(start: start, end: end, kind: .secretFields, replacement: RedactionPolicy.replacement)
         #expect(RedactionPolicy.replacing([span], in: Self.scalars) == RedactionPolicy.replacement)
