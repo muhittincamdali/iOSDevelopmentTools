@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 A security release. Checked again against the shared redaction specification (revision 2.1-r2,
 with the required tests added to it on 26 October 2026), 2.1.1 showed most of a text longer than
-its reading limit. The API is unchanged, and every text of up to 2^28 − 1 Unicode scalars is
-stored as 2.1.1 stores it.
+its reading limit, and the type of a content type in which the header rule finds a secret in the
+note of an omitted body and in a multipart part. The API is unchanged. Every text of up to
+2^28 − 1 Unicode scalars is stored as 2.1.1 stores it, except such a type.
 
 ### Security
 
@@ -33,6 +34,20 @@ stored as 2.1.1 stores it.
   end, which masked an offset the same way in 2.1.1 and were used only by tests, are gone. A
   span that ends past the text it is applied to, such as one that hides the whole text, writes
   that text as `[REDACTED]` alone instead of ending at the end of the text.
+- The type of a content type (`type/subtype`), written in the note of an omitted body and in a
+  multipart part's `Content-Type` line and note, is read as its header copy is, by the value
+  detectors and the secret-name rule, and is written as `[REDACTED]` when they find something.
+  2.1.1 wrote it as the media type parser read it, in lowercase: a request sent with
+  `Content-Type: application/4111111111111111` and a body of `hello` stored the header as
+  `application/[REDACTED]` and the body as
+  `[body omitted: 5 bytes, application/4111111111111111]`, in the console, in `NetworkEntry` and
+  in a HAR file, where the note is the `postData.text` beside `mimeType`. A secret set as the
+  content type by mistake (an AWS secret access key, a JWT written as `type/subtype`) was hidden
+  in the header and shown in lowercase in the note, and a part's `Content-Type: text/x-pin-4831`
+  was written as it was in its line and its note. The note of a response body read its type from
+  the response header in the same way. Such a body is now stored as
+  `[body omitted: 5 bytes, [REDACTED]]` and such a part line as `Content-Type: [REDACTED]`; a type
+  in which nothing is found is written as before.
 
 ### Changed
 
@@ -42,8 +57,15 @@ stored as 2.1.1 stores it.
   `Content-Length` and a recorded error description), and the value detectors on form, query and
   multipart names, query values, path segments and kept header values (rule P4). The new span
   tests fail on 2.1.1 and pass now; the tests for item 2 and rule P4 pass on 2.1.1 too.
-- The redaction guide lists what is stored for a text over the limit, and its introduction names
-  the rule 2.1.1 missed.
+- New tests check the type in the note of a request, response and multipart part body, in a
+  part's `Content-Type` line, in `NetworkEntry` and in a HAR file, with a card number, an AWS
+  secret access key, a JWT and `pin-4831` in the type, and that common types (`image/png`,
+  `application/vnd.api+json`, a long `vnd.openxmlformats-…` type) are still written. They fail on
+  2.1.1 and pass now, except those for types that are kept, unreadable or missing and for the
+  note made when a streamed request body turns out longer than what was checked, which reads the
+  stored header copy; these pass on 2.1.1 too.
+- The redaction guide lists what is stored for a text over the limit and for a type in which the
+  header rule finds something, and its introduction names the two rules 2.1.1 missed.
 - `HTTPArchive.creatorVersion` is `2.1.2`.
 
 ## [2.1.1] - 2026-10-26
