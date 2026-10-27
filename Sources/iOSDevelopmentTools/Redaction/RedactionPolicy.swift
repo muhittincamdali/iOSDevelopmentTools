@@ -164,6 +164,11 @@ public struct RedactionPolicy: Sendable, Hashable {
     /// less than 16 MB more.
     public let maximumBodySize: Int
 
+    /// The longest text, in Unicode scalars, that this policy reads: ``maximumTextLength``. A
+    /// longer text is hidden whole (see ``readsText(ofLength:)``). Tests set a shorter limit with
+    /// ``init(_:textKeys:textLengthLimit:)`` to reach it with a short text.
+    let textLengthLimit: Int
+
     /// Creates a policy.
     ///
     /// - Parameters:
@@ -210,19 +215,22 @@ public struct RedactionPolicy: Sendable, Hashable {
         self.allowedTextKeys = allowable(allowedTextKeys)
         self.maximumBodySize = min(max(maximumBodySize, 0), Self.bodySizeLimit)
         self.urlDetail = urlDetail
+        textLengthLimit = Self.maximumTextLength
     }
 
     /// A policy with the settings of `other` that reads free text on after `textKeys`, folded:
     /// for kept header values, which are also read on after the parameters their headers are
-    /// written with (see ``headerParameterNames``).
-    init(_ other: RedactionPolicy, textKeys: Set<String>) {
+    /// written with (see ``headerParameterNames``). With `textLengthLimit` it reads no text
+    /// longer than that, kept between 0 and ``maximumTextLength``, which only tests set.
+    init(_ other: RedactionPolicy, textKeys: Set<String>? = nil, textLengthLimit: Int? = nil) {
         isEnabled = other.isEnabled
         secretNameTable = other.secretNameTable
         allowedHeaders = other.allowedHeaders
         allowedQueryParameters = other.allowedQueryParameters
-        allowedTextKeys = textKeys
+        allowedTextKeys = textKeys ?? other.allowedTextKeys
         maximumBodySize = other.maximumBodySize
         urlDetail = other.urlDetail
+        self.textLengthLimit = textLengthLimit.map { min(max($0, 0), Self.maximumTextLength) } ?? other.textLengthLimit
     }
 
     /// The one table of readings of an input of `length` scalars, with this policy's secret names.
@@ -257,10 +265,17 @@ public struct RedactionPolicy: Sendable, Hashable {
 
     /// The findings in a text, in order and without overlaps, as ``redact(text:)`` finds them.
     func matches(in text: String) -> [Match] {
-        var spans = {
+        let whole = [Match(kind: .secretFields, range: text.startIndex..<text.endIndex)]
+        let length = text.unicodeScalars.count
+        // A text longer than the policy reads is one match before a copy of its scalars is made.
+        guard readsText(ofLength: length) else { return whole }
+        let findings = {
             let scalars = Array(text.unicodeScalars)
-            return textSpans(in: scalars, compatibility: readings(length: scalars.count), nesting: .text(length: scalars.count))
+            return textSpans(in: scalars, compatibility: readings(length: length), nesting: .text(length: length))
         }()
+        guard case .spans(var spans) = findings else { return findings.isEmpty ? [] : whole }
+        // A span that ends past the text hides all of it, as in ``replacing(_:in:)``.
+        guard Self.allEnd(spans, within: length) else { return whole }
         spans.removeAll { $0.kind.isEmpty }
         // The spans are in order and do not overlap, so one walk through the scalars finds the
         // index of each start and end; no index is kept for any other scalar.

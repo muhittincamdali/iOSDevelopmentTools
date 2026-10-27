@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@4c0211705a697c58b05bc4732f79b3b6beb39a9b status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -59,7 +59,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 857 тестов Swift Testing на macOS и 854 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 880 тестов Swift Testing на macOS и 877 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -74,7 +74,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Вставьте его в поле поиска в правом верхнем углу окна. Оставьте **Dependency Rule** равным
-**Up to Next Major Version** начиная с `2.1.1` и нажмите **Add Package**. В следующем окне выберите
+**Up to Next Major Version** начиная с `2.1.2` и нажмите **Add Package**. В следующем окне выберите
 target вашего приложения рядом с **iOSDevelopmentTools** и снова нажмите **Add Package**.
 
 **2. Импортируйте модуль**
@@ -131,7 +131,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.2")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -219,7 +219,9 @@ func configureNetworkLogger() {
   умолчанию скрывают своё значение.
 - **Тела, которые нельзя разобрать** (неизвестный или отсутствующий тип содержимого, повреждённый
   JSON или multipart, тело, обрезанное на пределе размера), заменяются пометкой вроде
-  `[body omitted: 512 bytes, application/xml]`.
+  `[body omitted: 512 bytes, application/xml]`. Тип в пометке, как и тип части multipart, читается
+  так же, как его заголовок: тип, в котором правило заголовков что-то находит, записывается как
+  `[REDACTED]` (`application/4111111111111111` даёт `[body omitted: 5 bytes, [REDACTED]]`).
 - **Сообщения журнала** сохраняются до первого триггера: секретное имя, ключ не из списка
   разрешённых (по умолчанию `status`, `method`, `path`, `duration_ms` и `count`; свои ключи
   добавляются через `allowedTextKeys`), символ вне ASCII, который не является буквой, диакритикой
@@ -260,9 +262,10 @@ func configureNetworkLogger() {
 Не допускайте секретов в записываемых запросах и сообщениях журнала с самого начала и используйте
 структурированное журналирование.
 
-К этой модели относятся ещё два ограничения. **Предел затрат:** все документы, вложенные в один
+К этой модели относятся ещё три ограничения. **Предел затрат:** все документы, вложенные в один
 вход (JSON в строке, URL в тексте), вместе читают не больше четырёх длин входа; сверх этого
-бюджета строка, содержащая следующий документ, скрывается целиком. **Многострочная разметка** не
+бюджета строка, содержащая следующий документ, скрывается целиком. **Предел длины:** текст длиннее 2^28 − 1 скалярных значений Unicode
+(268 435 455) не читается и скрывается целиком. **Многострочная разметка** не
 требует ничего особого: `<key>` property list на отдельной строке, JSON на нескольких строках и
 multipart-тело, записанное как текст, скрываются от первого триггера до конца текста, так что
 значение скрыто, где бы оно ни было записано.

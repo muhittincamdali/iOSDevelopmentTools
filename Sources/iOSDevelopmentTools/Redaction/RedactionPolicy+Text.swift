@@ -110,14 +110,23 @@ extension RedactionPolicy {
     public func redact(text: String) -> String {
         guard isEnabled else { return text }
         let length = text.unicodeScalars.count
+        // A text longer than the policy reads is hidden before a copy of its scalars is made.
+        guard readsText(ofLength: length) else { return Self.replacement }
         return redact(text, nesting: .text(length: length), compatibility: readings(length: length))
     }
 
-    /// The findings in free text, in order and without overlaps. `nesting` says which documents
-    /// the text is in; a text inside one whose JSON or URL goes past a limit is one finding.
-    func textSpans(in scalars: [Unicode.Scalar], compatibility: CompatibilityText, role: FreeTextScanner.Role = .text, nesting: Nesting) -> [Span] {
-        guard !scalars.isEmpty, !Self.isQuietWord(scalars, names: compatibility.secretNames) else { return [] }
-        guard scalars.count <= Self.maximumTextLength else { return [Span(start: 0, end: scalars.count, kind: .secretFields, replacement: Self.replacement)] }
+    /// Whether a text of `length` scalars is read at all. A longer one is hidden whole, as
+    /// ``TextFindings/wholeText``, and never reaches a ``Span``.
+    func readsText(ofLength length: Int) -> Bool {
+        length <= textLengthLimit
+    }
+
+    /// The findings in free text. `nesting` says which documents the text is in; a text inside
+    /// one whose JSON or URL goes past a limit is hidden whole.
+    func textSpans(in scalars: [Unicode.Scalar], compatibility: CompatibilityText, role: FreeTextScanner.Role = .text, nesting: Nesting) -> TextFindings {
+        guard !scalars.isEmpty else { return .none }
+        guard readsText(ofLength: scalars.count) else { return .wholeText }
+        guard !Self.isQuietWord(scalars, names: compatibility.secretNames) else { return .none }
         // The free-text rule cuts the text at the first scalar outside the safe alphabet at the
         // latest, so the copy is made only as far as the scan and the detectors read.
         let text = NormalizedText(scalars, compatibility: compatibility, extent: .scanned)
@@ -128,8 +137,8 @@ extension RedactionPolicy {
     /// With `detectsInRegions` the value detectors also read the JSON and URLs in the text, which
     /// a path segment needs: a URL in one keeps its host, and a token in the host must still make
     /// the segment `:id`. A text inside a document found in the input that the reading budget no
-    /// longer covers (see ``ReadingBudget``) is one finding, and so is a text longer than
-    /// ``maximumTextLength``, whose offsets the scanning copy cannot hold.
+    /// longer covers (see ``ReadingBudget``) is hidden whole, and so is a text longer than
+    /// ``textLengthLimit``, whose offsets a ``Span`` cannot hold.
     ///
     /// The free-text rule cuts the text at its first trigger (see ``FreeTextScanner``): what comes
     /// before the cut keeps the findings of the JSON, URLs and value detectors in it, and the cut
@@ -137,14 +146,12 @@ extension RedactionPolicy {
     func textSpans(
         in scalars: [Unicode.Scalar], text: NormalizedText, compatibility: CompatibilityText, role: FreeTextScanner.Role = .text,
         nesting: Nesting, detectsInRegions: Bool = false
-    ) -> [Span] {
-        guard !scalars.isEmpty else { return [] }
-        let whole = [Span(start: 0, end: scalars.count, kind: .secretFields, replacement: Self.replacement)]
-        guard scalars.count <= Self.maximumTextLength else { return whole }
-        guard nesting.reads(scalars.count) else { return whole }
+    ) -> TextFindings {
+        guard !scalars.isEmpty else { return .none }
+        guard readsText(ofLength: scalars.count), nesting.reads(scalars.count) else { return .wholeText }
         var scanner = FreeTextScanner(source: scalars, text: text, policy: self, compatibility: compatibility, role: role, nesting: nesting)
         scanner.run()
-        if scanner.hidesWholeText { return whole }
+        if scanner.hidesWholeText { return .wholeText }
         let cut = scanner.cut.flatMap { $0 < scalars.count ? [Span(start: $0, end: scalars.count, kind: .secretFields, replacement: Self.replacement)] : nil } ?? []
         // The detectors look for findings only before the cut, which hides the rest.
         let startLimit = scanner.cut.map(text.byteIndex(atOrAfter:)) ?? text.count
@@ -164,12 +171,14 @@ extension RedactionPolicy {
         found += cut
         // Handed over, not copied: an unoptimized build would otherwise keep `found` and copy it
         // when the spans are sorted.
-        return Self.merged(consume found)
+        let spans = Self.merged(consume found)
+        return spans.isEmpty ? .none : .spans(spans)
     }
 
     /// The longest text that is read: one whose scalar offsets fit in the 28 bits a ``Span`` keeps
-    /// them in, 256 Mi scalars. A longer one is hidden whole, and a longer body is omitted.
-    static let maximumTextLength = (1 << 28) - 1
+    /// them in, 2^28 − 1 (256 Mi) scalars. A longer one is hidden whole, and a longer body is
+    /// omitted (``bodySizeLimit`` is shorter).
+    static let maximumTextLength = Span.maximumOffset
 
     /// The findings that run over the edge of a JSON or URL region, hidden whole. A URL ends
     /// before the punctuation that ends a sentence, so `…?q=eyJ….eyJ….` keeps the dot of an
@@ -238,18 +247,20 @@ extension RedactionPolicy {
     func redactedText(
         _ scalars: [Unicode.Scalar], compatibility: CompatibilityText, role: FreeTextScanner.Role = .text, nesting: Nesting
     ) -> (text: String, kind: Kinds)? {
-        let spans = textSpans(in: scalars, compatibility: compatibility, role: role, nesting: nesting)
-        guard !spans.isEmpty else { return nil }
-        let kind = spans.reduce(into: Kinds()) { $0.formUnion($1.kind) }
-        return (Self.replacing(spans, in: scalars), kind)
+        switch textSpans(in: scalars, compatibility: compatibility, role: role, nesting: nesting) {
+        case .none:
+            return nil
+        case .wholeText:
+            return (Self.replacement, .secretFields)
+        case .spans(let spans):
+            return (Self.replacing(spans, in: scalars), spans.reduce(into: Kinds()) { $0.formUnion($1.kind) })
+        }
     }
 
-    /// A text inside a document (a form value, a query value, a multipart header), redacted as
-    /// free text with the document's nesting and the document's readings table.
+    /// A text inside a document or a list (a form value, a query value, a header value, a
+    /// `text/plain` body), redacted as free text with its nesting and readings table.
     func redact(_ text: String, nesting: Nesting, compatibility: CompatibilityText) -> String {
-        let scalars = Array(text.unicodeScalars)
-        let spans = textSpans(in: scalars, compatibility: compatibility, nesting: nesting)
-        return spans.isEmpty ? text : Self.replacing(spans, in: scalars)
+        redactedText(Array(text.unicodeScalars), compatibility: compatibility, nesting: nesting)?.text ?? text
     }
 
     /// A key that is written out (a form or multipart field name, a query parameter name) read as

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@4c0211705a697c58b05bc4732f79b3b6beb39a9b status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 857 Swift-Testing-Tests auf macOS und 854 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 880 Swift-Testing-Tests auf macOS und 877 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -74,7 +74,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Füge sie in das Suchfeld oben rechts im Fenster ein. Lass **Dependency Rule** auf
-**Up to Next Major Version** ab `2.1.1` stehen und klicke auf **Add Package**. Wähle im nächsten Fenster
+**Up to Next Major Version** ab `2.1.2` stehen und klicke auf **Add Package**. Wähle im nächsten Fenster
 neben **iOSDevelopmentTools** das Target deiner App aus und klicke erneut auf **Add Package**.
 
 **2. Modul importieren**
@@ -131,7 +131,7 @@ Oder füge es zu den `dependencies` in deiner `Package.swift` hinzu:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.2")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -221,7 +221,9 @@ func configureNetworkLogger() {
   `şifre`), haben standardmäßig verborgene Werte.
 - **Bodys, die sich nicht parsen lassen** (ein unbekannter oder fehlender Content-Type, fehlerhaftes
   JSON oder Multipart, ein an der Größengrenze abgeschnittener Body), werden durch einen Hinweis wie
-  `[body omitted: 512 bytes, application/xml]` ersetzt.
+  `[body omitted: 512 bytes, application/xml]` ersetzt. Der Typ im Hinweis wird wie der Typ eines
+  Multipart-Teils so gelesen wie sein Header: Ein Typ, in dem die Header-Regel etwas findet, wird
+  als `[REDACTED]` geschrieben (`application/4111111111111111` ergibt `[body omitted: 5 bytes, [REDACTED]]`).
 - **Log-Meldungen** werden bis zu ihrem ersten Auslöser gespeichert: Ein geheimer Name, ein
   Schlüssel, der nicht auf der Allowlist steht (standardmäßig `status`, `method`, `path`,
   `duration_ms` und `count`; eigene fügen Sie mit `allowedTextKeys` hinzu), ein Zeichen außerhalb
@@ -260,10 +262,11 @@ Zeichen oder eine Zahl ohne ASCII-Form zählt als beliebiger Buchstabe, daher we
 `tͦken hunter2`, `passw〇rd hunter2` und `t၀ken hunter2` (eine birmanische Null) gefunden. Halte Geheimnisse von vornherein aus den
 aufgezeichneten Anfragen und aus Log-Meldungen heraus, und bevorzuge strukturiertes Logging.
 
-Zwei weitere Grenzen gehören zu diesem Modell. **Kostengrenze:** Alle in einer Eingabe
+Drei weitere Grenzen gehören zu diesem Modell. **Kostengrenze:** Alle in einer Eingabe
 verschachtelten Dokumente (JSON in einem String, eine URL im Text) lesen zusammen höchstens das
 Vierfache der Länge der Eingabe; jenseits dieses Budgets wird der String, der das nächste
-Dokument enthält, vollständig verborgen. **Mehrzeilige Layouts** brauchen nichts Besonderes: Ein
+Dokument enthält, vollständig verborgen. **Längengrenze:** Ein Text mit mehr als 2^28 − 1
+Unicode-Skalarwerten (268.435.455) wird nicht gelesen und vollständig verborgen. **Mehrzeilige Layouts** brauchen nichts Besonderes: Ein
 Property-List-`<key>` in einer eigenen Zeile, JSON über mehrere Zeilen und ein als Text
 geschriebener Multipart-Body werden ab dem ersten Auslöser bis zum Ende des Textes verborgen, der
 Wert also, wo immer er steht.

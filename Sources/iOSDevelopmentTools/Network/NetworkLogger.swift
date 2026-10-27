@@ -239,7 +239,7 @@ public final class NetworkLogger: Sendable {
                 entry.requestBody = CapturedBody(data: body.data, byteCount: byteCount, isTruncated: true, redaction: body.redaction)
                 return
             }
-            let note = RedactionPolicy.omissionNote(byteCount: byteCount, contentType: entry.requestContentType)
+            let note = policy.omissionNote(byteCount: byteCount, contentType: entry.requestContentType)
             entry.requestBody = CapturedBody(data: Data(note.utf8), byteCount: byteCount, isTruncated: true, redaction: .omitted)
         }
     }

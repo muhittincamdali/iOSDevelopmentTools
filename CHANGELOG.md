@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-10-27
+
+A security release. Checked again against the shared redaction specification (revision 2.1-r2,
+with the required tests added to it on 26 October 2026), 2.1.1 showed most of a text longer than
+its reading limit, and the type of a content type in which the header rule finds a secret in the
+note of an omitted body and in a multipart part. The API is unchanged. Every text of up to
+2^28 − 1 Unicode scalars is stored as 2.1.1 stores it, except such a type.
+
+The correctness review of this release passed with no open findings. An adversarial sweep for
+bypass variants was not completed.
+
+### Security
+
+- A text longer than 2^28 − 1 Unicode scalars (268,435,455) is hidden whole, as the 2.1.1 notes
+  and the guide said it was. 2.1.1 hid only its first scalars and stored the rest as it was: a
+  text of 2^28 + 99 scalars passed to `RedactionPolicy.redact(text:)` was stored as `[REDACTED]`
+  followed by all but its first 99 scalars, so a secret after them showed. The same happened to a
+  kept header value (`redact(headers:)`), to the value of an allowed query parameter
+  (`redact(url:)`, the recorded URL, HAR files and cURL commands) and to an error description
+  that `NetworkEntry` records, at that length. A message logged to `LogStore` is redacted up to
+  1 MiB and a body over 16 MiB is omitted, so neither was affected. Such a text is now not read
+  at all and is stored as `[REDACTED]`, and a path segment of that length becomes `:id` with the
+  segment after it. 2.1.0 had the same flaw for texts longer than 2^32 − 1 scalars.
+- A span, the internal record of what to replace in a text, keeps its offsets in 28 bits. An
+  offset that does not fit now makes the span hide the whole text instead of keeping the low 28
+  bits of the offset, so no path that reaches a span with such an offset can show the rest of
+  the text. A span's offsets are checked once, when it is made: the setters of its start and
+  end, which masked an offset the same way in 2.1.1 and were used only by tests, are gone. A
+  span that ends past the text it is applied to, such as one that hides the whole text, writes
+  that text as `[REDACTED]` alone instead of ending at the end of the text.
+- The type of a content type (`type/subtype`), written in the note of an omitted body and in a
+  multipart part's `Content-Type` line and note, is read as its header copy is, by the value
+  detectors and the secret-name rule, and is written as `[REDACTED]` when they find something.
+  2.1.1 wrote it as the media type parser read it, in lowercase: a request sent with
+  `Content-Type: application/4111111111111111` and a body of `hello` stored the header as
+  `application/[REDACTED]` and the body as
+  `[body omitted: 5 bytes, application/4111111111111111]`, in the console, in `NetworkEntry` and
+  in a HAR file, where the note is the `postData.text` beside `mimeType`. A secret set as the
+  content type by mistake (an AWS secret access key, a JWT written as `type/subtype`) was hidden
+  in the header and shown in lowercase in the note, and a part's `Content-Type: text/x-pin-4831`
+  was written as it was in its line and its note. The note of a response body read its type from
+  the response header in the same way. Such a body is now stored as
+  `[body omitted: 5 bytes, [REDACTED]]` and such a part line as `Content-Type: [REDACTED]`; a type
+  in which nothing is found is written as before.
+
+### Changed
+
+- The port of the specification's required test set checks item 2 with the JSON escape it is
+  written with (the port tested the plain name before), item 17c on every path that reads text,
+  with the limit made short for the test (also on form and query names, a part's
+  `Content-Length` and a recorded error description), and the value detectors on form, query and
+  multipart names, query values, path segments and kept header values (rule P4). The new span
+  tests fail on 2.1.1 and pass now; the tests for item 2 and rule P4 pass on 2.1.1 too.
+- New tests check the type in the note of a request, response and multipart part body, in a
+  part's `Content-Type` line, in `NetworkEntry` and in a HAR file, with a card number, an AWS
+  secret access key, a JWT and `pin-4831` in the type, and that common types (`image/png`,
+  `application/vnd.api+json`, a long `vnd.openxmlformats-…` type) are still written. They fail on
+  2.1.1 and pass now, except those for types that are kept, unreadable or missing and for the
+  note made when a streamed request body turns out longer than what was checked, which reads the
+  stored header copy; these pass on 2.1.1 too.
+- The redaction guide lists what is stored for a text over the limit and for a type in which the
+  header rule finds something, and its introduction names the two rules 2.1.1 missed.
+- `HTTPArchive.creatorVersion` is `2.1.2`.
+
 ## [2.1.1] - 2026-10-26
 
 A security release. 2.1.0 followed an earlier generation of the redaction specification that this
@@ -87,7 +151,8 @@ and the cases where less is hidden are listed under Changed.
   character outside the safe alphabet at the end of a text (`done 👍` is stored as
   `done [REDACTED]`).
 - Free text longer than 2^28 − 1 Unicode scalars is hidden whole (2.1.0: 2^32 − 1), the limit of
-  the specification.
+  the specification. (This did not hold in 2.1.1, which hid only the first scalars of such a
+  text; see 2.1.2.)
 
 ### Changed
 
@@ -534,7 +599,8 @@ new major version.
 First tagged release: a network client built on Alamofire, storage, analytics and logging
 managers and utility extensions in five modules, each also offered as its own library.
 
-[Unreleased]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.2...HEAD
+[2.1.2]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/muhittincamdali/iOSDevelopmentTools/compare/v1.0.0...v2.0.0

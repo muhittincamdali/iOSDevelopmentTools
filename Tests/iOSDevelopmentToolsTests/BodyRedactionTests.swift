@@ -76,7 +76,7 @@ struct BodyRedactionTests {
     ] as [(String, String, Bool)])
     func omittedBodies(body: String, contentType: String, isComplete: Bool) {
         let data = Data(body.utf8)
-        let mediaType = MediaType(contentType)?.description ?? ""
+        let mediaType = MediaType(contentType)?.essence ?? ""
         #expect(policy.redact(body: data, contentType: contentType, isComplete: isComplete)
             == (Data("[body omitted: \(data.count) bytes, \(mediaType)]".utf8), .omitted))
     }

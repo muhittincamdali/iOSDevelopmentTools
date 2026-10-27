@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@4c0211705a697c58b05bc4732f79b3b6beb39a9b status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 857 tests Swift Testing sur macOS et 854 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 880 tests Swift Testing sur macOS et 877 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -76,7 +76,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Collez-la dans le champ de recherche en haut à droite de la fenêtre. Laissez **Dependency Rule** sur
-**Up to Next Major Version** à partir de `2.1.1`, puis cliquez sur **Add Package**. Dans la fenêtre
+**Up to Next Major Version** à partir de `2.1.2`, puis cliquez sur **Add Package**. Dans la fenêtre
 suivante, choisissez le target de votre app à côté de **iOSDevelopmentTools** et cliquez de nouveau sur
 **Add Package**.
 
@@ -135,7 +135,7 @@ Ou ajoutez-le aux `dependencies` de votre `Package.swift` :
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.2")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -224,7 +224,9 @@ func configureNetworkLogger() {
   valeur masquée par défaut.
 - **Les corps impossibles à analyser** (un type de contenu inconnu ou absent, du JSON ou du
   multipart mal formé, un corps coupé à la limite de taille) sont remplacés par une note comme
-  `[body omitted: 512 bytes, application/xml]`.
+  `[body omitted: 512 bytes, application/xml]`. Le type de la note, comme celui d'une partie
+  multipart, est lu comme son en-tête : un type dans lequel la règle des en-têtes trouve quelque
+  chose est écrit `[REDACTED]` (`application/4111111111111111` donne `[body omitted: 5 bytes, [REDACTED]]`).
 - **Les messages de journal** sont conservés jusqu'à leur premier déclencheur : un nom secret, une
   clé absente de la liste autorisée (`status`, `method`, `path`, `duration_ms` et `count` par
   défaut ; ajoutez les vôtres avec `allowedTextKeys`), un caractère hors ASCII qui n'est ni une
@@ -263,10 +265,11 @@ n'est pas forcément trouvé ; une seule lettre, marque ou chiffre sans forme AS
 n'importe quelle lettre, donc `tͦken hunter2`, `passw〇rd hunter2` et `t၀ken hunter2` (un zéro birman) sont trouvés. Gardez les secrets hors des requêtes que vous enregistrez et des
 messages de journal dès le départ, et préférez une journalisation structurée.
 
-Deux autres limites font partie de ce modèle. **Borne de coût :** tous les documents imbriqués
+Trois autres limites font partie de ce modèle. **Borne de coût :** tous les documents imbriqués
 dans une même entrée (du JSON dans une chaîne, une URL dans un texte) lisent ensemble au plus quatre
 fois la longueur de l'entrée ; au-delà de ce budget, la chaîne qui contient le document suivant est
-masquée entièrement. **Les mises en page sur plusieurs lignes** ne demandent rien de particulier :
+masquée entièrement. **Borne de longueur :** un texte de plus de 2^28 − 1 scalaires Unicode
+(268 435 455) n'est pas lu et est masqué entièrement. **Les mises en page sur plusieurs lignes** ne demandent rien de particulier :
 un `<key>` de property list sur sa propre ligne, du JSON réparti sur plusieurs lignes et un corps
 multipart écrit comme du texte sont masqués du premier déclencheur jusqu'à la fin du texte, si bien
 que la valeur est masquée où qu'elle soit écrite.

@@ -50,11 +50,16 @@ struct Redactor: Sendable {
         policy.matches(in: text)
     }
 
+    /// The findings of free text as spans; a text hidden whole is one span over all of it.
     func textSpans(
         in scalars: [Unicode.Scalar], text: NormalizedText, compatibility: CompatibilityText, role: FreeTextScanner.Role = .text,
         nesting: Nesting, detectsInRegions: Bool = false
     ) -> [RedactionPolicy.Span] {
-        policy.textSpans(in: scalars, text: text, compatibility: compatibility, role: role, nesting: nesting, detectsInRegions: detectsInRegions)
+        switch policy.textSpans(in: scalars, text: text, compatibility: compatibility, role: role, nesting: nesting, detectsInRegions: detectsInRegions) {
+        case .none: []
+        case .wholeText: [RedactionPolicy.Span(start: 0, end: scalars.count, kind: .secretFields, replacement: RedactionPolicy.replacement)]
+        case .spans(let spans): spans
+        }
     }
 }
 

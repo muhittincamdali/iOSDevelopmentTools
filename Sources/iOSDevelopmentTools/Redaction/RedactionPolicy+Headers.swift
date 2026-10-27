@@ -26,8 +26,19 @@ extension RedactionPolicy {
     func redactedHeaderValue(name: String, value: String, compatibility: CompatibilityText) -> String {
         guard !hidesHeader(named: name), !Self.startsWithAuthenticationScheme(value) else { return Self.replacement }
         let scalars = Array(value.unicodeScalars)
-        let spans = textSpans(in: scalars, compatibility: compatibility, nesting: .text(length: scalars.count))
-        return spans.isEmpty ? value : Self.replacing(spans, in: scalars)
+        return redactedText(scalars, compatibility: compatibility, nesting: .text(length: scalars.count))?.text ?? value
+    }
+
+    /// The `type/subtype` of a content type as the note of an omitted body and a multipart part's
+    /// `Content-Type` line write it: in lowercase when the header value rule finds nothing in it,
+    /// and as ``replacement`` otherwise. The media type parser's reading of a value is no way
+    /// around the reading its header copy gets: `application/4111111111111111` is
+    /// `application/[REDACTED]` as a header, so the note beside it does not write the number
+    /// either. The type is read in the letter case it was sent in, as the header copy is.
+    func shownEssence(of type: MediaType, nesting: Nesting, compatibility: CompatibilityText) -> String {
+        let written = Array(type.writtenEssence.unicodeScalars)
+        let findings = headerValueReader.textSpans(in: written, compatibility: compatibility, nesting: nesting)
+        return findings.isEmpty ? type.essence : Self.replacement
     }
 
     /// This policy, reading free text on after ``allowedTextKeys`` and the parameters of

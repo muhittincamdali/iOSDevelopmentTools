@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@4c0211705a697c58b05bc4732f79b3b6beb39a9b status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-tr-light.svg" alt="iOSDevelopmentTools: Uygulamanızın ağ istekleri, günlükleri ve cihaz durumu uygulama içi bir konsolda; gizli bilgiler maskelenir."></picture></p>
@@ -60,7 +60,7 @@ Swift 6 strict concurrency ile uyumlu yazılmıştır.
   bunları birleşik günlük sistemine (unified logging) yazar; `DeviceSnapshot` sürümü, işletim
   sistemini, modeli, bellek kullanımını, termal durumu ve bir debugger'ın bağlı olup olmadığını
   bildirir.
-- **Test edilmiş** — macOS'ta 857, iOS simülatöründe 854 Swift Testing testi. İstekler bir uygulama
+- **Test edilmiş** — macOS'ta 880, iOS simülatöründe 877 Swift Testing testi. İstekler bir uygulama
   oturumundan yakalama katmanı üzerinden bir stub sunucuya gider; testler sunucunun neyi aldığını,
   uygulamanın neyi aldığını ve neyin saklandığını kontrol eder.
 
@@ -74,7 +74,7 @@ Xcode'da **File › Add Package Dependencies…** menüsünü seçin ve depo adr
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-Pencerenin sağ üstündeki arama alanına yapıştırın. **Dependency Rule** ayarını `2.1.1` sürümünden
+Pencerenin sağ üstündeki arama alanına yapıştırın. **Dependency Rule** ayarını `2.1.2` sürümünden
 itibaren **Up to Next Major Version** olarak bırakın, ardından **Add Package**'a tıklayın.
 Sonraki pencerede **iOSDevelopmentTools** yanındaki hedef olarak uygulamanızın target'ını seçin ve
 yeniden **Add Package**'a tıklayın.
@@ -133,7 +133,7 @@ Ya da `Package.swift` dosyanızdaki `dependencies` listesine ekleyin:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.2")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -220,7 +220,8 @@ func configureNetworkLogger() {
   anahtarlar (Kiril `а` içeren `pаssword`, `pass\u200Dword`, `şifre`).
 - **Ayrıştırılamayan gövdeler** (bilinmeyen ya da eksik içerik türü, bozuk JSON veya multipart,
   boyut sınırında kesilmiş bir gövde) `[body omitted: 512 bytes, application/xml]` gibi bir notla
-  değiştirilir.
+  değiştirilir. Nottaki tür, bir multipart parçasının türü gibi, header'ı gibi okunur: header
+  kuralının içinde bir şey bulduğu tür `[REDACTED]` yazılır (`application/4111111111111111` → `[body omitted: 5 bytes, [REDACTED]]`).
 - **Günlük mesajları** ilk tetikleyiciye kadar tutulur: gizli bir ad, izin listesinde olmayan bir
   anahtar (varsayılan olarak `status`, `method`, `path`, `duration_ms` ve `count`; kendi
   anahtarlarınızı `allowedTextKeys` ile ekleyin), harf, işaret ya da rakam olmayan ASCII
@@ -259,9 +260,10 @@ garanti edilmez; ASCII biçimi olmayan tek bir harf, birleşen işaret ya da say
 yerine geçer, bu yüzden `tͦken hunter2`, `passw〇rd hunter2` ve `t၀ken hunter2` (Myanmar sıfırı) bulunur. Gizli bilgileri en baştan kaydettiğiniz isteklerin ve günlük mesajlarının dışında tutun ve
 yapılandırılmış günlük kaydını tercih edin.
 
-Bu modele iki sınır daha dahildir. **Maliyet sınırı:** bir girdinin içine gömülü bütün
+Bu modele üç sınır daha dahildir. **Maliyet sınırı:** bir girdinin içine gömülü bütün
 belgeler (bir string içindeki JSON, metindeki bir URL) toplamda girdinin uzunluğunun en çok dört
-katı kadar okunur; bu bütçe aşılınca sıradaki belgeyi taşıyan string bütünüyle gizlenir. **Çok
+katı kadar okunur; bu bütçe aşılınca sıradaki belgeyi taşıyan string bütünüyle gizlenir. **Uzunluk sınırı:** 2^28 − 1 Unicode skaler değerinden (268.435.455)
+uzun bir metin okunmaz ve bütünüyle gizlenir. **Çok
 satırlı düzenler** özel bir işlem gerektirmez: kendi satırındaki bir property list `<key>`'i,
 birden çok satıra yayılmış JSON ve metin olarak yazılmış bir multipart gövde ilk tetikleyiciden
 metnin sonuna kadar gizlenir; böylece değer nereye yazılmış olursa olsun gizlenir.

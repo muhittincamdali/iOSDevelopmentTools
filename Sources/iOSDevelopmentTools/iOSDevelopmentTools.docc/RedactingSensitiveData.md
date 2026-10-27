@@ -16,9 +16,13 @@ first sign of a secret, everything to the end of the text is hidden.
 
 These are the redaction rules this package shares with iOSSecurityTools and
 iOS-Networking-Architecture-Pro, written down as one specification and tested with one shared
-corpus of review probes. Release 2.1.0 followed an earlier generation of that specification; 2.1.1
-follows its current revision (2.1-r2) in every rule this package applies, and every input that
-2.1.0 read differently is kept as a test.
+corpus of review probes. Release 2.1.0 followed an earlier generation of that specification, and
+every input that 2.1.0 read differently is kept as a test. 2.1.1 follows its current revision
+(2.1-r2) except for two rules: a text longer than the reading limit was not hidden whole (see
+"Limits" below), and the type of a content type, written in the note of an omitted body and in a
+multipart part's `Content-Type` line, did not go through the value detectors and the secret-name
+rule that its header copy goes through (principle P4: every detector reads every input path).
+2.1.2 follows both, and its required test set is ported to this package's API.
 
 ### A safety net, not a guarantee
 
@@ -217,7 +221,10 @@ rule.
 - **Multipart form data** is read only with a single unquoted boundary of at most 70 characters,
   and only when every `--boundary` in it is a delimiter line after a CRLF and every part header
   ends with CRLF. Every part is written again with its field name and its type, and the body ends
-  at its closing delimiter. A part header name is a key of the part, so of the other part headers
+  at its closing delimiter. The type is written as `type/subtype` in lowercase, without its
+  parameters, and only when the header rule (see Headers below) finds nothing in it as it was
+  sent; otherwise it is written as `[REDACTED]`, in the part's `Content-Type` line and in the note
+  of its content (`Content-Type: text/x-pin-4831` is written as `Content-Type: [REDACTED]`). A part header name is a key of the part, so of the other part headers
   only `Content-Length` and `Content-Transfer-Encoding` are written with their value, and only in
   their form, which is not read as free text: a length of ASCII digits in which the value
   detectors find nothing (`Content-Length: 12`, but not a card number), and one of `7bit`,
@@ -238,7 +245,11 @@ that does not parse completely and a body larger than ``RedactionPolicy/maximumB
 default) are not stored, and neither is a body that was cut off at
 ``NetworkLogger/Configuration/maximumBodySize``. A note takes their place, such as
 `[body omitted: 512 bytes, application/xml]` or `[body omitted: 22 bytes, no content type]`, and
-the body is marked ``RedactionOutcome/omitted``.
+the body is marked ``RedactionOutcome/omitted``. The type in a note is read as a part's type is:
+a type in which the header rule finds something is written as `[REDACTED]`, so a request sent
+with `Content-Type: application/4111111111111111` stores the header as `application/[REDACTED]`
+and its body as `[body omitted: 5 bytes, [REDACTED]]`. A content type that is not one
+`type/subtype` with well-formed parameters is written as `unreadable content type`.
 
 ### Headers
 
@@ -429,7 +440,13 @@ and the time that a request or a log message can use:
 - A log message is redacted up to ``LogStore/maximumRedactedMessageLength`` (1 MiB of Unicode
   scalars), on the thread that logs it. A longer message is redacted up to its last line break
   before that length, and the rest of it is hidden.
-- A text longer than 2^28 − 1 Unicode scalars (256 Mi) is hidden whole.
+- A text longer than 2^28 − 1 Unicode scalars (268,435,455) is not read and is hidden whole: free
+  text, a kept header value, a query name or value, a JSON string or name, a form name or value,
+  a multipart part, field name or `Content-Length` and a recorded error description of that
+  length are each recorded as `[REDACTED]`, and such a path segment as `:id`, with the segment
+  after it. Nothing of it shows. Through 2.1.1 such a text was recorded with only its first
+  scalars hidden (fixed in 2.1.2). A log message is redacted up to 1 MiB and a body over 16 MiB is
+  omitted, so neither reaches this limit.
 - JSON in a line of free text is parsed when it is at most 65,536 scalars long. Longer JSON cuts
   the text at its first bracket, as JSON that does not parse does.
 - JSON objects and arrays may be open ``RedactionPolicy/maximumJSONDepth`` (64) levels deep in

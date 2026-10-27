@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@4c0211705a697c58b05bc4732f79b3b6beb39a9b status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 857 tests de Swift Testing en macOS y 854 en un simulador de iOS. Las solicitudes van
+- **Probado** — 880 tests de Swift Testing en macOS y 877 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -75,7 +75,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Pégala en el campo de búsqueda de la esquina superior derecha de la ventana. Deja **Dependency Rule**
-en **Up to Next Major Version** desde `2.1.1` y haz clic en **Add Package**. En la ventana siguiente,
+en **Up to Next Major Version** desde `2.1.2` y haz clic en **Add Package**. En la ventana siguiente,
 elige el target de tu app junto a **iOSDevelopmentTools** y vuelve a hacer clic en **Add Package**.
 
 **2. Importa el módulo**
@@ -132,7 +132,7 @@ O añádelo a las `dependencies` de tu `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.2")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -220,7 +220,9 @@ func configureNetworkLogger() {
   tienen su valor oculto por defecto.
 - **Los cuerpos que no se pueden analizar** (un tipo de contenido desconocido o ausente, JSON o
   multipart mal formado, un cuerpo cortado en el límite de tamaño) se sustituyen por una nota como
-  `[body omitted: 512 bytes, application/xml]`.
+  `[body omitted: 512 bytes, application/xml]`. El tipo de la nota, como el de una parte multipart,
+  se lee como su cabecera: un tipo en el que la regla de cabeceras encuentra algo se escribe como
+  `[REDACTED]` (`application/4111111111111111` da `[body omitted: 5 bytes, [REDACTED]]`).
 - **Los mensajes de registro** se guardan hasta su primer disparador: un nombre secreto, una clave
   que no está en la lista permitida (`status`, `method`, `path`, `duration_ms` y `count` por
   defecto; añade las tuyas con `allowedTextKeys`), un carácter fuera de ASCII que no es una letra,
@@ -259,10 +261,11 @@ una sola letra, marca o cifra sin forma ASCII cuenta como cualquier letra, así 
 Mantén los secretos fuera de las solicitudes que registras y de los mensajes de registro desde el
 principio, y prefiere el registro estructurado.
 
-Dos límites más forman parte de ese modelo. **Límite de coste:** todos los documentos anidados
+Tres límites más forman parte de ese modelo. **Límite de coste:** todos los documentos anidados
 en una entrada (JSON dentro de una cadena, una URL en un texto) leen juntos como mucho cuatro veces
 la longitud de la entrada; pasado ese presupuesto, la cadena que contiene el siguiente documento se
-oculta entera. **Los formatos de varias líneas** no necesitan nada especial: un `<key>` de property
+oculta entera. **Límite de longitud:** un texto de más de 2^28 − 1 escalares Unicode (268.435.455)
+no se lee y se oculta entero. **Los formatos de varias líneas** no necesitan nada especial: un `<key>` de property
 list en su propia línea, un JSON repartido en varias líneas y un cuerpo multipart escrito como
 texto se ocultan desde el primer disparador hasta el final del texto, así que el valor queda oculto
 esté donde esté.

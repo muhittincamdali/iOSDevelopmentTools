@@ -254,6 +254,8 @@ extension RedactionPolicy {
         guard let decoded = segment.removingPercentEncoding else { return PathSegmentReading(hides: true, isLabel: true) }
         let scalars = Array(decoded.unicodeScalars)
         guard !scalars.isEmpty else { return PathSegmentReading(hides: false, isLabel: false) }
+        // A segment longer than the policy reads cannot be read: it is hidden, and so is the next.
+        guard readsText(ofLength: scalars.count) else { return PathSegmentReading(hides: true, isLabel: true) }
         let isIdentifier = UUID(uuidString: decoded) != nil || Self.isIdentifierShaped(scalars)
         guard !Self.isQuietWord(scalars, names: compatibility.secretNames) else { return PathSegmentReading(hides: isIdentifier, isLabel: false) }
         let text = NormalizedText(scalars, compatibility: compatibility)

@@ -33,25 +33,29 @@ extension RedactionPolicy {
         let naming = NamingFields(multipart.parts.lazy.map(Self.namingField), compatibility: compatibility)
         var output = ""
         for (index, part) in multipart.parts.enumerated() {
+            // The part's type is read once, for its `Content-Type` line and the note of its content.
+            let shownType = part.contentType.map { shownEssence(of: $0, nesting: nesting, compatibility: compatibility) }
             output += "--\(boundary)\r\n"
-            output += renderedHeaders(of: part, nesting: nesting, compatibility: compatibility).map { $0 + "\r\n" }.joined()
+            output += renderedHeaders(of: part, shownType: shownType, nesting: nesting, compatibility: compatibility).map { $0 + "\r\n" }.joined()
             let hidesValue = naming.hidesValue(at: index, of: Self.namingField(part))
-            output += "\r\n" + (hidesValue ? Self.replacement : redactedContent(of: part, nesting: nesting, compatibility: compatibility)) + "\r\n"
+            let content = hidesValue ? Self.replacement : redactedContent(of: part, shownType: shownType, nesting: nesting, compatibility: compatibility)
+            output += "\r\n" + content + "\r\n"
         }
         return output + "--\(boundary)--"
     }
 
     /// The disposition with only the field name, read as free text; the content type as
-    /// `type/subtype`; other headers by name when the name is one of ``namedPartHeaders`` and as
+    /// `shownType`, the part's `type/subtype` as ``shownEssence(of:nesting:compatibility:)``
+    /// writes it; other headers by name when the name is one of ``namedPartHeaders`` and as
     /// ``replacement`` otherwise, their values hidden unless they are kept, and a kept value
     /// written by its form (see ``keptValue(ofHeader:_:nesting:compatibility:)``). A file name is
     /// never written. Header names are keys of the part: the app or a library writes them into the
     /// body, so a name outside the list, such as one that holds a card number or a token, is never
     /// written.
-    private func renderedHeaders(of part: MultipartBody.Part, nesting: Nesting, compatibility: CompatibilityText) -> [String] {
+    private func renderedHeaders(of part: MultipartBody.Part, shownType: String?, nesting: Nesting, compatibility: CompatibilityText) -> [String] {
         let fieldName = redactedName(part.name, nesting: nesting, compatibility: compatibility)
         var lines = ["Content-Disposition: form-data; name=\"\(Self.quotedStringContent(fieldName))\""]
-        if let contentType = part.contentType { lines.append("Content-Type: " + contentType.essence) }
+        if let shownType { lines.append("Content-Type: " + shownType) }
         for header in part.headers {
             let name = header.name.lowercased()
             guard name != "content-disposition", name != "content-type" else { continue }
@@ -84,18 +88,20 @@ extension RedactionPolicy {
 
     /// The content of a part, read as a body one level inside the multipart body. A part is a
     /// document found in the body, so it takes its length from the reading budget, and is omitted
-    /// when the budget does not cover it.
-    private func redactedContent(of part: MultipartBody.Part, nesting: Nesting, compatibility: CompatibilityText) -> String {
+    /// when the budget does not cover it. The note of an omitted part names `shownType`, the
+    /// part's type as its `Content-Type` line writes it, or the type a part without one is read as.
+    private func redactedContent(of part: MultipartBody.Part, shownType: String?, nesting: Nesting, compatibility: CompatibilityText) -> String {
         if hidesValue(ofKey: part.name.unicodeScalars) { return Self.replacement }
         let defaultType = part.filename == nil ? "text/plain" : "application/octet-stream"
-        guard let type = part.contentType ?? MediaType(defaultType) else { return Self.omitted(part.content.count, defaultType) }
+        let noteType = shownType ?? defaultType
+        guard let type = part.contentType ?? MediaType(defaultType) else { return Self.omitted(part.content.count, noteType) }
         guard part.filename == nil, !type.essence.hasPrefix("multipart/"), Self.leavesContentAsSent(part),
               let inner = nesting.enteringDocument(), inner.reads(Self.scalarCount(part.content))
         else {
-            return Self.omitted(part.content.count, type.essence)
+            return Self.omitted(part.content.count, noteType)
         }
         guard let (content, _) = redact(body: Data(part.content), as: type, nesting: inner, compatibility: compatibility) else {
-            return Self.omitted(part.content.count, type.essence)
+            return Self.omitted(part.content.count, noteType)
         }
         return String(decoding: content, as: UTF8.self)
     }

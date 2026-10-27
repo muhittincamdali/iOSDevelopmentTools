@@ -84,9 +84,7 @@ struct RedactionSpanOrderTests {
         #expect(span.end == 7)
         #expect(span.kind == .all)
         #expect(MemoryLayout<Span>.stride == 24)
-        var moved = span
-        moved.start = 3
-        moved.end = RedactionPolicy.maximumTextLength
-        #expect(moved.start == 3 && moved.end == RedactionPolicy.maximumTextLength && moved.kind == .all)
+        let other = Span(start: 3, end: RedactionPolicy.maximumTextLength, kind: .all, replacement: "x")
+        #expect(other.start == 3 && other.end == RedactionPolicy.maximumTextLength && other.kind == .all)
     }
 }

@@ -2,41 +2,85 @@
 extension RedactionPolicy {
     /// A replacement, in offsets of the original scalars, and the kinds of what it hides. The two
     /// offsets and the kinds are packed into 64 bits, so a span takes 24 bytes, not 40: a megabyte
-    /// of short findings (`a@b.cd `, `1:2@`) holds up to a quarter of a million of them. Every
-    /// text that is read has fewer than 2^28 scalars (see ``maximumTextLength``).
+    /// of short findings (`a@b.cd `, `1:2@`) holds up to a quarter of a million of them. A text
+    /// longer than ``maximumOffset`` scalars is hidden whole before any span is made (see
+    /// ``TextFindings/wholeText``), so the offsets of a text that is read fit. A span made with an
+    /// offset that does not fit fails closed: it hides the whole text it is applied to with
+    /// ``RedactionPolicy/replacement``. Keeping the low 28 bits of such an offset, as 2.1.1 did,
+    /// ended the span near the start of the text and wrote the rest of it as it was.
+    ///
+    /// A span is checked once, when it is made, and its offsets cannot be set afterwards: a setter
+    /// would make the new span from the offsets the old one reports, and a span that hides the
+    /// whole text reports 0 and `Int.max`, so setting its end would make it hide only the
+    /// scalars before the new end.
     struct Span {
-        var replacement: String
-        /// The start in the low 28 bits, the end in the next 28 and the kinds in the top 8.
-        private var packed: UInt64
+        let replacement: String
+        /// The start in the low 28 bits, the end in the next 28, the kinds in the next 7 and, in
+        /// the top bit, whether the span hides the whole text.
+        private let packed: UInt64
 
         init(start: Int, end: Int, kind: Kinds, replacement: String) {
+            let kinds = UInt64(kind.rawValue & Self.kindMask) << 56
+            guard Self.fits(start), Self.fits(end) else {
+                self.replacement = RedactionPolicy.replacement
+                packed = Self.wholeTextFlag | kinds
+                return
+            }
             self.replacement = replacement
-            packed = Self.offset(start) | Self.offset(end) << 28 | UInt64(UInt8(truncatingIfNeeded: kind.rawValue)) << 56
+            packed = UInt64(start) | UInt64(end) << 28 | kinds
         }
+
+        /// The largest offset a span holds: 2^28 − 1.
+        static let maximumOffset = Int(offsetMask)
 
         private static let offsetMask: UInt64 = (1 << 28) - 1
+        private static let kindMask = 0x7F
+        private static let wholeTextFlag: UInt64 = 1 << 63
 
-        private static func offset(_ value: Int) -> UInt64 {
-            UInt64(clamping: value) & offsetMask
+        private static func fits(_ offset: Int) -> Bool {
+            offset >= 0 && offset <= maximumOffset
         }
 
-        var start: Int {
-            get { Int(packed & Self.offsetMask) }
-            set { packed = packed & ~Self.offsetMask | Self.offset(newValue) }
-        }
+        /// Whether the span hides the whole text, however long it is: an offset it was made with
+        /// did not fit.
+        var hidesWholeText: Bool { packed & Self.wholeTextFlag != 0 }
 
-        var end: Int {
-            get { Int(packed >> 28 & Self.offsetMask) }
-            set { packed = packed & ~(Self.offsetMask << 28) | Self.offset(newValue) << 28 }
-        }
+        /// The offset of the first scalar replaced; 0 for a span that hides the whole text.
+        var start: Int { hidesWholeText ? 0 : Int(packed & Self.offsetMask) }
 
-        var kind: Kinds { Kinds(rawValue: Int(packed >> 56)) }
+        /// The offset after the last scalar replaced. A span that hides the whole text ends at
+        /// `Int.max`, past every text, so ``merged(_:)`` joins every other span into it and
+        /// ``replacing(_:in:)`` writes ``RedactionPolicy/replacement`` alone.
+        var end: Int { hidesWholeText ? .max : Int(packed >> 28 & Self.offsetMask) }
+
+        var kind: Kinds { Kinds(rawValue: Int(packed >> 56) & Self.kindMask) }
+    }
+
+    /// What the free-text rule finds in a text.
+    enum TextFindings {
+        /// Nothing: the text is written as it is.
+        case none
+        /// The text is hidden whole and written as ``RedactionPolicy/replacement``, without a
+        /// ``Span``: it is longer than the policy reads (see ``maximumTextLength``), a document it
+        /// is in has no reading budget left for it, or the scanner cannot read it.
+        case wholeText
+        /// The findings, in order and without overlaps; never empty.
+        case spans([Span])
+
+        /// Whether nothing was found.
+        var isEmpty: Bool {
+            if case .none = self { return true }
+            return false
+        }
     }
 
     /// The scalars with every span replaced; `spans` are in order and do not overlap. The UTF-8 of
     /// the output is counted first and written once into the string, so the output is never held
-    /// twice.
+    /// twice. A span that ends past the scalars hides all of them, and the output is
+    /// ``replacement`` alone: one that hides the whole text, or one made for another text, whose
+    /// offsets say nothing safe about this one.
     static func replacing(_ spans: [Span], in scalars: [Unicode.Scalar]) -> String {
+        guard Self.allEnd(spans, within: scalars.count) else { return replacement }
         // Appending to a String.UnicodeScalarView piece by piece copies what is already there,
         // which made many matches take quadratic time.
         func utf8Count(_ range: Range<Int>) -> Int {
@@ -79,6 +123,12 @@ extension RedactionPolicy {
             append(position..<scalars.count)
             return written
         }
+    }
+
+    /// Whether every span ends inside a text of `scalarCount` scalars, so that its offsets are
+    /// ones of that text; a span that hides the whole text never does.
+    static func allEnd(_ spans: [Span], within scalarCount: Int) -> Bool {
+        spans.allSatisfy { $0.end <= scalarCount }
     }
 
     /// The spans in order and without overlaps. A span inside a mask (an address, a card number)
