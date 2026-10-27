@@ -26,8 +26,7 @@ extension RedactionPolicy {
     func redactedHeaderValue(name: String, value: String, compatibility: CompatibilityText) -> String {
         guard !hidesHeader(named: name), !Self.startsWithAuthenticationScheme(value) else { return Self.replacement }
         let scalars = Array(value.unicodeScalars)
-        let spans = textSpans(in: scalars, compatibility: compatibility, nesting: .text(length: scalars.count))
-        return spans.isEmpty ? value : Self.replacing(spans, in: scalars)
+        return redactedText(scalars, compatibility: compatibility, nesting: .text(length: scalars.count))?.text ?? value
     }
 
     /// This policy, reading free text on after ``allowedTextKeys`` and the parameters of
