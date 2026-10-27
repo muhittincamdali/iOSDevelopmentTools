@@ -265,22 +265,25 @@ public struct RedactionPolicy: Sendable, Hashable {
 
     /// The findings in a text, in order and without overlaps, as ``redact(text:)`` finds them.
     func matches(in text: String) -> [Match] {
+        let whole = [Match(kind: .secretFields, range: text.startIndex..<text.endIndex)]
+        let length = text.unicodeScalars.count
+        // A text longer than the policy reads is one match before a copy of its scalars is made.
+        guard readsText(ofLength: length) else { return whole }
         let findings = {
             let scalars = Array(text.unicodeScalars)
-            return textSpans(in: scalars, compatibility: readings(length: scalars.count), nesting: .text(length: scalars.count))
+            return textSpans(in: scalars, compatibility: readings(length: length), nesting: .text(length: length))
         }()
-        guard case .spans(var spans) = findings else {
-            return findings.isEmpty ? [] : [Match(kind: .secretFields, range: text.startIndex..<text.endIndex)]
-        }
+        guard case .spans(var spans) = findings else { return findings.isEmpty ? [] : whole }
+        // A span that ends past the text hides all of it, as in ``replacing(_:in:)``.
+        guard Self.allEnd(spans, within: length) else { return whole }
         spans.removeAll { $0.kind.isEmpty }
         // The spans are in order and do not overlap, so one walk through the scalars finds the
-        // index of each start and end; no index is kept for any other scalar. A span ends at the
-        // end of the text at the latest.
+        // index of each start and end; no index is kept for any other scalar.
         let view = text.unicodeScalars
         var current = view.startIndex
         var offset = 0
         func index(at target: Int) -> String.Index {
-            current = view.index(current, offsetBy: target - offset, limitedBy: view.endIndex) ?? view.endIndex
+            current = view.index(current, offsetBy: target - offset)
             offset = target
             return current
         }

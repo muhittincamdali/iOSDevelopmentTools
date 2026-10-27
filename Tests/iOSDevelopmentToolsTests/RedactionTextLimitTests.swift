@@ -47,12 +47,24 @@ struct RedactionSpanOffsetTests {
         #expect(RedactionPolicy.replacing([short], in: Array("abcdefgh".unicodeScalars)) == "abcxgh")
     }
 
-    @Test("hides the whole text when an offset set later does not fit")
-    func setterFailsClosed() {
-        var span = RedactionPolicy.Span(start: 3, end: 6, kind: .cardNumbers, replacement: "x")
-        span.end = Self.beyond + 100
-        #expect(span.hidesWholeText && span.kind == .cardNumbers)
-        #expect(RedactionPolicy.replacing([span], in: Self.scalars) == RedactionPolicy.replacement)
+    /// A setter made a new span from the offsets the old one reported, and a span that hides the
+    /// whole text reports 0 and `Int.max`: setting its end to an offset that fits made it hide
+    /// only the scalars before that offset.
+    @Test("keeps the offsets it was made with: neither can be set afterwards")
+    func offsetsAreFixed() {
+        #expect(!(\RedactionPolicy.Span.start as AnyKeyPath is WritableKeyPath<RedactionPolicy.Span, Int>))
+        #expect(!(\RedactionPolicy.Span.end as AnyKeyPath is WritableKeyPath<RedactionPolicy.Span, Int>))
+    }
+
+    /// A span made for a longer text has offsets that mean nothing in this one; what it shows of
+    /// this text is not known to be safe.
+    @Test("hides the whole text when a span ends past it", arguments: [(5, 19), (17, 40), (18, 19), (0, 19)])
+    func spanPastTheText(start: Int, end: Int) {
+        let scalars = Array("status=200 hunter2".unicodeScalars)
+        let span = RedactionPolicy.Span(start: start, end: end, kind: .secretFields, replacement: RedactionPolicy.replacement)
+        let inside = RedactionPolicy.Span(start: 0, end: 2, kind: .cardNumbers, replacement: "x")
+        #expect(RedactionPolicy.replacing([span], in: scalars) == RedactionPolicy.replacement)
+        #expect(RedactionPolicy.replacing(RedactionPolicy.merged([inside, span]), in: scalars) == RedactionPolicy.replacement)
     }
 
     @Test("the limits fit the span: the longest text, every body, a log message and the kinds")
