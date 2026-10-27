@@ -18,9 +18,11 @@ These are the redaction rules this package shares with iOSSecurityTools and
 iOS-Networking-Architecture-Pro, written down as one specification and tested with one shared
 corpus of review probes. Release 2.1.0 followed an earlier generation of that specification, and
 every input that 2.1.0 read differently is kept as a test. 2.1.1 follows its current revision
-(2.1-r2) except for one rule: a text longer than the reading limit was not hidden whole (see
-"Limits" below). 2.1.2 follows that rule too, and its required test set is ported to this
-package's API.
+(2.1-r2) except for two rules: a text longer than the reading limit was not hidden whole (see
+"Limits" below), and the type of a content type, written in the note of an omitted body and in a
+multipart part's `Content-Type` line, did not go through the value detectors and the secret-name
+rule that its header copy goes through (principle P4: every detector reads every input path).
+2.1.2 follows both, and its required test set is ported to this package's API.
 
 ### A safety net, not a guarantee
 
@@ -219,7 +221,10 @@ rule.
 - **Multipart form data** is read only with a single unquoted boundary of at most 70 characters,
   and only when every `--boundary` in it is a delimiter line after a CRLF and every part header
   ends with CRLF. Every part is written again with its field name and its type, and the body ends
-  at its closing delimiter. A part header name is a key of the part, so of the other part headers
+  at its closing delimiter. The type is written as `type/subtype` in lowercase, without its
+  parameters, and only when the header rule (see Headers below) finds nothing in it as it was
+  sent; otherwise it is written as `[REDACTED]`, in the part's `Content-Type` line and in the note
+  of its content (`Content-Type: text/x-pin-4831` is written as `Content-Type: [REDACTED]`). A part header name is a key of the part, so of the other part headers
   only `Content-Length` and `Content-Transfer-Encoding` are written with their value, and only in
   their form, which is not read as free text: a length of ASCII digits in which the value
   detectors find nothing (`Content-Length: 12`, but not a card number), and one of `7bit`,
@@ -240,7 +245,11 @@ that does not parse completely and a body larger than ``RedactionPolicy/maximumB
 default) are not stored, and neither is a body that was cut off at
 ``NetworkLogger/Configuration/maximumBodySize``. A note takes their place, such as
 `[body omitted: 512 bytes, application/xml]` or `[body omitted: 22 bytes, no content type]`, and
-the body is marked ``RedactionOutcome/omitted``.
+the body is marked ``RedactionOutcome/omitted``. The type in a note is read as a part's type is:
+a type in which the header rule finds something is written as `[REDACTED]`, so a request sent
+with `Content-Type: application/4111111111111111` stores the header as `application/[REDACTED]`
+and its body as `[body omitted: 5 bytes, [REDACTED]]`. A content type that is not one
+`type/subtype` with well-formed parameters is written as `unreadable content type`.
 
 ### Headers
 
