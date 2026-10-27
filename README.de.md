@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@e5ddb4726a7921a6b9435f4a53fae2e13f81ddc9 status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-de-light.svg" alt="iOSDevelopmentTools: Netzwerkanfragen, Logs und Gerätestatus deiner App in einer In-App-Konsole prüfen – Geheimnisse werden geschwärzt."></picture></p>
@@ -59,7 +59,7 @@ und ist für Swift 6 Strict Concurrency geschrieben.
 - **Logs und Geräte-Report** — `LogStore` speichert Meldungen mit Level und Kategorie und schreibt sie
   zusätzlich in das Unified Logging System; `DeviceSnapshot` meldet Version, Betriebssystem, Modell,
   Speicherbedarf, thermischen Zustand und ob ein Debugger angehängt ist.
-- **Getestet** — 873 Swift-Testing-Tests auf macOS und 870 auf einem iOS-Simulator. Anfragen laufen von
+- **Getestet** — 880 Swift-Testing-Tests auf macOS und 877 auf einem iOS-Simulator. Anfragen laufen von
   einer App-Session über die Aufzeichnung zu einem Stub-Server, und die Tests prüfen, was der Server
   erhalten hat, was die App erhalten hat und was gespeichert wurde.
 
@@ -221,7 +221,9 @@ func configureNetworkLogger() {
   `şifre`), haben standardmäßig verborgene Werte.
 - **Bodys, die sich nicht parsen lassen** (ein unbekannter oder fehlender Content-Type, fehlerhaftes
   JSON oder Multipart, ein an der Größengrenze abgeschnittener Body), werden durch einen Hinweis wie
-  `[body omitted: 512 bytes, application/xml]` ersetzt.
+  `[body omitted: 512 bytes, application/xml]` ersetzt. Der Typ im Hinweis wird wie der Typ eines
+  Multipart-Teils so gelesen wie sein Header: Ein Typ, in dem die Header-Regel etwas findet, wird
+  als `[REDACTED]` geschrieben (`application/4111111111111111` ergibt `[body omitted: 5 bytes, [REDACTED]]`).
 - **Log-Meldungen** werden bis zu ihrem ersten Auslöser gespeichert: Ein geheimer Name, ein
   Schlüssel, der nicht auf der Allowlist steht (standardmäßig `status`, `method`, `path`,
   `duration_ms` und `count`; eigene fügen Sie mit `allowedTextKeys` hinzu), ein Zeichen außerhalb

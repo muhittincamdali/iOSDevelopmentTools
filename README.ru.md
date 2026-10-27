@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@e5ddb4726a7921a6b9435f4a53fae2e13f81ddc9 status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ru-light.svg" alt="iOSDevelopmentTools: Сетевые запросы, логи и состояние устройства вашего приложения во встроенной консоли, секреты скрыты."></picture></p>
@@ -59,7 +59,7 @@ concurrency в Swift 6.
 - **Логи и отчёт об устройстве** — `LogStore` хранит сообщения с уровнем и категорией и дополнительно
   записывает их в единую систему журналирования (unified logging); `DeviceSnapshot` сообщает версию,
   ОС, модель, объём занятой памяти, тепловое состояние и подключён ли отладчик.
-- **Протестировано** — 873 тестов Swift Testing на macOS и 870 в симуляторе iOS. Запросы идут из
+- **Протестировано** — 880 тестов Swift Testing на macOS и 877 в симуляторе iOS. Запросы идут из
   сессии приложения через перехват на stub-сервер, а тесты проверяют, что получил сервер, что получило
   приложение и что было сохранено.
 
@@ -219,7 +219,9 @@ func configureNetworkLogger() {
   умолчанию скрывают своё значение.
 - **Тела, которые нельзя разобрать** (неизвестный или отсутствующий тип содержимого, повреждённый
   JSON или multipart, тело, обрезанное на пределе размера), заменяются пометкой вроде
-  `[body omitted: 512 bytes, application/xml]`.
+  `[body omitted: 512 bytes, application/xml]`. Тип в пометке, как и тип части multipart, читается
+  так же, как его заголовок: тип, в котором правило заголовков что-то находит, записывается как
+  `[REDACTED]` (`application/4111111111111111` даёт `[body omitted: 5 bytes, [REDACTED]]`).
 - **Сообщения журнала** сохраняются до первого триггера: секретное имя, ключ не из списка
   разрешённых (по умолчанию `status`, `method`, `path`, `duration_ms` и `count`; свои ключи
   добавляются через `allowedTextKeys`), символ вне ASCII, который не является буквой, диакритикой

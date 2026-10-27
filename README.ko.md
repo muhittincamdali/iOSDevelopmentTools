@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@e5ddb4726a7921a6b9435f4a53fae2e13f81ddc9 status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -56,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 873개, iOS 시뮬레이터에서 870개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 880개, iOS 시뮬레이터에서 877개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -208,7 +208,9 @@ func configureNetworkLogger() {
 - **순수 ASCII가 아닌 키**(이스케이프를 풀고 NFKC를 적용하고 대소문자를 맞춘 뒤 기준, 예를 들어
   키릴 문자 `а`가 들어간 `pаssword`, `pass\u200Dword`, `şifre`)의 값은 기본적으로 가려집니다.
 - **파싱할 수 없는 본문**(알 수 없거나 없는 Content-Type, 잘못된 JSON이나 multipart, 크기 한도에서
-  잘린 본문)은 `[body omitted: 512 bytes, application/xml]` 같은 안내 문구로 바뀝니다.
+  잘린 본문)은 `[body omitted: 512 bytes, application/xml]` 같은 안내 문구로 바뀝니다. 안내 문구의
+  타입은 multipart 파트의 타입과 마찬가지로 헤더와 같은 규칙으로 읽습니다. 헤더 규칙이 무언가를 찾은
+  타입은 `[REDACTED]`로 기록됩니다(`application/4111111111111111`은 `[body omitted: 5 bytes, [REDACTED]]`가 됩니다).
 - **로그 메시지**는 첫 번째 트리거까지만 보관됩니다. 비밀 이름, 허용 목록에 없는 키(기본값은
   `status`, `method`, `path`, `duration_ms`, `count`이며 `allowedTextKeys`로 직접 추가할 수
   있습니다), 문자·결합 부호·숫자가 아닌 ASCII 밖의 문자(`꞉`, `…`, 이모지, U+00A0 같은 공백,

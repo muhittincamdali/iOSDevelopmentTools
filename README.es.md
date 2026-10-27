@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@e5ddb4726a7921a6b9435f4a53fae2e13f81ddc9 status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-es-light.svg" alt="iOSDevelopmentTools: Solicitudes de red, registros y estado del dispositivo de tu app en una consola integrada, con secretos ocultos."></picture></p>
@@ -60,7 +60,7 @@ escrito para la strict concurrency de Swift 6.
   escribe en el sistema de registro unificado (unified logging); `DeviceSnapshot` informa de la
   versión, el sistema operativo, el modelo, el consumo de memoria, el estado térmico y si hay un
   depurador conectado.
-- **Probado** — 873 tests de Swift Testing en macOS y 870 en un simulador de iOS. Las solicitudes van
+- **Probado** — 880 tests de Swift Testing en macOS y 877 en un simulador de iOS. Las solicitudes van
   de una sesión de la app, a través de la captura, a un servidor stub, y los tests comprueban qué
   recibió el servidor, qué recibió la app y qué se guardó.
 
@@ -220,7 +220,9 @@ func configureNetworkLogger() {
   tienen su valor oculto por defecto.
 - **Los cuerpos que no se pueden analizar** (un tipo de contenido desconocido o ausente, JSON o
   multipart mal formado, un cuerpo cortado en el límite de tamaño) se sustituyen por una nota como
-  `[body omitted: 512 bytes, application/xml]`.
+  `[body omitted: 512 bytes, application/xml]`. El tipo de la nota, como el de una parte multipart,
+  se lee como su cabecera: un tipo en el que la regla de cabeceras encuentra algo se escribe como
+  `[REDACTED]` (`application/4111111111111111` da `[body omitted: 5 bytes, [REDACTED]]`).
 - **Los mensajes de registro** se guardan hasta su primer disparador: un nombre secreto, una clave
   que no está en la lista permitida (`status`, `method`, `path`, `duration_ms` y `count` por
   defecto; añade las tuyas con `allowedTextKeys`), un carácter fuera de ASCII que no es una letra,

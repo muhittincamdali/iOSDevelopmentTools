@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 873 Swift Testing tests on macOS and 870 on an iOS simulator. Requests travel
+- **Tested** — 880 Swift Testing tests on macOS and 877 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -212,7 +212,9 @@ func configureNetworkLogger() {
   (`pаssword` with a Cyrillic `а`, `pass\u200Dword`, `şifre`) have their values hidden by default.
 - **Bodies that cannot be parsed** (an unknown or missing content type, malformed JSON or
   multipart, a body cut off at the size limit) are replaced by a note such as
-  `[body omitted: 512 bytes, application/xml]`.
+  `[body omitted: 512 bytes, application/xml]`. The type in the note, like a multipart part's type,
+  is read as its header is: one in which the header rule finds something is written as
+  `[REDACTED]` (`application/4111111111111111` gives `[body omitted: 5 bytes, [REDACTED]]`).
 - **Log messages** are kept up to their first trigger: a secret name, a key that is not on the
   allowlist (`status`, `method`, `path`, `duration_ms` and `count` by default; add yours with
   `allowedTextKeys`), a character outside ASCII that is not a letter, mark or digit (`꞉`, `…`,

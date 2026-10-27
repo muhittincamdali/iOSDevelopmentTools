@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@e5ddb4726a7921a6b9435f4a53fae2e13f81ddc9 status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -52,7 +52,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 873 个 Swift Testing 测试，iOS 模拟器上有 870 个。请求从应用的会话
+- **经过测试** — macOS 上有 880 个 Swift Testing 测试，iOS 模拟器上有 877 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -203,7 +203,9 @@ func configureNetworkLogger() {
 - **不是纯 ASCII 的键**（在解码转义、应用 NFKC 并统一大小写之后，例如含西里尔字母 `а` 的
   `pаssword`、`pass\u200Dword`、`şifre`）的值默认会被隐藏。
 - **无法解析的消息体**（未知或缺失的内容类型、格式错误的 JSON 或 multipart、在大小上限处被截断的
-  消息体）会被替换为 `[body omitted: 512 bytes, application/xml]` 这样的说明。
+  消息体）会被替换为 `[body omitted: 512 bytes, application/xml]` 这样的说明。说明中的类型与
+  multipart 部分的类型一样，按其标头的规则读取：标头规则在其中发现内容的类型会写成 `[REDACTED]`
+  （`application/4111111111111111` 得到 `[body omitted: 5 bytes, [REDACTED]]`）。
 - **日志消息**只保留到第一个触发点之前：秘密名称、不在允许列表中的键（默认是 `status`、`method`、
   `path`、`duration_ms` 和 `count`，可用 `allowedTextKeys` 添加自己的键）、ASCII 之外且不是字母、
   附加符号或数字的字符（`꞉`、`…`、表情符号、U+00A0 这样的空白，以及兼容性规范化读作标点的字符，

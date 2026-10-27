@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@e5ddb4726a7921a6b9435f4a53fae2e13f81ddc9 status=reviewed -->
+<!-- i18n-source: README.md@6a2fd145c01be99a7a207f7e8a45812f5f3761ef status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-fr-light.svg" alt="iOSDevelopmentTools: Requêtes réseau, journaux et état de l'appareil de votre app dans une console intégrée, secrets masqués."></picture></p>
@@ -61,7 +61,7 @@ n'a aucune dépendance et est écrit pour la strict concurrency de Swift 6.
   les écrit aussi dans le système de journalisation unifié (unified logging) ; `DeviceSnapshot`
   indique la version, l'OS, le modèle, l'empreinte mémoire, l'état thermique et si un débogueur est
   attaché.
-- **Testé** — 873 tests Swift Testing sur macOS et 870 sur un simulateur iOS. Les requêtes passent d'une
+- **Testé** — 880 tests Swift Testing sur macOS et 877 sur un simulateur iOS. Les requêtes passent d'une
   session de l'app à un serveur stub via la capture, et les tests vérifient ce que le serveur a reçu,
   ce que l'app a reçu et ce qui a été stocké.
 
@@ -224,7 +224,9 @@ func configureNetworkLogger() {
   valeur masquée par défaut.
 - **Les corps impossibles à analyser** (un type de contenu inconnu ou absent, du JSON ou du
   multipart mal formé, un corps coupé à la limite de taille) sont remplacés par une note comme
-  `[body omitted: 512 bytes, application/xml]`.
+  `[body omitted: 512 bytes, application/xml]`. Le type de la note, comme celui d'une partie
+  multipart, est lu comme son en-tête : un type dans lequel la règle des en-têtes trouve quelque
+  chose est écrit `[REDACTED]` (`application/4111111111111111` donne `[body omitted: 5 bytes, [REDACTED]]`).
 - **Les messages de journal** sont conservés jusqu'à leur premier déclencheur : un nom secret, une
   clé absente de la liste autorisée (`status`, `method`, `path`, `duration_ms` et `count` par
   défaut ; ajoutez les vôtres avec `allowedTextKeys`), un caractère hors ASCII qui n'est ni une
