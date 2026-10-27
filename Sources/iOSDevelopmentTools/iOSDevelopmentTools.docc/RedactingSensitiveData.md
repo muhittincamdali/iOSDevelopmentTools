@@ -432,11 +432,12 @@ and the time that a request or a log message can use:
   scalars), on the thread that logs it. A longer message is redacted up to its last line break
   before that length, and the rest of it is hidden.
 - A text longer than 2^28 − 1 Unicode scalars (268,435,455) is not read and is hidden whole: free
-  text, a kept header value, a query value, a JSON string or name, a form value and a multipart
-  part or field name of that length are each recorded as `[REDACTED]`, and such a path segment as
-  `:id`, with the segment after it. Nothing of it shows. Through 2.1.1 such a text was recorded
-  with only its first scalars hidden (fixed in 2.1.2). A log message is redacted up to 1 MiB and a
-  body over 16 MiB is omitted, so neither reaches this limit.
+  text, a kept header value, a query name or value, a JSON string or name, a form name or value,
+  a multipart part, field name or `Content-Length` and a recorded error description of that
+  length are each recorded as `[REDACTED]`, and such a path segment as `:id`, with the segment
+  after it. Nothing of it shows. Through 2.1.1 such a text was recorded with only its first
+  scalars hidden (fixed in 2.1.2). A log message is redacted up to 1 MiB and a body over 16 MiB is
+  omitted, so neither reaches this limit.
 - JSON in a line of free text is parsed when it is at most 65,536 scalars long. Longer JSON cuts
   the text at its first bracket, as JSON that does not parse does.
 - JSON objects and arrays may be open ``RedactionPolicy/maximumJSONDepth`` (64) levels deep in
