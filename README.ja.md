@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@4c0211705a697c58b05bc4732f79b3b6beb39a9b status=reviewed -->
+<!-- i18n-source: README.md@a2e2e7002287fab768218fc110e8d589839fa641 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ja-light.svg" alt="iOSDevelopmentTools: アプリのネットワークリクエスト、ログ、デバイスの状態をアプリ内コンソールで確認。機密情報は伏せ字になります。"></picture></p>
@@ -58,7 +58,7 @@ Swift 6 の strict concurrency に対応して書かれています。
 - **ログとデバイスレポート** — `LogStore` はレベルとカテゴリ付きのメッセージを保持し、統合ログ
   システム (unified logging) にも書き込みます。`DeviceSnapshot` はバージョン、OS、モデル、メモリ
   使用量、サーマルステート、デバッガーが接続されているかどうかを報告します。
-- **テスト済み** — macOS で 857 件、iOS シミュレーターで 854 件の Swift Testing テストがあります。
+- **テスト済み** — macOS で 870 件、iOS シミュレーターで 867 件の Swift Testing テストがあります。
   リクエストはアプリのセッションからキャプチャ層を通ってスタブサーバーに届き、テストではサーバーが
   受け取ったもの、アプリが受け取ったもの、保存されたものを検証します。
 
@@ -72,7 +72,7 @@ Xcode で **File › Add Package Dependencies…** を選び、リポジトリ�
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-ウィンドウ右上の検索フィールドに貼り付けます。**Dependency Rule** は `2.1.1` からの
+ウィンドウ右上の検索フィールドに貼り付けます。**Dependency Rule** は `2.1.2` からの
 **Up to Next Major Version** のままにして、**Add Package** をクリックします。次のウィンドウで
 **iOSDevelopmentTools** の横にあるアプリのターゲットを選び、もう一度 **Add Package** をクリックします。
 
@@ -129,7 +129,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.2")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -248,10 +248,11 @@ func configureNetworkLogger() {
 `passw〇rd hunter2`、`t၀ken hunter2`（ミャンマー数字の 0）は見つかります。そもそも記録する
 リクエストやログメッセージに秘密情報を含めず、構造化ログを使ってください。
 
-このモデルにはさらに 2 つの制限があります。**コストの上限:** 1 つの入力に入れ子になったすべての
+このモデルにはさらに 3 つの制限があります。**コストの上限:** 1 つの入力に入れ子になったすべての
 ドキュメント（文字列内の JSON、テキスト内の URL）は、合わせて入力の長さの最大 4 倍までしか
 読み取りません。この予算を超えると、次のドキュメントを含む文字列は丸ごとマスキングされます。
-**複数行のレイアウト**に特別な処理は要りません。独立した行にある property list の `<key>`、複数行に
+**長さの上限:** Unicode スカラー値が 2^28 − 1 個（268,435,455 個）を超えるテキストは読み取られず、
+丸ごとマスキングされます。**複数行のレイアウト**に特別な処理は要りません。独立した行にある property list の `<key>`、複数行に
 わたる JSON、テキストとして書かれた multipart ボディは、最初のトリガーからテキストの終わりまで
 マスキングされるため、値はどこに書かれていてもマスキングされます。
 

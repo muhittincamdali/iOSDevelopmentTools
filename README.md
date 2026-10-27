@@ -55,7 +55,7 @@ written for Swift 6 strict concurrency.
 - **Logs and device report** — `LogStore` keeps leveled, categorized messages and also writes
   them to the unified logging system; `DeviceSnapshot` reports version, OS, model, memory
   footprint, thermal state and whether a debugger is attached.
-- **Tested** — 857 Swift Testing tests on macOS and 854 on an iOS simulator. Requests travel
+- **Tested** — 870 Swift Testing tests on macOS and 867 on an iOS simulator. Requests travel
   from an app session through the capture to a stub server, and the tests check what the server
   received, what the app received and what was stored.
 
@@ -70,7 +70,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Paste it into the search field at the top right of the window. Leave **Dependency Rule** at
-**Up to Next Major Version** from `2.1.1`, then click **Add Package**. In the next window, choose
+**Up to Next Major Version** from `2.1.2`, then click **Add Package**. In the next window, choose
 your app target next to **iOSDevelopmentTools** and click **Add Package** again.
 
 **2. Import the module**
@@ -127,7 +127,7 @@ Or add it to the `dependencies` in your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.2")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -248,9 +248,10 @@ with no ASCII form counts as any letter, so `tͦken hunter2`,
 Keep secrets out of the requests you record and out of log messages in the first place, and prefer
 structured logging.
 
-Two more limits belong to that model. **Cost bound:** all the documents nested in one input
+Three more limits belong to that model. **Cost bound:** all the documents nested in one input
 (JSON in a string, a URL in text) read at most four times the input's length together; past that
-budget, the string that holds the next document is hidden whole. **Multi-line layouts** need
+budget, the string that holds the next document is hidden whole. **Length bound:** a text longer
+than 2^28 − 1 Unicode scalars (268,435,455) is not read and is hidden whole. **Multi-line layouts** need
 nothing special: a property list `<key>` on its own line, JSON spread over several lines and a
 multipart body written as text are hidden from the first trigger to the end of the text, so the
 value is hidden wherever it is written.

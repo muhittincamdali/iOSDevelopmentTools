@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@4c0211705a697c58b05bc4732f79b3b6beb39a9b status=reviewed -->
+<!-- i18n-source: README.md@a2e2e7002287fab768218fc110e8d589839fa641 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-ko-light.svg" alt="iOSDevelopmentTools: 앱의 네트워크 요청, 로그, 기기 상태를 앱 내 콘솔에서 확인하세요. 민감한 정보는 가려집니다."></picture></p>
@@ -56,7 +56,7 @@ Swift 6 strict concurrency에 맞춰 작성되었습니다.
 - **로그와 기기 리포트** — `LogStore`는 레벨과 카테고리가 있는 메시지를 보관하고 통합 로깅 시스템
   (unified logging)에도 기록합니다. `DeviceSnapshot`은 버전, OS, 모델, 메모리 사용량, 열 상태,
   디버거가 연결되어 있는지 여부를 보고합니다.
-- **테스트 완료** — macOS에서 Swift Testing 테스트 857개, iOS 시뮬레이터에서 854개를 실행합니다.
+- **테스트 완료** — macOS에서 Swift Testing 테스트 870개, iOS 시뮬레이터에서 867개를 실행합니다.
   요청은 앱 세션에서 캡처 계층을 거쳐 스텁 서버로 전달되며, 테스트는 서버가 받은 것, 앱이 받은 것,
   저장된 것을 확인합니다.
 
@@ -70,7 +70,7 @@ Xcode에서 **File › Add Package Dependencies…**를 선택하고 저장소 U
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-창 오른쪽 위의 검색 필드에 붙여 넣으세요. **Dependency Rule**은 `2.1.1`부터 시작하는
+창 오른쪽 위의 검색 필드에 붙여 넣으세요. **Dependency Rule**은 `2.1.2`부터 시작하는
 **Up to Next Major Version**으로 둔 채 **Add Package**를 클릭합니다. 다음 창에서
 **iOSDevelopmentTools** 옆에 있는 앱 타깃을 선택하고 **Add Package**를 다시 클릭하세요.
 
@@ -127,7 +127,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.2")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -240,9 +240,10 @@ func configureNetworkLogger() {
 `tͦken hunter2`, `passw〇rd hunter2`, `t၀ken hunter2`(미얀마 숫자 0)는 찾습니다. 애초에 기록하는 요청과 로그 메시지에 비밀 값을 넣지 말고, 구조화된
 로깅을 쓰세요.
 
-이 모델에는 두 가지 한계가 더 있습니다. **비용 상한:** 한 입력 안에 중첩된 모든 문서(문자열 속
+이 모델에는 세 가지 한계가 더 있습니다. **비용 상한:** 한 입력 안에 중첩된 모든 문서(문자열 속
 JSON, 텍스트 속 URL)는 합쳐서 입력 길이의 최대 4배까지만 읽습니다. 이 예산을 넘으면 다음 문서를
-담은 문자열 전체를 가립니다. **여러 줄 레이아웃**에는 특별한 처리가 필요 없습니다. 한 줄에
+담은 문자열 전체를 가립니다. **길이 상한:** Unicode 스칼라 값이 2^28 − 1개(268,435,455개)를 넘는
+텍스트는 읽지 않고 전체를 가립니다. **여러 줄 레이아웃**에는 특별한 처리가 필요 없습니다. 한 줄에
 따로 쓴 property list `<key>`, 여러 줄에 걸친 JSON, 텍스트로 쓴 multipart 본문은 첫 번째
 트리거부터 텍스트 끝까지 가려지므로 값이 어디에 쓰였든 가려집니다.
 

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@4c0211705a697c58b05bc4732f79b3b6beb39a9b status=reviewed -->
+<!-- i18n-source: README.md@a2e2e7002287fab768218fc110e8d589839fa641 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-pt-BR-light.svg" alt="iOSDevelopmentTools: Requisições de rede, logs e estado do dispositivo do seu app em um console integrado, com segredos ocultos."></picture></p>
@@ -59,7 +59,7 @@ concurrency do Swift 6.
 - **Logs e relatório do dispositivo** — `LogStore` guarda mensagens com nível e categoria e também as
   grava no sistema de log unificado (unified logging); `DeviceSnapshot` informa versão, sistema
   operacional, modelo, uso de memória, estado térmico e se há um depurador conectado.
-- **Testado** — 857 testes de Swift Testing no macOS e 854 em um simulador de iOS. As requisições vão de
+- **Testado** — 870 testes de Swift Testing no macOS e 867 em um simulador de iOS. As requisições vão de
   uma sessão do app, passando pela captura, até um servidor stub, e os testes verificam o que o servidor
   recebeu, o que o app recebeu e o que foi armazenado.
 
@@ -74,7 +74,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
 Cole no campo de busca no canto superior direito da janela. Deixe **Dependency Rule** em
-**Up to Next Major Version** a partir de `2.1.1` e clique em **Add Package**. Na janela seguinte,
+**Up to Next Major Version** a partir de `2.1.2` e clique em **Add Package**. Na janela seguinte,
 escolha o target do seu app ao lado de **iOSDevelopmentTools** e clique em **Add Package** novamente.
 
 **2. Importe o módulo**
@@ -131,7 +131,7 @@ Ou adicione-o às `dependencies` do seu `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.2")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -259,10 +259,11 @@ sem `=` ou `:` com duas ou mais letras trocadas por outras parecidas (`pɑsswoʀ
 segredos fora das requisições que você registra e das mensagens de log desde o início, e prefira
 logs estruturados.
 
-Mais dois limites fazem parte desse modelo. **Limite de custo:** todos os documentos aninhados
+Mais três limites fazem parte desse modelo. **Limite de custo:** todos os documentos aninhados
 em uma entrada (JSON dentro de uma string, uma URL em um texto) leem juntos no máximo quatro vezes
 o tamanho da entrada; passado esse orçamento, a string que contém o próximo documento é ocultada
-inteira. **Layouts de várias linhas** não precisam de nada especial: um `<key>` de property list em
+inteira. **Limite de tamanho:** um texto com mais de 2^28 − 1 escalares Unicode (268.435.455) não
+é lido e é ocultado inteiro. **Layouts de várias linhas** não precisam de nada especial: um `<key>` de property list em
 sua própria linha, um JSON espalhado por várias linhas e um corpo multipart escrito como texto são
 ocultados do primeiro gatilho até o fim do texto, então o valor fica oculto onde quer que esteja.
 

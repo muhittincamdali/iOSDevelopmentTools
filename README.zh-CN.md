@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md@4c0211705a697c58b05bc4732f79b3b6beb39a9b status=reviewed -->
+<!-- i18n-source: README.md@a2e2e7002287fab768218fc110e8d589839fa641 status=reviewed -->
 <!-- brand:start -->
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg"><img src="https://raw.githubusercontent.com/muhittincamdali/iOSDevelopmentTools/master/.github/brand/banner-zh-CN-light.svg" alt="iOSDevelopmentTools: 在应用内控制台中查看应用的网络请求、日志和设备状态，敏感信息会被遮盖。"></picture></p>
@@ -52,7 +52,7 @@
 - **日志和设备报告** — `LogStore` 保存带级别和类别的消息，同时把它们写入统一日志系统
    (unified logging)；`DeviceSnapshot` 报告版本、操作系统、型号、内存占用、散热状态，以及是否
   附加了调试器。
-- **经过测试** — macOS 上有 857 个 Swift Testing 测试，iOS 模拟器上有 854 个。请求从应用的会话
+- **经过测试** — macOS 上有 870 个 Swift Testing 测试，iOS 模拟器上有 867 个。请求从应用的会话
   经过捕获层到达一个 stub 服务器，测试会检查服务器收到了什么、应用收到了什么，以及存储了什么。
 
 ## 快速开始
@@ -65,7 +65,7 @@
 https://github.com/muhittincamdali/iOSDevelopmentTools.git
 ```
 
-把它粘贴到窗口右上角的搜索框中。将 **Dependency Rule** 保持为从 `2.1.1` 开始的
+把它粘贴到窗口右上角的搜索框中。将 **Dependency Rule** 保持为从 `2.1.2` 开始的
 **Up to Next Major Version**，然后点击 **Add Package**。在下一个窗口中，在 **iOSDevelopmentTools**
 旁边选择你的应用 target，再次点击 **Add Package**。
 
@@ -122,7 +122,7 @@ https://github.com/muhittincamdali/iOSDevelopmentTools.git
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.1")
+    .package(url: "https://github.com/muhittincamdali/iOSDevelopmentTools.git", from: "2.1.2")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -232,8 +232,9 @@ func configureNetworkLogger() {
 和 `t၀ken hunter2`（缅甸数字 0）能被发现。从一开始就不要让秘密进入
 你记录的请求和日志消息，并优先使用结构化日志。
 
-这个模型还包括两个限制。**开销上限：** 一个输入中嵌套的所有文档（字符串中的 JSON、文本中的
-URL）合计最多读取输入长度的四倍；超出这个预算后，包含下一个文档的字符串会被整体隐藏。**多行布局**
+这个模型还包括三个限制。**开销上限：** 一个输入中嵌套的所有文档（字符串中的 JSON、文本中的
+URL）合计最多读取输入长度的四倍；超出这个预算后，包含下一个文档的字符串会被整体隐藏。**长度上限：** 超过 2^28 − 1 个 Unicode 标量值（268,435,455 个）的文本
+不会被读取，而是被整体隐藏。**多行布局**
 不需要特殊处理：单独一行的 property list `<key>`、分布在多行的 JSON 和以文本形式写出的 multipart
 消息体都会从第一个触发点隐藏到文本末尾，所以无论值写在哪里都会被隐藏。
 
