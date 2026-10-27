@@ -165,6 +165,33 @@ struct RedactionTextLengthLimitTests {
         #expect(body(form, formType) == "status=[REDACTED]&count=1")
     }
 
+    @Test("a form name and a query name are the replacement alone", arguments: lengths)
+    func names(length: Int) throws {
+        // Read, the name shows. Whether it hides its value is the key rule's choice, which reads
+        // no free text and does not change with the limit.
+        let name = Self.formWords(length: length)
+        let form = "\(name)=1&count=2"
+        let formType = "application/x-www-form-urlencoded"
+        func body(_ policy: RedactionPolicy) -> String {
+            String(decoding: policy.redact(body: Data(form.utf8), contentType: formType).body, as: UTF8.self)
+        }
+        #expect(body(.default) == form)
+        #expect(body(Self.policy) == "[REDACTED]=1&count=2")
+        let url = try #require(URL(string: "https://example.com/a?\(name)=1"))
+        #expect(RedactionPolicy.default.redact(url: url) == "https://example.com/a?\(name)=[REDACTED]")
+        #expect(Self.policy.redact(url: url) == "https://example.com/a?[REDACTED]=[REDACTED]")
+    }
+
+    @Test("a recorded error description and a part's Content-Length are the replacement alone", arguments: lengths)
+    func errorAndPartHeader(length: Int) {
+        let error = NSError(domain: "x", code: 1, userInfo: [NSLocalizedDescriptionKey: Self.text(length: length)])
+        #expect(NetworkError(error, policy: Self.policy).message == Self.replacement)
+        let digits = String(repeating: "1", count: length)
+        let part = "--B0und\r\nContent-Disposition: form-data; name=\"a\"\r\nContent-Length: \(digits)\r\n\r\nx\r\n--B0und--"
+        let redacted = Self.policy.redact(body: Data(part.utf8), contentType: "multipart/form-data; boundary=B0und").body
+        #expect(String(decoding: redacted, as: UTF8.self) == part.replacingOccurrences(of: digits, with: Self.replacement))
+    }
+
     @Test("a multipart text part and a field name are the replacement alone", arguments: lengths)
     func multipart(length: Int) {
         let input = Self.text(length: length)
